@@ -46,13 +46,11 @@
 #include <vector>
 #include <algorithm>
 #include <mutex>
+#include <thread>
 
 namespace MultiCore {
 
-	enum ThreadType {
-		MAIN,
-		OTHER,
-	};
+	using namespace std;
 
 	class SafeLock{
 	public:
@@ -70,174 +68,81 @@ namespace MultiCore {
 		std::mutex& _mtx;
 	};
 
-	class FunctionWrapperBase
-	{
-	public:
-        virtual ~FunctionWrapperBase() {}
-		virtual void run(int threadNum, int numThreads) = 0;
-		virtual FunctionWrapperBase* clone() const = 0;
-	};
-
-	template <class ObjType, class Method>
-	class FunctionWrapper : public FunctionWrapperBase
-	{
-	public:
-		FunctionWrapper(ObjType* obj, Method method)
-			: m_obj(obj)
-			, m_method(method)
-		{}
-
-		virtual void run(int threadNum, int numThreads)
-		{
-			(m_obj->*m_method)(threadNum, numThreads);
-		}
-
-		virtual FunctionWrapperBase* clone() const
-		{
-			return new FunctionWrapper(*this);
-		}
-	private:
-		ObjType* m_obj;
-		Method m_method;
-	};
-
-	class FunctionWrapperLoopBase
-	{
-	public:
-        virtual ~FunctionWrapperLoopBase(){}
-		virtual void run(int idx) = 0;
-		virtual FunctionWrapperLoopBase* clone() const = 0;
-	};
-
-	template <class ObjType, class Method>
-	class FunctionWrapperLoop : public FunctionWrapperLoopBase
-	{
-	public:
-		FunctionWrapperLoop(ObjType* obj, Method method)
-			: m_obj(obj)
-			, m_method(method)
-		{}
-
-		virtual void run(int idx)
-		{
-			(m_obj->*m_method)(idx);
-		}
-
-		virtual FunctionWrapperLoopBase* clone() const
-		{
-			return new FunctionWrapperLoop(*this);
-		}
-	private:
-		ObjType* m_obj;
-		Method m_method;
-	};
-
-	//turn OFF processor targeting
-	static void setProcessorTargetingEnabled(bool target);
-
-	// Return the number of threads that will be used by run calls
-	// The state of the servo loop affects the answer so be sure it 
-	// doesn't change between this call and a call to a run function.
-	int numThreads();
-
-	void setThreadType(ThreadType threadType);
-
-	// Tell multi core if the servo loop is running
-	void setServoRunning(bool isRunning);
-
-	void shutdown();
-
-	void setMaxCores(int max);
-
-	// If useServo is false the processor running the servo loop is not used
-	// If useServo is true all processors are used including the one running the servo loop. You should
-	// pause the servo loop if you choose this option. The functions won't do it for you.
-
-	// WARNING: These threads are set to highest priority, if you set useServo true it will block
-	// the servo loop!!
-
-	// For testing purposes set the multiThread parameter to false and
-	// the function will be run in the main thread. This avoids lots of if tests
-	// and #defines in the main code.
-
-	// Run a standalone function passing pData, threadNum and numThreads.
-	// Expects you to write a loop such as for (i = threadNum; i < max; i += numThreads)
-	void runFunc (void* pData, 
-		void (*func)(void* pData, int threadNum, int numThreads), 
-		bool multiThread = true);
-
-	// Run a standalone function passing pData, and idx.
-	// We run the loop "for (idx = threadNum; idx < maxIdx; idx += numThreads)" for you
-	void runFunc (void* pData, 
-		void (*func)(void* pData, int idx), size_t maxIdx, 
-		bool multiThread = true);
 	
-	// used internally, don't call directly
-	void runMethod (FunctionWrapperBase& func, 
-		bool multiThread);
-	void runMethod (FunctionWrapperLoopBase& func, size_t maxIdx, 
-		bool multiThread);
-	void runMethodNoWait (FunctionWrapperBase& func, 
-		bool multiThread);
-	void runMethodNoWait (FunctionWrapperLoopBase& func, size_t maxIdx, 
-		bool multiThread);
 
-	// Run an object's member function passing threadNum and numThreads.
-	// Expects you to write a loop such as for (i = threadNum; i < max; i += numThreads)
-	template <class ObjType, class Method>
-	void run (ObjType* obj, Method method, 
-		bool multiThread = true)
+	inline int getNumCores()
 	{
-		FunctionWrapper<ObjType, Method> fw(obj, method);
-		runMethod(fw, multiThread);
+		return thread::hardware_concurrency();
 	}
 
-	// Same as above except does not wait for threads to complete. Call wait to
-	// check for thread completion
-	template <class ObjType, class Method>
-	void runNoWait (ObjType* obj, Method method, 
-		bool multiThread = true)
-	{
-		FunctionWrapper<ObjType, Method> fw(obj, method);
-		runMethodNoWait(fw, multiThread);
-	}
-
-	// Run an object's member function passing threadNum and numThreads.
-	// We run the loop "for (idx = threadNum; idx < maxIdx; idx += numThreads)" for you
-	template <class ObjType, class Method>
-	void run (ObjType* obj, Method method, size_t maxIdx, 
-		bool multiThread = true)
-	{
-		FunctionWrapperLoop<ObjType, Method> fw(obj, method);
-		runMethod(fw, maxIdx, multiThread);
-	}
-
-	// Same as above except does not wait for threads to complete. Call wait to
-	// check for thread completion
-	template <class ObjType, class Method>
-	void runNoWait (ObjType* obj, Method method, size_t maxIdx, 
-		bool multiThread = true)
-	{
-		FunctionWrapperLoop<ObjType, Method> fw(obj, method);
-		runMethodNoWait(fw, maxIdx, multiThread);
-	}
-
-	// Wait for thread completion after calling a runNoWait.
-	bool running();
-	void wait();
-
-	class MaxCores
-	{
+	template<class T, typename M>
+	class FuncWrapper {
 	public:
-		MaxCores(int max)
+		FuncWrapper()
 		{
-			setMaxCores(max);
 		}
-		~MaxCores()
+
+		void start()
 		{
-			setMaxCores(INT_MAX);
+			_pThread = make_shared<thread>(&func, this);
 		}
+
+		static void func(void* p) {
+			FuncWrapper* pFW = (FuncWrapper*)p;
+			(pFW->_obj->*pFW->_method)(pFW->_threadNum, pFW->_numThreads);
+		}
+
+		T* _obj;
+		M _method;
+		size_t _threadNum;
+		size_t _numThreads;
+		shared_ptr<thread> _pThread = nullptr;
 	};
+
+	template<class T, class M>
+	void runMethod(T* obj, M method, bool multiCore)
+	{
+		if (multiCore) {
+			vector<FuncWrapper<T, M>> threads;
+			threads.resize(getNumCores());
+			for (size_t i = 0; i < threads.size(); i++) {
+				threads[i]._obj = obj;
+				threads[i]._method = method;
+				threads[i]._threadNum = i;
+				threads[i]._numThreads = threads.size();
+			}
+
+			for (size_t i = 0; i < threads.size(); i++) {
+				threads[i].start();
+			}
+
+			for (size_t i = 0; i < threads.size(); i++) {
+				threads[i]._pThread->join();
+			}
+
+		}
+		else {
+			(obj->*method)(0, 1);
+		}
+	}
+	template<class L>
+	void runLambda(L fLambda, bool multiCore)
+	{
+		if (multiCore) {
+			vector<shared_ptr<thread>> threads;
+			threads.resize(getNumCores());
+			for (size_t i = 0; i < threads.size(); i++) {
+				threads[i] = make_shared<thread>(fLambda, i, threads.size());
+			}
+
+			for (size_t i = 0; i < threads.size(); i++) {
+				threads[i]->join();
+			}
+		}
+		else {
+			fLambda(0, 1);
+		}
+	}
 
 	// ********************************************
 	// MultiCore std::vector sorting classes
@@ -272,7 +177,7 @@ namespace MultiCore {
 			, m_comp(comp)
 		{
 			int size = (int)m_list.size();
-			int numT = numThreads();
+			int numT = getNumCores();
 			bool runMulti = size > (50 * numT);
 			if (!runMulti)
 				numT = 1;
