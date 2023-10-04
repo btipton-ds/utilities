@@ -169,17 +169,17 @@ namespace MultiCore {
 	// Run a standalone function passing pData, and idx.
 	// We run the loop "for (idx = threadNum; idx < maxIdx; idx += numThreads)" for you
 	void runFunc (void* pData, 
-		void (*func)(void* pData, int idx), int maxIdx, 
+		void (*func)(void* pData, int idx), size_t maxIdx, 
 		bool multiThread = true);
 	
 	// used internally, don't call directly
 	void runMethod (FunctionWrapperBase& func, 
 		bool multiThread);
-	void runMethod (FunctionWrapperLoopBase& func, int maxIdx, 
+	void runMethod (FunctionWrapperLoopBase& func, size_t maxIdx, 
 		bool multiThread);
 	void runMethodNoWait (FunctionWrapperBase& func, 
 		bool multiThread);
-	void runMethodNoWait (FunctionWrapperLoopBase& func, int maxIdx, 
+	void runMethodNoWait (FunctionWrapperLoopBase& func, size_t maxIdx, 
 		bool multiThread);
 
 	// Run an object's member function passing threadNum and numThreads.
@@ -205,7 +205,7 @@ namespace MultiCore {
 	// Run an object's member function passing threadNum and numThreads.
 	// We run the loop "for (idx = threadNum; idx < maxIdx; idx += numThreads)" for you
 	template <class ObjType, class Method>
-	void run (ObjType* obj, Method method, int maxIdx, 
+	void run (ObjType* obj, Method method, size_t maxIdx, 
 		bool multiThread = true)
 	{
 		FunctionWrapperLoop<ObjType, Method> fw(obj, method);
@@ -215,7 +215,7 @@ namespace MultiCore {
 	// Same as above except does not wait for threads to complete. Call wait to
 	// check for thread completion
 	template <class ObjType, class Method>
-	void runNoWait (ObjType* obj, Method method, int maxIdx, 
+	void runNoWait (ObjType* obj, Method method, size_t maxIdx, 
 		bool multiThread = true)
 	{
 		FunctionWrapperLoop<ObjType, Method> fw(obj, method);

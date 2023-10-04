@@ -2,6 +2,7 @@
 #include <iostream>
 #include <thread>
 #include <mutex>
+#include <assert.h>
 
 #if !defined(MAC) && !defined(LINUX)
 #include <process.h>
@@ -31,6 +32,7 @@ static bool gProcessorTargetingEnabled = false;
 enum Step {
 	START_STEP,
 	RUN_STEP,
+	DONE_STEP,
 	EXIT_STEP,
 	NULL_STEP,
 };
@@ -45,7 +47,7 @@ enum Step {
 struct ThreadControlRec;
 
 struct ThreadRec {
-	ThreadRec();
+	ThreadRec(ThreadControlRec* pTcr, int threadNum);
 
 	ThreadRec(const ThreadRec& src) = delete;
 
@@ -56,7 +58,7 @@ struct ThreadRec {
 	}
 
 	inline void threadFunc();
-	inline void start(Step stepIn, int runCountIn, int priority);
+	inline void start(Step stepIn, int runCountIn);
 	inline void stop(bool exiting);
 
 	inline void acquireStart();
@@ -66,11 +68,11 @@ struct ThreadRec {
 	inline void acquireRun();
 	inline void releaseRun();
 
-	int threadNum;
-	ThreadControlRec* tcr;
-	Step step;
-	int m_priority;
-	int runCount;
+	int _threadNum = -1;
+	ThreadControlRec* _pTcr = nullptr;
+	Step _step = NULL_STEP;
+	int _priority = 0;
+	int _runCount = -1;
 	thread _thread;
 
 	mutex startMutex, stopMutex, runMutex;
@@ -78,57 +80,55 @@ struct ThreadRec {
 
 void gThreadFunc(void* data)
 {
-	ThreadRec* threadRec = (ThreadRec*)data;
-	threadRec->threadFunc();
+	ThreadRec* pThreadRec = (ThreadRec*)data;
+	// Wait to finish construction
+	while (pThreadRec->_pTcr == nullptr || pThreadRec->_threadNum == -1) {
+		this_thread::sleep_for(100ms);
+	}
+	pThreadRec->threadFunc();
 }
 
-ThreadRec::ThreadRec()
-	: _thread(gThreadFunc, this)
+ThreadRec::ThreadRec(ThreadControlRec* pTcr, int threadNum)
+	: _pTcr(pTcr)
+	, startMutex()
+	, stopMutex()
+	, runMutex()
+	, _threadNum(threadNum)
+	, _thread(gThreadFunc, this)
 {
 }
 
 struct ThreadControlRec {
 	ThreadControlRec()
-		: threadsCreated(false)
-		, ownerThreadId(this_thread::get_id())
-		, numThreads(1)
-		, maxIdx(0)
-		, runMethodProc(NULL)
-		, runMethodLoopProc(NULL)
-		, runProc(NULL)
-		, runLoopProc(NULL)
-		, pData(NULL)
-		, runCount(0)
-		, threadType(MAIN)
-		, maxThreads(INT_MAX)
+		: ownerThreadId(this_thread::get_id())
 	{
-		ownerThreadId = this_thread::get_id();
 	}
 
 	void createThreads();
-	void startThreads(Step step, bool skip, int priority);
+	void startThreads(Step step);
 	void runThreads(Step step);
+	void waitTillAllDone();
 	void stopThreads(Step step);
 	inline int calNumThreads(bool exiting) const;
-	inline void setThreadCounts(Step step, bool skip);
+	inline void setThreadCounts(Step step);
 	void runThread(int threadNum);
 
-	ThreadType threadType;
+	bool multiThread = false;
+	bool threadsCreated = false;
+	int maxThreads = INT_MAX;
+	int numThreads = 1;
+	int runCount = 0;
+	size_t maxIdx = -1;
+
+	ThreadType threadType = ThreadType::MAIN;
 	thread::id ownerThreadId;
 
-	int maxIdx;
-	FunctionWrapperBase* runMethodProc;
-	FunctionWrapperLoopBase* runMethodLoopProc;
-	void (*runProc)(void* pData, int threadNum, int numThreads);
-	void (*runLoopProc)(void* pData, int idx);
-	void* pData;
+	FunctionWrapperBase* runMethodProc = nullptr;
+	FunctionWrapperLoopBase* runMethodLoopProc = nullptr;
+	void (*runProc)(void* pData, int threadNum, int numThreads) = nullptr;
+	void (*runLoopProc)(void* pData, int idx) = nullptr;
+	void* pData = nullptr;
 
-	bool multiThread;
-	bool threadsCreated;
-	int maxThreads;
-	int numThreads;
-	int skipThread;
-	int runCount;
 
 	vector<std::shared_ptr<ThreadRec>> threadRecs;
 
@@ -225,32 +225,32 @@ void printPad(bool isMain, int threadNum)
 inline void ThreadRec::acquireStart()
 {
 #if DUMP_LOCKS
-	bool isMain = this_thread::get_id() == tcr->ownerThreadId;
-	printPad(isMain, threadNum);
+	bool isMain = this_thread::get_id() == _pTcr->ownerThreadId;
+	printPad(isMain, _threadNum);
 	if (isMain)
-		cout << "Main waiting for start" << "[" << threadNum << "]" << endl;
+		cout << "Main waiting for start" << "[" << _threadNum << "]" << endl;
 	else
-		cout << "Thread waiting for start" << "[" << threadNum << "]" << endl;
+		cout << "Thread waiting for start" << "[" << _threadNum << "]" << endl;
 #endif
 	startMutex.lock();
 #if DUMP_LOCKS
-	printPad(isMain, threadNum);
+	printPad(isMain, _threadNum);
 	if (isMain)
-		cout << "Main owns start" << "[" << threadNum << "]" << endl;
+		cout << "Main owns start" << "[" << _threadNum << "]" << endl;
 	else
-		cout << "Thread owns start" << "[" << threadNum << "]" << endl;
+		cout << "Thread owns start" << "[" << _threadNum << "]" << endl;
 #endif
 }
 
 inline void ThreadRec::releaseStart()
 {
 #if DUMP_LOCKS
-	bool isMain = this_thread::get_id() == tcr->ownerThreadId;
-	printPad(isMain, threadNum);
+	bool isMain = this_thread::get_id() == _pTcr->ownerThreadId;
+	printPad(isMain, _threadNum);
 	if (isMain)
-		cout << "Main releasing start" << "[" << threadNum << "]" << endl;
+		cout << "Main releasing start" << "[" << _threadNum << "]" << endl;
 	else
-		cout << "Thread releasing start" << "[" << threadNum << "]" << endl;
+		cout << "Thread releasing start" << "[" << _threadNum << "]" << endl;
 #endif
 	startMutex.unlock();
 }
@@ -258,32 +258,32 @@ inline void ThreadRec::releaseStart()
 inline void ThreadRec::acquireStop()
 {
 #if DUMP_LOCKS
-	bool isMain = this_thread::get_id() == tcr->ownerThreadId;
-	printPad(isMain, threadNum);
+	bool isMain = this_thread::get_id() == _pTcr->ownerThreadId;
+	printPad(isMain, _threadNum);
 	if (isMain)
-		cout << "Main waiting for stop" << "[" << threadNum << "]" << endl;
+		cout << "Main waiting for stop" << "[" << _threadNum << "]" << endl;
 	else
-		cout << "Thread waiting for stop" << "[" << threadNum << "]" << endl;
+		cout << "Thread waiting for stop" << "[" << _threadNum << "]" << endl;
 #endif
 	stopMutex.lock();
 #if DUMP_LOCKS
-	printPad(isMain, threadNum);
+	printPad(isMain, _threadNum);
 	if (isMain)
-		cout << "Main owns stop" << "[" << threadNum << "]" << endl;
+		cout << "Main owns stop" << "[" << _threadNum << "]" << endl;
 	else
-		cout << "Thread owns stop" << "[" << threadNum << "]" << endl;
+		cout << "Thread owns stop" << "[" << _threadNum << "]" << endl;
 #endif
 }
 
 inline void ThreadRec::releaseStop()
 {
 #if DUMP_LOCKS
-	bool isMain = this_thread::get_id() == tcr->ownerThreadId;
-	printPad(isMain, threadNum);
+	bool isMain = this_thread::get_id() == _pTcr->ownerThreadId;
+	printPad(isMain, _threadNum);
 	if (isMain)
-		cout << "Main releasing stop" << "[" << threadNum << "]" << endl;
+		cout << "Main releasing stop" << "[" << _threadNum << "]" << endl;
 	else
-		cout << "Thread releasing stop" << "[" << threadNum << "]" << endl;
+		cout << "Thread releasing stop" << "[" << _threadNum << "]" << endl;
 #endif
 	stopMutex.unlock();
 }
@@ -291,32 +291,32 @@ inline void ThreadRec::releaseStop()
 inline void ThreadRec::acquireRun()
 {
 #if DUMP_LOCKS
-	bool isMain = this_thread::get_id() == tcr->ownerThreadId;
-	printPad(isMain, threadNum);
+	bool isMain = this_thread::get_id() == _pTcr->ownerThreadId;
+	printPad(isMain, _threadNum);
 	if (isMain)
-		cout << "Main waiting for run" << "[" << threadNum << "]" << endl;
+		cout << "Main waiting for run" << "[" << _threadNum << "]" << endl;
 	else
-		cout << "Thread waiting for run" << "[" << threadNum << "]" << endl;
+		cout << "Thread waiting for run" << "[" << _threadNum << "]" << endl;
 #endif
 	runMutex.lock();
 #if DUMP_LOCKS
-	printPad(isMain, threadNum);
+	printPad(isMain, _threadNum);
 	if (isMain)
-		cout << "Main owns run" << "[" << threadNum << "]" << endl;
+		cout << "Main owns run" << "[" << _threadNum << "]" << endl;
 	else
-		cout << "Thread owns run" << "[" << threadNum << "]" << endl;
+		cout << "Thread owns run" << "[" << _threadNum << "]" << endl;
 #endif
 }
 
 inline void ThreadRec::releaseRun()
 {
 #if DUMP_LOCKS
-	bool isMain = this_thread::get_id() == tcr->ownerThreadId;
-	printPad(isMain, threadNum);
+	bool isMain = this_thread::get_id() == _pTcr->ownerThreadId;
+	printPad(isMain, _threadNum);
 	if (isMain)
-		cout << "Main releasing run" << "[" << threadNum << "]" << endl;
+		cout << "Main releasing run" << "[" << _threadNum << "]" << endl;
 	else
-		cout << "Thread releasing run" << "[" << threadNum << "]" << endl;
+		cout << "Thread releasing run" << "[" << _threadNum << "]" << endl;
 #endif
 	runMutex.unlock();
 }
@@ -340,18 +340,18 @@ unsigned __stdcall gThreadFunc2(void* data)
 inline void ThreadRec::threadFunc()
 {
 	acquireRun();
-	step = NULL_STEP;
+	_step = NULL_STEP;
 
 	bool done = false;
 	while (!done) {
 		acquireStart();
-		runCount++;
-		if (step == EXIT_STEP)
+		_runCount++;
+		if (_step == EXIT_STEP)
 			done = true;
-		else if (step == RUN_STEP)
-			tcr->runThread(threadNum);
+		else if (_step == RUN_STEP)
+			_pTcr->runThread(_threadNum);
 
-		step = NULL_STEP;
+		_step = DONE_STEP;
 
 		releaseRun();
 		acquireStop();
@@ -368,11 +368,13 @@ void ThreadControlRec::runThread(int threadNum)
 	if (runProc) {
 		(*runProc)(pData, threadNum, numThreads);
 	} else if (runLoopProc) {
+		cout << "runLoopProc: " << threadNum << "\n";
 		for (int i = threadNum; i < maxIdx; i += numThreads)
 			(*runLoopProc)(pData, i);
 	} else if (runMethodProc) {
 		runMethodProc->run(threadNum, numThreads);
 	} else if (runMethodLoopProc) {
+		cout << "runMethodLoopProc: " << threadNum << "\n";
 		for (int i = threadNum; i < maxIdx; i += numThreads)
 			runMethodLoopProc->run(i);
 	}
@@ -418,14 +420,9 @@ void ThreadControlRec::createThreads()
 #endif
     
 	for (int i = threadStart; i < numProcs; i++) {
-		threadRecs[i] = make_shared<ThreadRec>();
-		threadRecs[i]->threadNum = i;
-		threadRecs[i]->tcr = this;
-		threadRecs[i]->step = START_STEP;
+		threadRecs[i] = make_shared<ThreadRec>(this, i);
 		threadRecs[i]->acquireStart();
 		threadRecs[i]->acquireStop();
-
-		int processor = calProcNum(i);
 	}
 
 #if TIME_SETUP
@@ -442,7 +439,7 @@ void ThreadControlRec::createThreads()
 	while (!allRunning) {
 		allRunning = true;
 		for (int i = threadStart; i < numProcs; i++) {
-			allRunning = allRunning && threadRecs[i]->step == NULL_STEP;
+			allRunning = allRunning && threadRecs[i]->_step == NULL_STEP;
 			if (!allRunning)
 				break;
 		}
@@ -470,26 +467,17 @@ void ThreadControlRec::createThreads()
 //	run(NULL, test);
 }
 
-inline void ThreadControlRec::setThreadCounts(Step step, bool skip)
+inline void ThreadControlRec::setThreadCounts(Step step)
 {
 	numThreads = calNumThreads(step == EXIT_STEP);
-	skipThread = -1;
 	if (step == EXIT_STEP)
 		return;
-	switch(threadType) {
-		case MAIN:
-			skipThread = skip ? 0 : -1;
-			break;
-		default:
-			skipThread = -1;
-			break;
-	}
 }
 
-inline void ThreadControlRec::startThreads(Step stepIn, bool skip, int priority)
+inline void ThreadControlRec::startThreads(Step stepIn)
 {
 	createThreads();
-	setThreadCounts(stepIn, skip);
+	setThreadCounts(stepIn);
 
 #if 0 && defined(_DEBUG)
 	// Verify we're in main thread on processor 1
@@ -499,22 +487,23 @@ inline void ThreadControlRec::startThreads(Step stepIn, bool skip, int priority)
 	// threads owns run
 	// main owns start and stop
 
+	for (int i = 0; i < numThreads; i++) {
+		threadRecs[i]->_step = stepIn;
+		threadRecs[i]->_runCount = runCount;
+	}
 	// release start
 	for (int i = 0; i < numThreads; i++)
-		if (i != skipThread)
-			threadRecs[i]->start(stepIn, runCount, priority);
-	if (skipThread != -1)
-		runThread(skipThread);
+		threadRecs[i]->releaseStart();
+
 	runCount++;
 }
 
 // Called from the owner thread
 
-inline void ThreadRec::start(Step stepIn, int runCountIn, int priority)
+inline void ThreadRec::start(Step stepIn, int runCountIn)
 {
-	m_priority = priority;
-	step = stepIn;
-	runCount = runCountIn;
+	_step = stepIn;
+	_runCount = runCountIn;
 	releaseStart();
 }
 
@@ -529,42 +518,36 @@ inline void ThreadRec::stop(bool exiting)
 		acquireStop();
 }
 
-#define STOP_ALL 0
 inline void ThreadControlRec::stopThreads(Step step) 
 {
-#if STOP_ALL
-	for (int i = 0; i < numThreads; i++)
-		if (i != skipThread)
-			threadRecs[i].acquireRun();
-	for (int i = 0; i < numThreads; i++)
-		if (i != skipThread)
-			threadRecs[i].releaseStop();
-	if (step != EXIT_STEP)
-		for (int i = 0; i < numThreads; i++)
-			if (i != skipThread)
-				threadRecs[i].acquireStart();
-	for (int i = 0; i < numThreads; i++)
-		if (i != skipThread)
-			threadRecs[i].releaseRun();
-	if (step != EXIT_STEP)
-		for (int i = 0; i < numThreads; i++)
-			if (i != skipThread)
-				threadRecs[i].acquireStop();
-#else
 	for (int i = 0; i < numThreads; i++) {
-		if (i != skipThread) {
-			ThreadRec& thread = *threadRecs[i];
-			thread.stop(step == EXIT_STEP);
-//			assert(thread.runCount == runCount);
+		ThreadRec& thread = *threadRecs[i];
+		thread.stop(step == EXIT_STEP);
+
+		while (thread._step != DONE_STEP) {
+			this_thread::sleep_for(10us);
 		}
+		assert(thread._step == DONE_STEP);
+		//		assert(thread.runCount == runCount);
 	}
-#endif
+}
+
+void ThreadControlRec::waitTillAllDone()
+{
+	for (int i = 0; i < numThreads; i++) {
+		ThreadRec& thread = *threadRecs[i];
+
+		while (thread._step != DONE_STEP) {
+			this_thread::sleep_for(50us);
+		}
+		cout << "Thread " << i << " finished\n";
+	}
 }
 
 inline void ThreadControlRec::runThreads(Step step)
 {
-	startThreads(step, true, 0); // bugus priority
-	stopThreads(step);
+	startThreads(step);
+	waitTillAllDone();
 }
 
 } // namespace 
@@ -661,7 +644,7 @@ void MultiCore::runFunc (void* pData,
 }
 
 void MultiCore::runFunc (void* pData, 
-	void (*func)(void*, int idx), int maxIdx, 
+	void (*func)(void*, int idx), size_t maxIdx, 
 	bool multiThread)
 {
 	ThreadControlRec* tcr = setupTCR();
@@ -706,11 +689,11 @@ void MultiCore::runMethodNoWait (FunctionWrapperBase& func,
 		func.run(0, 1);
 	} else {
 		tcr->runMethodProc = func.clone();
-		tcr->startThreads(RUN_STEP, false, 0); // bogus priority
+		tcr->startThreads(RUN_STEP);
 	}
 }
 
-void MultiCore::runMethod (FunctionWrapperLoopBase& func, int maxIdx,
+void MultiCore::runMethod (FunctionWrapperLoopBase& func, size_t maxIdx,
 		bool multiThread)
 {
 	ThreadControlRec* tcr = setupTCR();
@@ -728,7 +711,7 @@ void MultiCore::runMethod (FunctionWrapperLoopBase& func, int maxIdx,
 		tcr->runMethodLoopProc = NULL;
 	}
 }
-void MultiCore::runMethodNoWait (FunctionWrapperLoopBase& func, int maxIdx, 
+void MultiCore::runMethodNoWait (FunctionWrapperLoopBase& func, size_t maxIdx, 
 		bool multiThread)
 {
 	ThreadControlRec* tcr = setupTCR();
@@ -740,7 +723,7 @@ void MultiCore::runMethodNoWait (FunctionWrapperLoopBase& func, int maxIdx,
 	} else {
 		tcr->runMethodLoopProc = func.clone();
 		tcr->maxIdx = maxIdx;
-		tcr->startThreads(RUN_STEP, false, 0); // bogus priority
+		tcr->startThreads(RUN_STEP); // bogus priority
 	}
 }
 
@@ -748,7 +731,7 @@ bool MultiCore::running()
 {
 	ThreadControlRec* tcr = setupTCR();
 	for (int i = 0; i < tcr->threadRecs.size(); i++) {
-		if (tcr->threadRecs[i]->step == RUN_STEP)
+		if (tcr->threadRecs[i]->_step == RUN_STEP)
 			return true;
 	}
 	return false;
