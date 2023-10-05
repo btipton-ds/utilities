@@ -13,10 +13,7 @@
 #else
 #endif // WIND32
 
-
 #define	RETURN_IF_NOT_FIRST_TIME(a) static bool first=true; if(!first) return a; first = false;
-
-
 
 PFNGLBINDBUFFERPROC      COglVboFunctions::glBindBuffer = 0;
 PFNGLGENBUFFERSPROC      COglVboFunctions::glGenBuffers = 0;
