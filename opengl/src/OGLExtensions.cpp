@@ -3,8 +3,6 @@
 
 #ifdef WIN32
 #include <tchar.h>
-#include <Windows.h>
-#include <GL/gl.h>
 
 #define GET_EXT_POINTER(name, type) name = (type)wglGetProcAddress(#name)
 #define GET_EXT_POINTER_MESSAGE_ONCE(name, type)         {                      static bool first=true; if(first){ first=false; name = (type)wglGetProcAddress(#name); if(!name){ }}}

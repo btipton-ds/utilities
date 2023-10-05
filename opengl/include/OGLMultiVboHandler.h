@@ -3,10 +3,6 @@
 #include <vector>
 #include <memory>
 
-#define WINGDIAPI
-#define APIENTRY
-#include <GL/gl.h>
-
 #include <OGLExtensions.h>
 #include <OGLMultiVbo.h>
 

@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <set>
 
-#include <glext.h>
 #include <rgbaColor.h>
 #include <OglMultiVboHandler.h>
 
@@ -812,7 +811,7 @@ void COglMultiVboHandler::OGLIndices::clear()
     m_elementIndices.clear();
 
     m_batchIndex = _SIZE_T_ERROR;   // Pointer to the batch which stores this face's data
-    m_vertBaseIndex = _SIZE_T_ERROR;    // Index of the entity's first index in the batch
+    m_vertBaseIndex = -1;    // Index of the entity's first index in the batch
     m_numVertsInBatch = 0;          // Number of entity vertices in the batch
 }
 

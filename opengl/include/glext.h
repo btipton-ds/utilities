@@ -1,8 +1,6 @@
 #ifndef __glext_h_
 #define __glext_h_ 1
 
-#define WINGDIAPI
-#define APIENTRY
 #include <GL/gl.h>
 
 #ifdef __cplusplus
