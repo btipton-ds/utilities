@@ -6,15 +6,9 @@
 //
 // If someone can find a way to hyperlink to a relative file, please do that.
 
-#include <Kernel/OpenGLib/OGLExport.h>
-#include <Kernel/OpenGlib/gl.h>
-#ifndef __glext_h_
-#include <Kernel/OpenGLib/glext.h>
-#endif
 #include <vector>
 #include <memory>
-#include <Kernel/OpenGLib/OglVboHandler.h>
-#include <Kernel/OpenGLib/OGLMultiVboHandler.h>
+#include <OGLMultiVboHandler.h>
 
 template<typename PRE_FUNC, typename POST_FUNC, typename PRE_TEX_FUNC, typename POST_TEX_FUNC>
 inline void COglMultiVboHandler::drawAllKeys(PRE_FUNC preDrawFunc, POST_FUNC postDrawFunc, PRE_TEX_FUNC preDrawTexFunc, POST_TEX_FUNC postDrawTexFunc) const

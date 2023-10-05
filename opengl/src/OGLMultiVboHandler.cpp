@@ -733,13 +733,13 @@ void COglMultiVboHandler::draw(int key, COglMultiVBO::DrawVertexColorMode drawCo
     }
 }
 
-inline void COglMultiVboHandler::bindCommonBuffers(shared_ptr<VertexBatch> batchPtr) const
+void COglMultiVboHandler::bindCommonBuffers(shared_ptr<VertexBatch> batchPtr) const
 {
     auto& vbo = batchPtr->m_VBO;
     batchPtr->m_VBO.bindCommon(vbo.m_numVerts);
 }
 
-inline void COglMultiVboHandler::drawKeyForBatch(int key, shared_ptr<VertexBatch> batchPtr, COglMultiVBO::DrawVertexColorMode drawColors) const
+void COglMultiVboHandler::drawKeyForBatch(int key, shared_ptr<VertexBatch> batchPtr, COglMultiVBO::DrawVertexColorMode drawColors) const
 {
     batchPtr->m_VBO.drawVBO(key, drawColors);
 }
@@ -748,7 +748,7 @@ void COglMultiVboHandler::drawTexturedFaces(std::shared_ptr<VertexBatch> batchPt
 {
 }
 
-inline void COglMultiVboHandler::unbindCommonBuffers(shared_ptr<VertexBatch> batchPtr) const
+void COglMultiVboHandler::unbindCommonBuffers(shared_ptr<VertexBatch> batchPtr) const
 {
     auto& vbo = batchPtr->m_VBO;
     vbo.unbindCommon();
