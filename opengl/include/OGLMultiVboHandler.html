@@ -1,0 +1,212 @@
+<HTML>
+<HEAD>
+<META NAME="GENERATOR" Content="Microsoft Visual Studio">
+<TITLE>Summary of Batched VBO Rendering</TITLE>
+</HEAD>
+<BODY>
+    <h1>Summary of Batched VBO Rendering</h1>
+    <p>
+        This architecture was created in response to <a href="https://3dsystems.atlassian.net/browse/GF-10849">GF-10849</a> which reported extremely slow rendering on
+        models with thousands of patches. That lead to epic <a href="https://3dsystems.atlassian.net/browse/GF-11112">GF-11112</a> which covers all the work required. From
+        an outside view, this seems an incredibly large response to a small problem. To understand why, it's important to understand that in a worst case it took over 180 seconds to render
+        a single frame of the file in <a href="https://3dsystems.atlassian.net/browse/GF-10849">GF-10849</a> and that file is a fairly typical output of the ADP autosurfacer. From a user perspective, FreeForm would hang when opening
+        autosurfacer files of medium, or greater, size.
+    </p>
+    <p>
+        The justification for this effort is in the resulting frame rate. This approach moved the average framerate for drawing large patch models from 1 fps or less to about 60 fps.
+        In the best (worst?) case it achieved a 1,200 X increase in frame rate.
+    </p>
+    <p>There was also feedback from customers that FreeForm's rendering didn't take advantage of their new graphics card's high performance features.</p>
+    <p>This approach may be applicable to other areas of rendering, like clay.</p>
+    <p>
+        The multi version supports one set of vertex, normal, texture, color buffers and multiple index VBOs referencing them.
+        These arrays are divided, based on size, into "batches." The CAD industry breaks them up by face, but that's too slow. The gaming folks
+        use single arrays - that's resulted in segment faults and they are extremely hard to manage because to change one face we have to reconstruct
+        the "world." This approach is documented online as Batched VBOs and that's how we're referring to this.
+    </p>
+    <p>Keeping track of units (byte, float, vertex-3, vertex-2, vertex-1, triangle etc.) can be confusing. I've attempted to include the unit type in the variable names, such as vertBaseIndex, 
+    to avoid confusion with byteBaseIndex or floatBaseIndex. It makes the code more verbose, but avoids have to constantly check comments and declarations.</p>
+    <p>
+        Fit colors use vertex colors, pull dir colors use front and back vertex colors and face textures us UV/texture mapping.
+    </p>
+    <p>
+        All of this data is preloaded in a set of buffers, managed by FaceVisual and EdgeVisual.
+    </p>
+    <p>
+        This is based on the timing concept that the number of changes is always less than the number of draw calls. At 60 fps, a user will have to modifiy data
+        faster than 60 fps to violate that assumption. In many cases we're changing at less than 1 fps.
+    </p>
+    <p>
+        As an example:
+    </p>
+    <p>
+        Solid faces, patch faces, fit faces, selected faces and hilighted faces all draw with different colors. Fit to clay uses vertex colors, but only those
+        with a fit. Pull direction uses front and back vertex colors, which must be draw seperately. Face texture mapping uses uv values and a set of textures
+        which cannot all be active at once.
+    </p>
+    <p>
+        So, we have a map of draw keys. The number of keys is totally adjustable, but should be kept relatively small.
+    </p>
+    <p>
+        The draw loop looks like
+    </p>
+    <p>
+        <ol>
+            <li>for each batch</li>
+            <li>&nbsp;bind common buffers for all draw calls</li>
+            <li>&nbsp;&nbsp;for each populated key</li>
+            <li>&nbsp;&nbsp;&nbsp;setup appropriate color and draw settings via preDrawFunc</li>
+            <li>&nbsp;&nbsp;&nbsp;draw element index buffer</li>
+            <li>&nbsp;&nbsp;&nbsp;clean up color and draw settings via postDrawFunc</li>
+        </ol>
+    </p>
+    <p>
+        Since the vertices, normals and uvs are common for all draw calls, they are all bound during each batch's bindCommon call. These buffers stay bound for the
+        entire key loop. Curren
+    </p>
+    <p>
+        Currently the vertex color buffers are bound when each key is drawn. It may be possible to bind these at the same time as the other buffers, but pull direction
+        drawing poses trouble. Pull direction drawing uses different colors for front faces than back faces and requires a buffer swap. Right new we swap the color buffers
+        every key whether it's required or not. It's simpler and safer that way.
+    </p>
+    <p>
+        So, the number of draw calls is small, but not the minimum possible
+    </p>
+    <h2>Triggering a Screen Refresh</h2>
+    <p>
+        While this approach is designed to be independent of the Surface Modeling layer, it was also designed to work specifically with it. So, to trigger regeneration
+        of the keys and index buffers call either
+    </p>
+    <p>
+        BreMode::setBrepRenderNeedsUpdate() or send a BrepDisplayChangedEvent which will call it for you.
+    </p>
+    <p>
+        On the next draw pass, the FaceVisual predraw method will test the flag and do what's required. It's probably advisable to improve this approach instead of adding a new one.
+        If this method is ever extended to drawing mesh or clay, a similar method for triggering updates should be created.
+    </p>
+    <p>
+        <img src="OglMultiVboHandler 01.svg" width="750" />
+    </p>
+    <h2>
+        Reuse of graphics memory
+    </h2>
+    <p>
+        The memory on the graphics card is limited. If memory is fully deleted frequently and only a portion is used, memory management is easy. When the buffer sizes
+        are small, there are lots of buffers and much of the memory is used - it requires reallocation of the memory. It's like a problem in heap management. TBD
+    </p>
+    <h2>
+        Structure
+    </h2>
+    <p>
+        On the OGL side, there is no knowledge or assumption of faces, edges or vertices. That organization is created by the BrepModel architecture.
+    </p>
+    <p>
+        <ol>
+            <li>Data is duplicated between main memory and the graphics card. This allows us to modify main memory and transfer to the card without rebuilding</li>
+            <li>Data on the card is stored by BufferId. It's an unsigned int which behaves like a pointer to memory on the card</li>
+            <li>All drawing is done using glDrawElements by element indices</li>
+        </ol>
+    </p>
+    <h3>ElementVBORec</h3>
+    <p>
+        This structure holds the data required for a call to glDrawElements. It's members are the number of elements to draw and the buffer id for the elements.
+    </p>
+    <p>
+        It containts the element ids to render a group of graphics entities (lines and triangles) which should be drawn with the same properties. For example, all selected faces will be drawn by the
+        DRAW_PHASE_SELECTED key. If that key is not specific enough, a new key must be created to cover the case. The number of keys is not bounded and managed in an stl::map.
+        Keys are simple ints. It is up to the API user to assure that keys are not ambiguous. Surfacing::Face does this with an enum defined in the .cpp file. It's in the cpp
+        file to prevent a large rebuild everytime a key is modified.
+    </p>
+    <h3>Keys and Key Map</h3>
+    <p>
+        Keys are keys into an stl map of ElementVBORecs. Keys are unique within a batch, but may be duplicated across batches.
+    </p>
+    <p>Keys are stored in a key map.</p>
+    <h3>Batches | VertexBatch</h3>
+    <p>
+        A batch is an entire set of VBOs which can draw a subset of the model's elements. There is an unresolvable conflict between the CAD editor's need to interactively edit
+        or regenerate each face, edge or vertex and the renderer's need to use as few draw calls as possible. The CAD industry uses a set of VBOs for every face while the
+        game industry uses one set of VBOs for an entire model, character or scene.
+    </p>
+    <p>
+        Batching is the term I found in use in internet articles on the best compromise solution. It lumps the soup of faces into groups called batches and there's an arbitrary
+        limit on how large the group can get. That group is a stored in a VertexBatch.
+    </p>
+    <p>Each batch holds a set of VBOs (vertex, normal, tex coords, front colors, back colors etc.) required to draw the batch.</p>
+    <p>The batches are stored in a std::vector<shared_ptr<VertexBatch>> so that addition, removal or restructuring of the list is only a pointer assignment.</p>
+    <p>The face maintains an OGLIndices structure (see that section) so that each face can still be drawn individually, using the graphics data stored in its batch.</p>
+    <p>There is relationship where each batch contains many faces/edges/vertics and one face/edge/vertex points to entries in a single batch.</p>
+    <p>Ideally, it will also be possible to recreate only the batches required.</p>
+    <p>
+        To make updating of each batch faster, the contents of each VBO (vertex, normal etc.) are kept in main memory. When the contents change, the effected values are
+        overwritten and the entire batch is sent back to the graphics card's VBO memory.
+    </p>
+    <p><b>TODO:</b> A future enhancement may be to support partial writing of only the changed values.</p>
+    <h3>
+        FaceVisual::updateBatchVBOIndices
+    </h3>
+    <p>
+        The complexity shows up in setting up the batches, keys and maps.
+        That's where FaceVisual::updateBatchVBOIndices function comes into play.
+    </p>
+    <p>
+        The downside is that every time selection or highlighting changes, updateBatchVBOIndices must be called. This is accelerated with a set of dirty flags on each face/edge/vertex.
+        There's a loop which runs the face list and decides which key it requires and puts the appropriate elements in that key's element list. This is reasonably fast because
+        it's just the element indices that are updated and only for the effected batches.
+    </p>
+    <p>
+        This function must be called every time the draw state changes. If not, the display will be incorrect.
+        It runs the face loop, the batch for each face is fetched (it's store with the face), and the face's indices are placed under the appropriate key
+        in the face's batch. This can be further optimized by change tracking on a per face basis, so only the changed batches are updated.
+    </p>
+    <p>
+        During updateBatchVBOIndices the elements needed for each draw phase (solid, selcted, vertex colors etc.) are added to the batch's key to element map. During drawing
+        the the element index VBO in each batch is draw for each key. To accelerate further, thee keys which contain elements are added to a simple linear array.
+        The drawAllKeys method runs a loop, only for the active keys, thus avoiding all testing, setup etc. Adding this method moved the draw rate from 25-30 fps to 60-70 fps.
+        That performance improvement justifies the complexity.
+    </p>
+    <h3>COglMultiVboHandler::OGLIndices</h3>
+    <p>
+        The OGLIndices structure contains all the information required to render a single face/edge/vertex. It contains a point to the batch containing all of the data
+        needed to render a complete entity such as a face/edge/vertex. It is implicit in the architecture that a face/edge/vertex cannot be split across batches.
+    </p>
+    <h3>Vertex Color Rendering</h3>
+    <p>
+        It is required that all entities with vertex colors must have their vertex color values in their batch. As a result, all other entries in the color VBO must be present,
+        but they may contain 0s. There is support for both front and back colors for each vertex to support parting line colors. When using the VERTEX_COLOR_FRONT key, only the
+        indices using vertex colors will be drawn, only the populated colors will be used and the zero colors will never be read. It's not memory efficient, but it's very fast.
+    </p>
+    <h3>Texture Rendering</h3>
+    <p>
+        Open GL has no support for a texture lookup array. This results in each face/edge/vertex requiring a setting of the correct textures. The only way I could find around this
+        is to create a 'macro' texture and remapping each faces' uv values into that macro texture. <b>This has not been done, and I doubt it will ever be worth the effort for Freeform.</b>
+    </p>
+    <h2>Misc</h2>
+    <p>
+        This is a work in progress as of 12/9/2022, vertex colors and face textures in particular.
+    </p>
+    <p>
+        This is used as
+    </p>
+    <p>
+        <ul>
+            <li>copyToVBO(...)</li>
+            <li>addIndexVBO(indices0)</li>
+            <li>addIndexVBO(indices1)</li>
+            <li>addIndexVBO(indices2)</li>
+
+
+            <li>// Set colors etc</li>
+            <li>draw(0);</li>
+            <li>// Set colors etc</li>
+            <li>draw(1);</li>
+            <li>// Set colors etc</li>
+            <li>draw(2);</li>
+        </ul>
+    </p>
+    Each draw corresponds to color state such as normal, selected, high lighted, mirrored, instanced etc.
+    <p>
+
+
+</BODY>
+</HTML>
