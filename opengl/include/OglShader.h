@@ -1,14 +1,13 @@
 #pragma once
 
 #include <string>
+#include <map>
+#include <memory>
 
 #ifdef WIN32
 #include <Windows.h>
 #include <GL/gl.h>
-
-#ifndef __glext_h_
 #include <glext.h>
-#endif
 
 #ifndef __wglext_h_
 //#include <wglext.h>
@@ -16,26 +15,34 @@
 
 #endif
 
-//this macro is for use in COglShader derived classes
-#define CHECK_GLSL_STATE   Assert( wglGetCurrentContext() ); GL_ASSERT; if( !isEnabled() || !hasShaderSupport() || m_Error )  return 0
-#define HAS_SHADER_SUBROUTINES 1
+#include <OGLExtensions.h>
+#include <OglCol4f.h>
 
+//this macro is for use in COglShader derived classes
+#define CHECK_GLSL_STATE   assert( wglGetCurrentContext() ); GL_ASSERT; if( !isEnabled() || m_Error )  return 0
+
+class COglArg;
 class COglTexture;
 class ActiveTextureUnits;
+
+#define TEXTURE_SUPPORT 0
 
 /** Class that encapsulates glsl shader functionality
 This is a base class to store a shader program
 A shader program consists of a vertex and a fragment component
 Currently this is set up to load shaders from a resource
  */
-class COglShader 
+class COglShader : public COglExtensions
 {
 public:
+    using ArgMapType = std::map<const std::string, std::shared_ptr<COglArg>>;
+#if TEXTURE_SUPPORT
+    using TextureMapType = std::map<const std::string, std::shared_ptr<COglTexture>>;
+#endif
+
 	COglShader();
 	virtual ~COglShader();
 
-	static bool hasShaderSupport();
-	static bool hasOGL3Support();
     static bool isEnabled();
     static void enable(bool set=true);
     static std::string getDataDir();
@@ -48,52 +55,53 @@ public:
 
     void loadDefaultVariables(); ///< Loads defaults (resets to default) variables defined in the shader file
 
-    void setVariablei( LPCTSTR name, int  value );
-    void setVariable( LPCTSTR name, float  value );
-    void setVariable( LPCTSTR name, col4f& value );
-    void setVariable( LPCTSTR name, m44f&  value );
-    void setVariable( LPCTSTR name, p4f&   value );
-    void setVariable( LPCTSTR name, p3f&   value );
-    void setVariable( LPCTSTR name, p2f&   value );
+    void setVariablei( const std::string& name, int  value );
+    void setVariable( const std::string& name, float  value );
+    void setVariable( const std::string& name, col4f& value );
+    void setVariable( const std::string& name, m44f&  value );
+    void setVariable( const std::string& name, p4f&   value );
+    void setVariable( const std::string& name, p3f&   value );
+    void setVariable( const std::string& name, p2f&   value );
 
 #if HAS_SHADER_SUBROUTINES
 	void setVertSubRoutine(const char* name);
 	void setFragSubRoutine(const char* name);
 #endif
 
-    bool hasTexture ( LPCTSTR textureShaderName);
-    bool setTexture ( LPCTSTR textureShaderName, LPCTSTR filename, bool flipImage = true );
-    bool setTexture ( LPCTSTR textureShaderName, COglTexture* hwBuffer, bool takeOwnerShip );
+#if TEXTURE_SUPPORT
+    bool hasTexture ( const std::string& textureShaderName);
+    bool setTexture ( const std::string& textureShaderName, const std::string& filename, bool flipImage = true );
+    bool setTexture ( const std::string& textureShaderName, COglTexture* hwBuffer, bool takeOwnerShip );
     
-    COglTexture* getTexture( LPCTSTR textureShaderName );
+    COglTexture* getTexture( const std::string& textureShaderName );
+#endif
 
-	const CString getName() const
+    const std::string getName() const
 	{
 		return m_Name;
 	}
 
-    bool getVariable( LPCTSTR name, CString& type, CString& value );
-    bool getVariablei( LPCTSTR name, int& value );
-    bool getVariable( LPCTSTR name, float& value );
-    bool getVariable( LPCTSTR name, col4f& value );
-    bool getVariable( LPCTSTR name, m44f&  value );
-    bool getVariable( LPCTSTR name, p4f&   value );
-    bool getVariable( LPCTSTR name, p3f&   value );
-    bool getVariable( LPCTSTR name, p2f&   value );
+    bool getVariable( const std::string& name, std::string& type, std::string& value );
+    bool getVariablei( const std::string& name, int& value );
+    bool getVariable( const std::string& name, float& value );
+    bool getVariable( const std::string& name, col4f& value );
+    bool getVariable( const std::string& name, m44f&  value );
+    bool getVariable( const std::string& name, p4f&   value );
+    bool getVariable( const std::string& name, p3f&   value );
+    bool getVariable( const std::string& name, p2f&   value );
 
     void setGeomShaderIOtype( int intype, int outtype);
 	bool load();
 
 protected: 
 	virtual void initUniform() = 0;
-    char* loadShaderFromResource( int shaderID );
     bool unLoad();
 
     bool hasShaderError (int shaderID);
 	bool hasProgramError(int programID);
 
     bool    m_Error;
-    CString m_Log, m_Name;
+    std::string m_Log, m_Name;
 
 private:
     friend UINT __cdecl LoadShaderBackgroundThread( LPVOID pParam );
@@ -113,51 +121,23 @@ private:
     int m_GeomShaderInType;  /// if we have a geometry shader we're required to setup the in and out type here
     int m_GeomShaderOutType; /// if we have a geometry shader we're required to setup the in and out type here
 
-    void*  m_TextureMap;  /// map of images keyed to shader inputs
-    void*  m_ArgumentMap; /// map of arguments matched to shader inputs
+#if TEXTURE_SUPPORT
+    TextureMapType  m_TextureMap;  /// map of images keyed to shader inputs
+    void   clearTextures();
+#endif
+    ArgMapType  m_ArgumentMap; /// map of arguments matched to shader inputs
 
     ActiveTextureUnits* m_TextureUnitStates; /// texture units bound to the card, primary use is gl state management
 
-    void   clearTextures();
 
-    static bool loadGlFuncPointers();
     static bool mEnabled;
 
     bool m_DefaultsLoaded;
     bool m_Bound;
 
-public:
-    static PFNWGLGETEXTENSIONSSTRINGARBPROC wglGetExtensionsStringARB;
-	static PFNGLGETSHADERIVPROC				glGetShaderiv;
-    static PFNGLGETINFOLOGARBPROC           glGetInfoLogARB;
-	static PFNGLGETPROGRAMIVPROC			glGetProgramiv;
-	static PFNGLGETPROGRAMINFOLOGPROC		glGetProgramInfoLog;
-    static PFNGLCREATEPROGRAMOBJECTARBPROC  glCreateProgramObjectARB;
-    static PFNGLCREATESHADEROBJECTARBPROC   glCreateShaderObjectARB;
-    static PFNGLSHADERSOURCEARBPROC         glShaderSourceARB;
-    static PFNGLCOMPILESHADERARBPROC        glCompileShaderARB;
-    static PFNGLATTACHOBJECTARBPROC         glAttachObjectARB;
-    static PFNGLLINKPROGRAMARBPROC          glLinkProgramARB;
-    static PFNGLUSEPROGRAMOBJECTARBPROC     glUseProgramObjectARB;
-    static PFNGLGETUNIFORMLOCATIONARBPROC   glGetUniformLocationARB;
-    static PFNGLUNIFORM1IARBPROC            glUniform1iARB;
-    static PFNGLUNIFORM1FARBPROC            glUniform1fARB;
-    static PFNGLUNIFORM2FARBPROC            glUniform2fARB;
-    static PFNGLUNIFORM3FARBPROC            glUniform3fARB;
-    static PFNGLUNIFORM4FARBPROC            glUniform4fARB;
-    static PFNGLUNIFORMMATRIX4FVARBPROC     glUniformMatrix4fv;
-    static PFNGLPROGRAMPARAMETERIEXTPROC    glProgramParameteriEXT;
-	static PFNGLACTIVETEXTUREPROC			glActiveTexture;
-	static PFNGLTEXIMAGE3DEXTPROC			glTexImage3D;
-#if HAS_SHADER_SUBROUTINES
-	typedef GLuint (APIENTRYP PFNGLGETSUBROUTINEINDEXPROC) (GLuint program, GLenum shadertype, const GLchar *name);
-	typedef void (APIENTRYP PFNGLUNIFORMSUBROUTINESUIVPROC) (GLenum shadertype, GLsizei count, const GLuint *indices);
-	static PFNGLGETSUBROUTINEINDEXPROC			glGetSubroutineIndex;
-	static PFNGLUNIFORMSUBROUTINESUIVPROC			glUniformSubroutinesuiv;
-#endif
 };
 
-class OGLAPI COglArg
+class COglArg
 {
 public:
     enum argtype { eInt, eFloat, eFloat2, eFloat3, eFloat4, eFloat16 };

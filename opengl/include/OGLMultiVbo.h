@@ -16,7 +16,7 @@
 //
 // If someone can find a way to hyperlink to a relative file, please do that.
 
-class COglMultiVBO : public COglVboFunctions
+class COglMultiVBO : public COglExtensions
 {
     friend class COglMultiVboHandler;
 public:

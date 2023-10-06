@@ -12,7 +12,7 @@
 //
 // If someone can find a way to hyperlink to a relative file, please do that.
 
-class COglMultiVboHandler : public COglVboFunctions
+class COglMultiVboHandler : public COglExtensions
 {
 public:
     struct OGLIndices {

@@ -2,10 +2,27 @@
 //
 //////////////////////////////////////////////////////////////////////
 
+
+#ifdef WIN32
+#include <Windows.h>
+#include <gl/GL.h>
+#endif
+
 //#include <Kernel/OpenGLib/glu.h> // LIMBO not picking up from the precompiled header in 64 bit
 #include <OglShader.h>
 #include <vector>
 #include <map>
+#include <set>
+#include <string>
+#include <filesystem>
+
+using namespace std;
+
+#define	RETURN_IF_NOT_FIRST_TIME(a) static bool first=true; if(!first) return a; first = false;
+#define GL_ASSERT
+#define HDTIMELOG(X)
+//#define CHECK_GLSL_STATE
+#define GL_IGNORE_ERROR
 
 //#define GLSL_VERBOSE
 
@@ -38,40 +55,6 @@ ADD_PREF_SERIALIZED(HighQualityEnvFileName, StringT(_T("Patterns\\seaworld.dds")
 
 
 #define assert_variable_not_found //assert(!"variable not found")
-
-typedef map<CString,COglTexture*> TextureMapType;
-#define textureMap (*((TextureMapType*)(m_TextureMap)))
-
-typedef map<CString,COglArg*> ArgMapType;
-#define argumentMap (*((ArgMapType*)(m_ArgumentMap)))
-
-PFNWGLGETEXTENSIONSSTRINGARBPROC COglShader::wglGetExtensionsStringARB =0;
-PFNGLGETSHADERIVPROC			 COglShader::glGetShaderiv			   =0;
-PFNGLGETINFOLOGARBPROC			 COglShader::glGetInfoLogARB		   =0;
-PFNGLGETPROGRAMIVPROC			 COglShader::glGetProgramiv			   =0;
-PFNGLGETPROGRAMINFOLOGPROC		 COglShader::glGetProgramInfoLog       =0;
-PFNGLCREATEPROGRAMOBJECTARBPROC  COglShader::glCreateProgramObjectARB  =0;
-PFNGLCREATESHADEROBJECTARBPROC   COglShader::glCreateShaderObjectARB   =0;
-PFNGLSHADERSOURCEARBPROC         COglShader::glShaderSourceARB         =0;
-PFNGLCOMPILESHADERARBPROC        COglShader::glCompileShaderARB        =0;
-PFNGLATTACHOBJECTARBPROC         COglShader::glAttachObjectARB         =0;
-PFNGLLINKPROGRAMARBPROC          COglShader::glLinkProgramARB          =0;
-PFNGLUSEPROGRAMOBJECTARBPROC     COglShader::glUseProgramObjectARB     =0;
-PFNGLGETUNIFORMLOCATIONARBPROC   COglShader::glGetUniformLocationARB   =0;
-PFNGLUNIFORM1IARBPROC            COglShader::glUniform1iARB            =0;
-PFNGLUNIFORM1FARBPROC            COglShader::glUniform1fARB            =0;
-PFNGLUNIFORM2FARBPROC            COglShader::glUniform2fARB            =0;
-PFNGLUNIFORM3FARBPROC            COglShader::glUniform3fARB            =0;
-PFNGLUNIFORM4FARBPROC            COglShader::glUniform4fARB            =0;
-PFNGLUNIFORMMATRIX4FVARBPROC     COglShader::glUniformMatrix4fv        =0; 
-PFNGLPROGRAMPARAMETERIEXTPROC    COglShader::glProgramParameteriEXT    =0; 
-PFNGLACTIVETEXTUREPROC			 COglShader::glActiveTexture		   =0;
-PFNGLTEXIMAGE3DEXTPROC           COglShader::glTexImage3D              =0;
-
-#if HAS_SHADER_SUBROUTINES
-COglShader::PFNGLGETSUBROUTINEINDEXPROC		 COglShader::glGetSubroutineIndex	   =0;
-COglShader::PFNGLUNIFORMSUBROUTINESUIVPROC	 COglShader::glUniformSubroutinesuiv   =0;
-#endif
 
 COglArg::COglArg(int val)
 {
@@ -199,21 +182,19 @@ COglShader::COglShader()
     , m_GeomShaderInType(GL_TRIANGLES)
     , m_GeomShaderOutType(GL_TRIANGLES)
 {
-    m_TextureMap  = (void*) new TextureMapType;
-    m_ArgumentMap = (void*) new ArgMapType;
 }
 
 COglShader::~COglShader()
 {
     HLOG(_T("~COglShader()"));
+#if TEXTURE_SUPPORT
     clearTextures();
-    delete ((TextureMapType*) m_TextureMap);
-    delete ((ArgMapType*) m_ArgumentMap);
+#endif
 }
 
 bool COglShader::isEnabled()
 {
-    return mEnabled && hasShaderSupport();
+    return mEnabled;
 }
 
 void COglShader::enable(bool set)
@@ -221,85 +202,14 @@ void COglShader::enable(bool set)
     mEnabled = set;
 }
 
-bool COglShader::hasOGL3Support()
-{
-	static bool ok = false;
-
-    if( !wglGetCurrentContext() )
-    {
-        assert( !"no wglGetCurrentContext" );
-        return ok;
-    }
-
-	RETURN_IF_NOT_FIRST_TIME(ok);
-    CString message;
-
-    ok = hasShaderSupport();
-    ok = ok ? Ogl::verifyGLVersionAtOrAfter(3, 0, message) : false; 
-    ok = ok ? checkOglExtension("GL_EXT_geometry_shader4") : false;
-
-	if(!ok)
-    {
-        LoadOglResourceLocal localRsc;
-		CString frmtstr;
-        frmtstr.LoadString( IDS_INADEQUATE_HW );
-		AfxMessageBox( Format( (LPCTSTR)frmtstr, (LPCTSTR)message));
-    }
-
-    return ok;
-}
-
-bool COglShader::hasShaderSupport()
-{
-	static bool ok = false;
-
-    if( !wglGetCurrentContext() )
-    {
-        assert( !"no wglGetCurrentContext" );
-        return ok;
-    }
-
-#ifdef OPENGLIB_EXPORTS // e.g. FF not StlViewer
-	static Symbol RPOM_sym( "RunPrimitiveOglMode" );
-	if( getPrefEntry<bool>(RPOM_sym) )
-		return false;
-#endif
-
-	RETURN_IF_NOT_FIRST_TIME(ok);
-
-    CString message;
-	ok = Ogl::verifyGLVersionAtOrAfter(3, 0, message); // required by metal shader (high quality)  
-    // LIMBO, if needed we will need ATI version too:
-    // ok = ok ? Ogl::verifyNVidiaDriverVersionAtLeast(_T("6.14.11.6262"), message) : false;
-	ok = ok ? loadGlFuncPointers(): false;
-	ok = ok ? checkOglExtension("GL_ARB_shader_objects") : false;
-
-	if(!ok)
-    {
-        LoadOglResourceLocal localRsc;
-		CString frmtstr;
-        frmtstr.LoadString( IDS_INADEQUATE_HW );
-
-		AfxMessageBox( Format( (LPCTSTR)frmtstr, (LPCTSTR)message));
-
-#ifndef OPENGLIB_EXPORTS //meaning we're not building this as part of the FF OpenGLib.dll
-        abort();
-#endif
-    }
-
-	return ok;
-}
-
-void COglShader::setVariablei( LPCTSTR name, int  value )
+void COglShader::setVariablei( const std::string& name, int  value )
 {
     if( !m_DefaultsLoaded ) 
         loadDefaultVariables();
 
-    ArgMapType::iterator it;
-
-    it = argumentMap.find( name );
-    if( it == argumentMap.end() )
-        argumentMap.insert( ArgMapType::value_type( name, new COglArg( value ) ) );
+    auto it = m_ArgumentMap.find( name );
+    if( it == m_ArgumentMap.end() )
+        m_ArgumentMap.insert(make_pair(name, make_shared<COglArg>(value)));
     else
         it->second->set(value);
 
@@ -307,7 +217,7 @@ void COglShader::setVariablei( LPCTSTR name, int  value )
     {
 		int progId = programID();
 		int dbg = glGetUniformLocationARB(progId, "DepthPeel");
-        int argLocation = glGetUniformLocationARB( progId, Uni2Ansi(name)); GL_ASSERT;
+        int argLocation = glGetUniformLocationARB( progId, name.c_str()); GL_ASSERT;
         if( argLocation >= 0 )
         {
             glUniform1iARB( argLocation, value ); GL_ASSERT;
@@ -315,22 +225,22 @@ void COglShader::setVariablei( LPCTSTR name, int  value )
     }
 }
 
-void COglShader::setVariable( LPCTSTR name, float  value )
+void COglShader::setVariable( const std::string& name, float  value )
 {
     if( !m_DefaultsLoaded ) 
         loadDefaultVariables();
 
     ArgMapType::iterator it;
 
-    it = argumentMap.find( name );
-    if( it == argumentMap.end() )
-        argumentMap.insert( ArgMapType::value_type( name, new COglArg( value ) ) );
+    it = m_ArgumentMap.find( name );
+    if( it == m_ArgumentMap.end() )
+        m_ArgumentMap.insert( ArgMapType::value_type( name, new COglArg( value ) ) );
     else
         it->second->set(value);
 
     if(m_Bound)
     {
-        int argLocation = glGetUniformLocationARB( programID(), Uni2Ansi(name)); GL_ASSERT;
+        int argLocation = glGetUniformLocationARB( programID(), name.c_str()); GL_ASSERT;
         if( argLocation >= 0 )
         {
             glUniform1fARB( argLocation, value ); GL_ASSERT;
@@ -338,22 +248,22 @@ void COglShader::setVariable( LPCTSTR name, float  value )
     }
 }
 
-void COglShader::setVariable( LPCTSTR name, col4f& value )
+void COglShader::setVariable( const std::string& name, col4f& value )
 {
     if( !m_DefaultsLoaded ) 
         loadDefaultVariables();
 
     ArgMapType::iterator it;
 
-    it = argumentMap.find( name );
-    if( it == argumentMap.end() )
-        argumentMap.insert( ArgMapType::value_type( name, new COglArg( (float*)value, 4 ) ) );
+    it = m_ArgumentMap.find( name );
+    if( it == m_ArgumentMap.end() )
+        m_ArgumentMap.insert( ArgMapType::value_type( name, new COglArg( (float*)value, 4 ) ) );
     else
         it->second->set(value);
 
     if(m_Bound)
     {
-        int argLocation = glGetUniformLocationARB( programID(), Uni2Ansi(name)); GL_ASSERT;
+        int argLocation = glGetUniformLocationARB( programID(), name.c_str()); GL_ASSERT;
         if( argLocation >= 0 )
         {
             glUniform4fARB( argLocation, value.r, value.g, value.b, value.o );  GL_ASSERT;
@@ -361,22 +271,22 @@ void COglShader::setVariable( LPCTSTR name, col4f& value )
     }
 }
 
-void COglShader::setVariable( LPCTSTR name, m44f&  value )
+void COglShader::setVariable( const std::string& name, m44f&  value )
 {
     if( !m_DefaultsLoaded ) 
         loadDefaultVariables();
 
     ArgMapType::iterator it;
 
-    it = argumentMap.find( name );
-    if( it == argumentMap.end() )
-        argumentMap.insert( ArgMapType::value_type( name, new COglArg( value.transposef(), 16 ) ) );
+    it = m_ArgumentMap.find( name );
+    if( it == m_ArgumentMap.end() )
+        m_ArgumentMap.insert( ArgMapType::value_type( name, new COglArg( value.transposef(), 16 ) ) );
     else
         it->second->set( value.transposef() );
 
     if(m_Bound)
     {
-        int argLocation = glGetUniformLocationARB( programID(), Uni2Ansi(name)); GL_ASSERT;
+        int argLocation = glGetUniformLocationARB( programID(), name.c_str()); GL_ASSERT;
         if( argLocation >= 0 )
         {
             glUniformMatrix4fv( argLocation, 1, false, value.transposef() );  GL_ASSERT;
@@ -385,22 +295,22 @@ void COglShader::setVariable( LPCTSTR name, m44f&  value )
 
 }
 
-void COglShader::setVariable( LPCTSTR name, p4f&   value )
+void COglShader::setVariable( const std::string& name, p4f&   value )
 {
     if( !m_DefaultsLoaded ) 
         loadDefaultVariables();
 
     ArgMapType::iterator it;
 
-    it = argumentMap.find( name );
-    if( it == argumentMap.end() )
-        argumentMap.insert( ArgMapType::value_type( name, new COglArg( (float*)value, 4 ) ) );
+    it = m_ArgumentMap.find( name );
+    if( it == m_ArgumentMap.end() )
+        m_ArgumentMap.insert( ArgMapType::value_type( name, new COglArg( (float*)value, 4 ) ) );
     else
         it->second->set(value);
 
     if(m_Bound)
     {
-        int argLocation = glGetUniformLocationARB( programID(), Uni2Ansi(name)); GL_ASSERT;
+        int argLocation = glGetUniformLocationARB( programID(), name.c_str()); GL_ASSERT;
         if( argLocation >= 0 )
         {
             glUniform4fARB( argLocation, value.x, value.y, value.z, value.w ); GL_ASSERT;
@@ -408,22 +318,22 @@ void COglShader::setVariable( LPCTSTR name, p4f&   value )
     }
 }
 
-void COglShader::setVariable( LPCTSTR name, p3f&   value )
+void COglShader::setVariable( const std::string& name, p3f&   value )
 {
     if( !m_DefaultsLoaded ) 
         loadDefaultVariables();
 
     ArgMapType::iterator it;
 
-    it = argumentMap.find( name );
-    if( it == argumentMap.end() )
-        argumentMap.insert( ArgMapType::value_type( name, new COglArg( (float*)value, 3 ) ) );
+    it = m_ArgumentMap.find( name );
+    if( it == m_ArgumentMap.end() )
+        m_ArgumentMap.insert( ArgMapType::value_type( name, new COglArg( (float*)value, 3 ) ) );
     else
         it->second->set(value);
 
     if(m_Bound)
     {
-        int argLocation = glGetUniformLocationARB( programID(), Uni2Ansi(name)); GL_ASSERT;
+        int argLocation = glGetUniformLocationARB( programID(), name.c_str()); GL_ASSERT;
         if( argLocation >= 0 )
         {
             glUniform3fARB( argLocation, value.x, value.y, value.z );  GL_ASSERT;
@@ -431,22 +341,22 @@ void COglShader::setVariable( LPCTSTR name, p3f&   value )
     }
 }
 
-void COglShader::setVariable( LPCTSTR name, p2f&   value )
+void COglShader::setVariable( const std::string& name, p2f&   value )
 {
     if( !m_DefaultsLoaded ) 
         loadDefaultVariables();
 
     ArgMapType::iterator it;
 
-    it = argumentMap.find( name );
-    if( it == argumentMap.end() )
-        argumentMap.insert( ArgMapType::value_type( name, new COglArg( (float*)value, 2 ) ) );
+    it = m_ArgumentMap.find( name );
+    if( it == m_ArgumentMap.end() )
+        m_ArgumentMap.insert( ArgMapType::value_type( name, new COglArg( (float*)value, 2 ) ) );
     else
         it->second->set(value);
 
     if(m_Bound)
     {
-        int argLocation = glGetUniformLocationARB( programID(), Uni2Ansi(name)); GL_ASSERT;
+        int argLocation = glGetUniformLocationARB( programID(), name.c_str()); GL_ASSERT;
         if( argLocation >= 0 )
         {
             glUniform2fARB( argLocation, value.x, value.y );  GL_ASSERT;
@@ -471,47 +381,42 @@ void COglShader::setVertSubRoutine(const char* name)
 	}
 }
 #endif
+
+#if TEXTURE_SUPPORT
+void   clearTextures();
 void COglShader::clearTextures()
 {
-    for( TextureMapType::iterator mp = textureMap.begin(); mp != textureMap.end(); mp++ )
-        if( mp->second && (mp->second->mOwner == this) )
-        {
-            HLOG(Format(_T("deleting texture %d"),mp->second->m_hwID));
-            delete mp->second;
-        }
-
-    textureMap.clear();
+    m_TextureMap.clear();
 }
 
-bool COglShader::setTexture( LPCTSTR textureShaderName, LPCTSTR filename, bool flipImage )
+bool COglShader::setTexture( const std::string& textureShaderName, const std::string& filename, bool flipImage )
 {
     HLOG(Format(_T("COglShader::setTexture %s %s"),textureShaderName,filename));
 
-    TextureMapType::iterator map = textureMap.find( textureShaderName );
-    if( map != textureMap.end() )
+    auto iter = m_TextureMap.find( textureShaderName );
+    if(iter != m_TextureMap.end() )
     {
-        if( map->second && (map->second->mOwner == this) )
+        if(iter->second && (iter->second->mOwner == this) )
         {
             HLOG(Format(_T("deleting texture %s, id %d in in shader"),textureShaderName,map->second->m_hwID));
-            delete map->second;
-			map->second = 0;
+            iter->second = 0;
         }
     }
 
-	if( !filename )
+	if( filename.empty() )
 	{
-		textureMap.insert( TextureMapType::value_type( textureShaderName, (COglTexture *)0 ) );
+		m_TextureMap.insert( TextureMapType::value_type( textureShaderName, (COglTexture *)0 ) );
 		return true;
 	}
 
     bool dds=false;
     {
         //LIMBO use check extension utility
-        CString name( filename );
-        name = name.MakeLower();
-        dds = name.Find(_T(".dds")) > 0;
+        string name( filename );
+//        name = name.MakeLower();
+        dds = name.find(".dds") > 0;
     }
-    
+#if 0
     CTextureLoader* img = 0;
     if(dds)
         img = new CDDSImage;
@@ -529,17 +434,18 @@ bool COglShader::setTexture( LPCTSTR textureShaderName, LPCTSTR filename, bool f
 
     img->mOwner = this; // this shader will delete this texture
 
-    textureMap.insert( TextureMapType::value_type( textureShaderName, img ) );
+    m_TextureMap.insert( TextureMapType::value_type( textureShaderName, img ) );
+#endif
     return true;
 }
 
-bool COglShader::hasTexture ( LPCTSTR textureShaderName)
+bool COglShader::hasTexture ( const std::string& textureShaderName)
 {
-    TextureMapType::iterator target = textureMap.find( textureShaderName );
-    return target != textureMap.end();
+    TextureMapType::iterator target = m_TextureMap.find( textureShaderName );
+    return target != m_TextureMap.end();
 }
 
-bool COglShader::setTexture ( LPCTSTR textureShaderName, COglTexture* texture, bool takeOwnerShip )
+bool COglShader::setTexture ( const std::string& textureShaderName, COglTexture* texture, bool takeOwnerShip )
 {
     // HLOG(Format(_T("COglShader::setTexture %s %s"),textureShaderName, takeOwnerShip ? _T("shader will delete") : _T("shader will NOT delete")));
 
@@ -548,8 +454,8 @@ bool COglShader::setTexture ( LPCTSTR textureShaderName, COglTexture* texture, b
 
     if( !texture )
     {
-        TextureMapType::iterator target = textureMap.find( textureShaderName );
-        if( target != textureMap.end() )
+        TextureMapType::iterator target = m_TextureMap.find( textureShaderName );
+        if( target != m_TextureMap.end() )
         {
             if( target->second && (target->second->mOwner == this ))
             {
@@ -559,12 +465,12 @@ bool COglShader::setTexture ( LPCTSTR textureShaderName, COglTexture* texture, b
             }
         }
 
-		textureMap.insert( TextureMapType::value_type( textureShaderName, (COglTexture *)0 ) );
+		m_TextureMap.insert( TextureMapType::value_type( textureShaderName, (COglTexture *)0 ) );
     }
     else
     {
-        TextureMapType::iterator target = textureMap.find( textureShaderName );
-        if( target != textureMap.end() )
+        TextureMapType::iterator target = m_TextureMap.find( textureShaderName );
+        if( target != m_TextureMap.end() )
         {
             if( target->second && (target->second->mOwner == this) )
             {
@@ -582,82 +488,45 @@ bool COglShader::setTexture ( LPCTSTR textureShaderName, COglTexture* texture, b
                 texture->mOwner = this; // this shader will delete this texture
             }
 
-            textureMap.insert( TextureMapType::value_type( textureShaderName, texture ) );
+            m_TextureMap.insert( TextureMapType::value_type( textureShaderName, texture ) );
         }
     }
 
     return true;
 }
 
-COglTexture* COglShader::getTexture( LPCTSTR textureShaderName )
+COglTexture* COglShader::getTexture( const std::string& textureShaderName )
 {
     if( !m_DefaultsLoaded ) 
         loadDefaultVariables();
 
-    TextureMapType::iterator target = textureMap.find( textureShaderName );
-    assert(target != textureMap.end() && "shader not initialized or texture name incorrect");
+    TextureMapType::iterator target = m_TextureMap.find( textureShaderName );
+    assert(target != m_TextureMap.end() && "shader not initialized or texture name incorrect");
 
-    if( target != textureMap.end() )
+    if( target != m_TextureMap.end() )
         return target->second;     
 
     return 0;
 }
-
-bool COglShader::loadGlFuncPointers()
-{
-    static bool gl_ok = false;
-    RETURN_IF_NOT_FIRST_TIME( gl_ok );
-
-    assert( wglGetCurrentContext() ); //always call within valid gl rendering context
-
-    if( checkOglExtension("GL_ARB_shader_objects") )
-    {
-		GET_EXT_POINTER( glGetShaderiv           , PFNGLGETSHADERIVPROC );
-        GET_EXT_POINTER( glGetInfoLogARB         , PFNGLGETINFOLOGARBPROC );  
-		GET_EXT_POINTER( glGetProgramiv          , PFNGLGETPROGRAMIVPROC ); 
-		GET_EXT_POINTER( glGetProgramInfoLog     , PFNGLGETPROGRAMINFOLOGPROC ); 
-        GET_EXT_POINTER( glCreateProgramObjectARB, PFNGLCREATEPROGRAMOBJECTARBPROC );
-        GET_EXT_POINTER( glCreateShaderObjectARB , PFNGLCREATESHADEROBJECTARBPROC ); 
-        GET_EXT_POINTER( glShaderSourceARB       , PFNGLSHADERSOURCEARBPROC );       
-        GET_EXT_POINTER( glCompileShaderARB      , PFNGLCOMPILESHADERARBPROC );      
-        GET_EXT_POINTER( glAttachObjectARB       , PFNGLATTACHOBJECTARBPROC );       
-        GET_EXT_POINTER( glLinkProgramARB        , PFNGLLINKPROGRAMARBPROC );        
-        GET_EXT_POINTER( glUseProgramObjectARB   , PFNGLUSEPROGRAMOBJECTARBPROC );   
-        GET_EXT_POINTER( glGetUniformLocationARB , PFNGLGETUNIFORMLOCATIONARBPROC );
-        GET_EXT_POINTER( glUniform1iARB          , PFNGLUNIFORM1IARBPROC );
-        GET_EXT_POINTER( glUniform1fARB          , PFNGLUNIFORM1FARBPROC );
-        GET_EXT_POINTER( glUniform2fARB          , PFNGLUNIFORM2FARBPROC );
-        GET_EXT_POINTER( glUniform3fARB          , PFNGLUNIFORM3FARBPROC );
-        GET_EXT_POINTER( glUniform4fARB          , PFNGLUNIFORM4FARBPROC );
-        GET_EXT_POINTER( glUniformMatrix4fv      , PFNGLUNIFORMMATRIX4FVARBPROC );
-        GET_EXT_POINTER( glProgramParameteriEXT  , PFNGLPROGRAMPARAMETERIEXTPROC );
-        GET_EXT_POINTER( glActiveTexture  , PFNGLACTIVETEXTUREPROC );
-		GET_EXT_POINTER( glTexImage3D     , PFNGLTEXIMAGE3DEXTPROC );
-
-		gl_ok = glGetInfoLogARB && glCreateProgramObjectARB && glCreateShaderObjectARB && glShaderSourceARB &&
-                glCompileShaderARB && glAttachObjectARB && glLinkProgramARB && glUseProgramObjectARB &&
-                glGetUniformLocationARB && glUniform1iARB && 
-                glUniform1fARB && glUniform2fARB && glUniform3fARB && glUniform4fARB &&
-                glUniformMatrix4fv && glActiveTexture && glTexImage3D;
-
-#if HAS_SHADER_SUBROUTINES
-        GET_EXT_POINTER( glGetSubroutineIndex  , PFNGLGETSUBROUTINEINDEXPROC );
-        GET_EXT_POINTER( glUniformSubroutinesuiv  , PFNGLUNIFORMSUBROUTINESUIVPROC );
-		gl_ok = gl_ok && glGetSubroutineIndex && glUniformSubroutinesuiv;
 #endif
-        if(!gl_ok)
-        {
-            LoadOglResourceLocal glres;
-            AfxMessageBox(IDS_FAILURE_TO_LOAD);
+
+#define GET_EXT_POINTER(name, type) name = (type)wglGetProcAddress(#name)
+
+namespace
+{
+
+    bool checkOglExtension(const char* name)
+    {
+        static GLint numExt;
+        static set<string> names;
+        if (numExt == 0) {
+
+            glGetIntegerv(GL_NUM_EXTENSIONS, &numExt);
+            for (GLint i = 0; i < numExt; i++) {
+                const GLubyte* pName = COglShader::glGetStringi(GL_EXTENSIONS, i);
+            }
         }
     }
-    else
-    {
-        LoadOglResourceLocal glres;
-        AfxMessageBox(IDS_GL_SHADER_OBJ_NOT_SUPPORTED);
-    }
-
-    return gl_ok;
 }
 
 bool COglShader::hasShaderError(int obj)
@@ -674,10 +543,10 @@ bool COglShader::hasShaderError(int obj)
 		glGetInfoLogARB( obj, infologLength, &charsWritten, err );
 		err[charsWritten] = '\0';
 
-		CString wErr = CString(err);
+		string wErr = string(err);
 
 //		cout << err << endl;
-		HLOG( Format( _T("compiling shader \"%s\":\n%s\n\n"),(LPCTSTR)m_Name, wErr));
+		HLOG( Format( _T("compiling shader \"%s\":\n%s\n\n"),(const std::string&)m_Name, wErr));
 		delete [] err;
 	}
 #endif
@@ -697,8 +566,8 @@ bool COglShader::hasProgramError(int obj)
 		glGetProgramInfoLog(obj, infologLength, &charsWritten, err);
 		err[charsWritten] = '\0';
 
-		CString wErr = CString(err);
-		HLOG( Format( _T("linking shader \"%s\":\n%s"),(LPCTSTR)m_Name, wErr) );
+		string wErr = string(err);
+		HLOG( Format( _T("linking shader \"%s\":\n%s"),(const std::string&)m_Name, wErr) );
 
 		delete [] err;
 	}
@@ -706,12 +575,12 @@ bool COglShader::hasProgramError(int obj)
 	return false;
 }
 
-CString COglShader::getDataDir()
+string COglShader::getDataDir()
 {
 #ifdef OPENGLIB_EXPORTS
     return getGUIWrapper()->getExeDirectory().getBuffer();
 #else
-    return _T(""); //LIMBO do something here for standalone mode (Dental etc.)?
+    return "";
 #endif
 }
 
@@ -723,7 +592,7 @@ static char* getNextLine(char* str, char* max)
     if(!str || (str >= max))
         return 0;
 
-    int offset = strlen(str);
+    size_t offset = strlen(str);
 
     // in case we are on a line of no length
     // skip multiple nulls (which came from previous multiple endlines \r\n etc.)
@@ -741,47 +610,40 @@ static char* getNextLine(char* str, char* max)
 static char* getVariableName(char* str)
 {
     assert(str && strlen(str));
-
+    const unsigned int bufsize = 24;
     static char name[24];
     name[0] = '\0';
-    sscanf_s(str, "%s", name, COUNTOF(name));
+    sscanf_s(str, "%s", name, bufsize);
     
-    int sz = strlen(name);
+    size_t sz = strlen(name);
     if(name[sz-1]==';')
         name[sz-1] = '\0';
 
     return name;
 }
 
-static bool doesFileExist( LPCTSTR pathFile )
+static bool doesFileExist( const std::string& pathFile )
 {
-	CString file(pathFile);
-	if (file.IsEmpty())
+	if (pathFile.empty())
 		return false;
 
-	CFileFind finder;
-	bool ok = finder.FindFile( pathFile );
-
-	if(!ok) //double check if there are unquoted spaces in the filename
-		ok = finder.FindFile( Format(_T("\"%s\""),pathFile) );
-
-	finder.Close();
+    bool ok = filesystem::exists(pathFile);
 
 	return ok;
 }
 
-static CString getCheckedImagePath(const char* str)
+static string getCheckedImagePath(const std::string& str)
 {
-    CString fname = COglShader::getDataDir();
+    string fname = COglShader::getDataDir();
 
-    if( fname.GetLength() )
+    if( !fname.empty() )
     {
-        fname += CString( str );
+        fname += string( str );
 
         if( !doesFileExist(fname) )
         {
             assert(!"default shader image file not found");
-            fname = _T("");
+            fname = "";
         }
     }
     return fname;
@@ -809,9 +671,9 @@ void COglShader::loadDefaultVariables()
         if(!orgSource || !strlen(orgSource)) 
             continue;
 
-        int end = strlen(orgSource);
+        size_t end = strlen(orgSource);
         char* sourceCpy = new char[ end+1 ];
-        strcpy(sourceCpy,orgSource);
+        strcpy_s(sourceCpy, end + 1,orgSource);
         sourceCpy[end] = '\0';
         char* source  = sourceCpy; // don't change the original source
         char* endChar = &source[end];
@@ -830,7 +692,7 @@ void COglShader::loadDefaultVariables()
                 char* tname  = 0;
 				char* stiArg = 0;
 
-                CString vname;
+                string vname;
 
 				if( stiDefaultVariable )
 				{
@@ -843,13 +705,13 @@ void COglShader::loadDefaultVariables()
                 if( stiDefaultVariable && (tname = strstr( source, "float" )) )
                 {
                     vname = getVariableName( tname + 5 );
-                    setVariable( vname, atof( stiArg ));
+                    setVariable( vname, (float)atof( stiArg ));
                 }
                 else if( stiDefaultVariable && (tname = strstr( source, "vec2" )) )
                 {
                     vname = getVariableName( tname + 4 );
                     p2f val;
-                    int num = sscanf( stiArg, "%f %f", &val.x, &val.y ); 
+                    int num = sscanf_s( stiArg, "%f %f", &val.x, &val.y ); 
                     assert(num == 2 && "missing shader defaults");
 
                     setVariable( vname, val);
@@ -858,7 +720,7 @@ void COglShader::loadDefaultVariables()
                 {
                     vname = getVariableName( tname + 4 );
                     p3f val;
-                    int num = sscanf( stiArg, "%f %f %f", &val.x, &val.y, &val.z ); 
+                    int num = sscanf_s( stiArg, "%f %f %f", &val.x, &val.y, &val.z );
                     assert(num == 3 && "missing shader defaults");
 
                     setVariable( vname, val);
@@ -867,17 +729,18 @@ void COglShader::loadDefaultVariables()
                 {
                     vname = getVariableName( tname + 4 );
                     col4f col;
-                    int num = sscanf( stiArg, "%f %f %f %f", &col.r, &col.g, &col.b, &col.o ); 
+                    int num = sscanf_s( stiArg, "%f %f %f %f", &col.r, &col.g, &col.b, &col.o );
                     assert(num == 4 && "missing shader defaults");
 
                     setVariable( vname, col);
                 }
+#if TEXTURE_SUPPORT
                 else if( tname = strstr( source, "sampler2DRect" ) )
                 {
                     vname = getVariableName( tname + 14 );
 					if( !stiArg )
 					{
-						setTexture( CString(vname), 0 );
+						setTexture( string(vname), 0 );
 					}
                     else if( strstr( stiArg, "GraphicsRGBABuffer") )
                     {
@@ -897,11 +760,11 @@ void COglShader::loadDefaultVariables()
                     }
                     else
                     {
-                        CString path = getCheckedImagePath( stiArg );
+                        string path = getCheckedImagePath( stiArg );
                         if( path.GetLength() )
-                            setTexture( CString(vname), path );
+                            setTexture( string(vname), path );
 						else
-							setTexture( CString(vname), 0 ); // need to make sure the texture is present and gets a slot for ATI
+							setTexture( string(vname), 0 ); // need to make sure the texture is present and gets a slot for ATI
                     }
                 }
                 else if( tname = strstr( source, "sampler2D" ) )
@@ -912,15 +775,15 @@ void COglShader::loadDefaultVariables()
 
 					if( !stiArg )
 					{
-						setTexture( CString(vname), 0 );
+						setTexture( string(vname), 0 );
 					}
 					else
 					{
-						CString path = getCheckedImagePath( stiArg );
+						string path = getCheckedImagePath( stiArg );
 						if( path.GetLength() )
-							setTexture( CString(vname), path );
+							setTexture( string(vname), path );
 						else
-							setTexture( CString(vname), 0 ); // need to make sure the texture is present and gets a slot for ATI
+							setTexture( string(vname), 0 ); // need to make sure the texture is present and gets a slot for ATI
 					}
                 }
                 else if( tname = strstr( source, "samplerCube" ) )
@@ -929,11 +792,11 @@ void COglShader::loadDefaultVariables()
 
 					if( !stiArg )
 					{
-						setTexture( CString(vname), 0 );
+						setTexture( string(vname), 0 );
 					}
 					else
 					{
-						CString path;
+						string path;
 #ifdef OPENGLIB_EXPORTS // e.g. FF not StlViewer
 						StringT prefName = getPrefEntry<StringT>(_T("HighQualityEnvFileName"));
 						if (prefName.isEmpty())
@@ -946,18 +809,19 @@ void COglShader::loadDefaultVariables()
 						path = getCheckedImagePath( stiArg );
 #endif
 						if( path.GetLength() )
-							setTexture( CString(vname), path );
+							setTexture( string(vname), path );
 						else
-							setTexture( CString(vname), 0 ); // need to make sure the texture is present and gets a slot for ATI
+							setTexture( string(vname), 0 ); // need to make sure the texture is present and gets a slot for ATI
 					}
 				}
+#endif
                 else if( stiDefaultVariable )
                 {
                     assert(!"unknown type");
                     continue;
                 } 
             }
-        }while( source = getNextLine(source, endChar) );
+        } while( source = getNextLine(source, endChar) );
 
         delete [] sourceCpy;
     }
@@ -967,7 +831,7 @@ void COglShader::loadDefaultVariables()
 
 bool COglShader::load()
 {
-    HDTIMELOG(_T("Entering COglShader::load()"));
+    HDTIMELOG("Entering COglShader::load()");
     CHECK_GLSL_STATE;
 
     // Get Vertex And Fragment Shader Sources
@@ -978,20 +842,23 @@ bool COglShader::load()
 
     // insert the 'shader include source' in the fragment source
     // we may want to extend this in the future
-    int len = isource ? strlen(isource)+strlen(fsource)+1 : strlen(fsource);
+    size_t len = isource ? strlen(isource)+strlen(fsource)+1 : strlen(fsource);
     char* source = new char[len+1];
 
+#pragma warning(push)
+#pragma warning(disable: 4996)
     if(isource)
     {
-        strcpy(source,isource);
-        strcpy(&source[strlen(isource)],fsource);
+        strcpy(source, isource);
+        strcpy(&source[strlen(isource)], fsource);
     }
     else
         strcpy(source,fsource);
 
+#pragma warning(pop)
     source[len] = '\0';
 
-    LOG_AND_RETURN( !source || !vsource, _T("Failed to access shader code") )
+    LOG_AND_RETURN( !source || !vsource, "Failed to access shader code" )
 
     if( !m_DefaultsLoaded ) 
         loadDefaultVariables();
@@ -1007,10 +874,10 @@ bool COglShader::load()
     fragID  = glCreateShaderObjectARB(GL_FRAGMENT_SHADER_ARB);
     geomID  = gsource ? glCreateShaderObjectARB(GL_GEOMETRY_SHADER_EXT) : 0;
 
-    LOG_AND_RETURN( !progID || !vertID || !fragID, _T("Shader compilation failed") )
+    LOG_AND_RETURN( !progID || !vertID || !fragID, "Shader compilation failed" )
 
     if(gsource && !geomID)
-        LOG_AND_RETURN( gsource && !geomID , _T("Your card and or driver does not support geometry shaders"))
+        LOG_AND_RETURN( gsource && !geomID , "Your card and or driver does not support geometry shaders")
 
     // Load Shader Sources
     glShaderSourceARB( vertID, 1, (const GLcharARB**)&vsource, NULL); GL_ASSERT;
@@ -1053,7 +920,7 @@ bool COglShader::load()
     delete [] source; // NB: living with the leak if we have an error condition
 
 	initUniform();
-    HDTIMELOG(_T("Succesfully completed COglShader::load()"));
+    HDTIMELOG("Succesfully completed COglShader::load()");
     return true;
 }
 
@@ -1097,7 +964,7 @@ bool COglShader::bind()
 
             if( hasProgramError( progID ) )
             {
-                AfxMessageBox( m_Log );
+                assert(!"shader program error");
                 return false;
             }
 
@@ -1105,8 +972,9 @@ bool COglShader::bind()
         }
     }     
 
+#if TEXTURE_SUPPORT
     //bind all the textures now 
-    if( textureMap.size() )
+    if( m_TextureMap.size() )
     {
         assert( !m_TextureUnitStates ); // texture states should have been destroyed at end of each render pass
         m_TextureUnitStates = new ActiveTextureUnits;
@@ -1116,9 +984,9 @@ bool COglShader::bind()
         // taking 2 passes so the textures with matrices get the first 8 slots
         // texture slots 8-16 do not have matrices
         for( int i=0; i<2; i++ ) 
-        for( TextureMapType::iterator mp = textureMap.begin(); mp != textureMap.end(); mp++ )
+        for( TextureMapType::iterator mp = m_TextureMap.begin(); mp != m_TextureMap.end(); mp++ )
         {
-            CString textureName  =  mp->first;
+            string textureName  =  mp->first;
             COglTexture* texture =  mp->second;
 
             if( !i && (texture && texture->textureMatrix().isIdentity()) )
@@ -1147,7 +1015,7 @@ bool COglShader::bind()
 
             int samplerLocation = glGetUniformLocationARB( progID, Uni2Ansi(textureName));  GL_ASSERT;
             
-            HLOG(Format(_T("Bound texture %s unit: %d loc: %d hwid: %d"),(LPCTSTR)textureName, texUnit, samplerLocation, hwid ));
+            HLOG(Format("Bound texture %s unit: %d loc: %d hwid: %d",(const std::string&)textureName, texUnit, samplerLocation, hwid ));
 
             if( samplerLocation >= 0 )
             {
@@ -1155,21 +1023,22 @@ bool COglShader::bind()
             }
         }
     }
+#endif
 
     //send all the arguments
-    if(argumentMap.size())
+    if(m_ArgumentMap.size())
     {
-        for( ArgMapType::iterator arg = argumentMap.begin(); arg != argumentMap.end(); arg++ )
+        for( ArgMapType::iterator arg = m_ArgumentMap.begin(); arg != m_ArgumentMap.end(); arg++ )
         {
-            CString argName =  arg->first;
+            string argName =  arg->first;
             COglArg& argVal  = *arg->second;
 
-            int argLocation = glGetUniformLocationARB( programID(), Uni2Ansi(argName)); GL_ASSERT;
+            int argLocation = glGetUniformLocationARB( programID(), argName.c_str()); GL_ASSERT;
 
             if( argLocation >= 0 )
             {
                 /* This would be good to be able to switch on per shader
-                CString argval;
+                string argval;
                 switch(argVal.getType() )
                 {
                 case COglArg::eFloat: argval = Format(" %.1f",argVal.getFloat());break;
@@ -1184,7 +1053,7 @@ bool COglShader::bind()
                         argval = Format(" %.1f %.1f %.1f %.1f",val[0],val[1],val[2],val[3]);break;
                     }
                 }
-                HLOG(Format("Binding argName:%s val:%s",(LPCTSTR)argName,(LPCTSTR)argval));
+                HLOG(Format("Binding argName:%s val:%s",(const std::string&)argName,(const std::string&)argval));
                 */
 
                 switch( argVal.getType() )
@@ -1217,14 +1086,15 @@ bool COglShader::bind()
     return m_Error;
 }
 
-bool COglShader::getVariable( LPCTSTR name, CString& type, CString& value )
+bool COglShader::getVariable( const std::string& name, string& type, string& value )
 {
     bool found = false;
 
-    if(argumentMap.size())
+    if(m_ArgumentMap.size())
     {
-        ArgMapType::iterator arg = argumentMap.find( name );
-        if( arg != argumentMap.end() )
+        ArgMapType::iterator arg = m_ArgumentMap.find( name );
+        stringstream ss;
+        if( arg != m_ArgumentMap.end() )
         {
             found = true;
             COglArg& argVal = *arg->second;
@@ -1235,7 +1105,7 @@ bool COglShader::getVariable( LPCTSTR name, CString& type, CString& value )
                 break;
             case COglArg::eFloat:
                 type = "float";  // TBD: should share this string with COglMaterial
-                value.Format(_T("%f"), argVal.getFloat() );
+                ss << argVal.getFloat();
                 break;
             case COglArg::eFloat2: 
                 assert(!"implement type"); 
@@ -1245,25 +1115,29 @@ bool COglShader::getVariable( LPCTSTR name, CString& type, CString& value )
                 break;
             case COglArg::eFloat4:
                 type = "color";  // TBD: should share this string with COglMaterial
-                value.Format(_T("%f %f %f %f"), argVal.getFloatAt(0),  argVal.getFloatAt(1), argVal.getFloatAt(2), argVal.getFloatAt(3) );
+                ss << argVal.getFloatAt(0) << " " << argVal.getFloatAt(1) << " " << argVal.getFloatAt(2) << " " << argVal.getFloatAt(3);
                 break;
             case COglArg::eFloat16:
                 type = "m44f";  // TBD: should share this string with COglMaterial
-                for(int i=0; i<16; i++)
-                    value += Format(_T("%f "), argVal.getFloatAt(i));
+                for(int i=0; i<16; i++) {
+                    ss << argVal.getFloatAt(i);
+                    if (i != 15)
+                        ss << " ";
+                }
                 break;
             default: assert(0);
             }
+            value = ss.str();
         }
     }
 
     return found;
 }
 
-bool COglShader::getVariablei( LPCTSTR name, int& value )
+bool COglShader::getVariablei( const std::string& name, int& value )
 {
-    ArgMapType::iterator arg = argumentMap.find( name );
-    if( arg != argumentMap.end() )
+    ArgMapType::iterator arg = m_ArgumentMap.find( name );
+    if( arg != m_ArgumentMap.end() )
     {
         COglArg& argVal = *arg->second;
         assert( argVal.getType() == COglArg::eInt );
@@ -1276,10 +1150,10 @@ bool COglShader::getVariablei( LPCTSTR name, int& value )
     return false;
 }
 
-bool COglShader::getVariable( LPCTSTR name, float& value )
+bool COglShader::getVariable( const std::string& name, float& value )
 {
-    ArgMapType::iterator arg = argumentMap.find( name );
-    if( arg != argumentMap.end() )
+    ArgMapType::iterator arg = m_ArgumentMap.find( name );
+    if( arg != m_ArgumentMap.end() )
     {
         COglArg& argVal = *arg->second;
         assert( argVal.getType() == COglArg::eFloat );
@@ -1292,10 +1166,10 @@ bool COglShader::getVariable( LPCTSTR name, float& value )
     return false;
 }
 
-bool COglShader::getVariable( LPCTSTR name, col4f& value )
+bool COglShader::getVariable( const std::string& name, col4f& value )
 {
-    ArgMapType::iterator arg = argumentMap.find( name );
-    if( arg != argumentMap.end() )
+    ArgMapType::iterator arg = m_ArgumentMap.find( name );
+    if( arg != m_ArgumentMap.end() )
     {
         COglArg& argVal = *arg->second;
         assert( argVal.getType() == COglArg::eFloat4 );
@@ -1310,10 +1184,10 @@ bool COglShader::getVariable( LPCTSTR name, col4f& value )
     return false;
 }
 
-bool COglShader::getVariable( LPCTSTR name, m44f&  value )
+bool COglShader::getVariable( const std::string& name, m44f&  value )
 {
-    ArgMapType::iterator arg = argumentMap.find( name );
-    if( arg != argumentMap.end() )
+    ArgMapType::iterator arg = m_ArgumentMap.find( name );
+    if( arg != m_ArgumentMap.end() )
     {
         COglArg& argVal = *arg->second;
         assert( argVal.getType() == COglArg::eFloat16 );
@@ -1327,10 +1201,10 @@ bool COglShader::getVariable( LPCTSTR name, m44f&  value )
     return false;
 }
 
-bool COglShader::getVariable( LPCTSTR name, p4f&   value )
+bool COglShader::getVariable( const std::string& name, p4f&   value )
 {
-    ArgMapType::iterator arg = argumentMap.find( name );
-    if( arg != argumentMap.end() )
+    ArgMapType::iterator arg = m_ArgumentMap.find( name );
+    if( arg != m_ArgumentMap.end() )
     {
         COglArg& argVal = *arg->second;
         assert( argVal.getType() == COglArg::eFloat4 );
@@ -1345,10 +1219,10 @@ bool COglShader::getVariable( LPCTSTR name, p4f&   value )
     return false;
 }
 
-bool COglShader::getVariable( LPCTSTR name, p3f&   value )
+bool COglShader::getVariable( const std::string& name, p3f&   value )
 {
-    ArgMapType::iterator arg = argumentMap.find( name );
-    if( arg != argumentMap.end() )
+    ArgMapType::iterator arg = m_ArgumentMap.find( name );
+    if( arg != m_ArgumentMap.end() )
     {
         COglArg& argVal = *arg->second;
         assert( argVal.getType() == COglArg::eFloat3 );
@@ -1363,10 +1237,10 @@ bool COglShader::getVariable( LPCTSTR name, p3f&   value )
     return false;
 }
 
-bool COglShader::getVariable( LPCTSTR name, p2f&   value )
+bool COglShader::getVariable( const std::string& name, p2f&   value )
 {
-    ArgMapType::iterator arg = argumentMap.find( name );
-    if( arg != argumentMap.end() )
+    ArgMapType::iterator arg = m_ArgumentMap.find( name );
+    if( arg != m_ArgumentMap.end() )
     {
         COglArg& argVal = *arg->second;
         assert( argVal.getType() == COglArg::eFloat2 );        
@@ -1388,36 +1262,16 @@ bool COglShader::unBind()
 
     glUseProgramObjectARB(0);   GL_ASSERT; // Back to Fixed Function OpenGL
 
+#if TEXTURE_SUPPORT
 	//reset all the states of all the texture units
-	if( textureMap.size() )
+	if( m_TextureMap.size() )
 	{
 		assert( m_TextureUnitStates );
 		delete m_TextureUnitStates; //the destructor fires the state cleanup code
 		m_TextureUnitStates = 0;
 	}
+#endif
 
     m_Bound = false;   
     return true;
-}
-
-#define RET_LOG_SYS_ERROR(a,b) if(!a) { m_Log = GetLastErrorString( b ); m_Error = true;  return 0; }
-
-char* COglShader::loadShaderFromResource( int shaderID )
-{
-    LPCTSTR resourceName = _T("Shader");
-    LPCTSTR functionName = _T("loadShaderFromResource");
-
-    int err=0;
-    HINSTANCE inst = LoadLibrary( getResourceLibrary() );
-
-    HRSRC vertResInfo = FindResource( inst, Format(_T("#%d"), shaderID), resourceName );
-    RET_LOG_SYS_ERROR( vertResInfo, functionName );
-
-    HGLOBAL vertRes = LoadResource( inst, vertResInfo );
-    RET_LOG_SYS_ERROR( vertRes, functionName );
-
-    char* res = (char*) LockResource( vertRes );
-    RET_LOG_SYS_ERROR( res, functionName );
-
-    return res;
 }
