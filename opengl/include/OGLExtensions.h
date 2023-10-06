@@ -4,6 +4,7 @@
 #include <Windows.h>
 #include <GL/gl.h>
 #include <glext.h>
+#include <wglext.h>
 #endif
 
 #define HAS_SHADER_SUBROUTINES 1
@@ -23,7 +24,7 @@ public:
     static PFNGLGETBUFFERPARAMETERIVPROC glGetBufferParameteriv;
     static PFNGLGETBUFFERSUBDATAPROC glGetBufferSubData;
 
-    //    static PFNWGLGETEXTENSIONSSTRINGARBPROC wglGetExtensionsStringARB;
+    static PFNWGLGETEXTENSIONSSTRINGARBPROC wglGetExtensionsStringARB;
     static PFNGLGETSTRINGIPROC			    glGetStringi;
     static PFNGLGETSHADERIVPROC				glGetShaderiv;
     static PFNGLGETINFOLOGARBPROC           glGetInfoLogARB;
