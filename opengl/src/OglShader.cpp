@@ -9,17 +9,57 @@
 #endif
 
 //#include <Kernel/OpenGLib/glu.h> // LIMBO not picking up from the precompiled header in 64 bit
-#include <OglShader.h>
 #include <vector>
 #include <map>
 #include <set>
 #include <string>
+#include <fstream>
 #include <filesystem>
+#include <iostream>
+#include <OglShader.h>
 
 using namespace std;
 
 #define	RETURN_IF_NOT_FIRST_TIME(a) static bool first=true; if(!first) return a; first = false;
+
+void COglShaderBase::dumpGlErrors()
+{
+    GLenum err;
+    while ((err = glGetError()) && err != GL_NO_ERROR) {
+        switch (err) {
+        case GL_INVALID_ENUM:
+            cout << "glErr: GL_INVALID_ENUM\n"; break;
+        case GL_INVALID_VALUE:
+            cout << "glErr: GL_INVALID_VALUE\n"; break;
+        case GL_INVALID_OPERATION:
+            cout << "glErr: GL_INVALID_OPERATION\n"; break;
+        case GL_STACK_OVERFLOW:
+            cout << "glErr: GL_STACK_OVERFLOW\n"; break;
+        case GL_STACK_UNDERFLOW:
+            cout << "glErr: GL_STACK_UNDERFLOW\n"; break;
+        case GL_OUT_OF_MEMORY:
+            cout << "glErr: GL_OUT_OF_MEMORY\n"; break;
+        case GL_INVALID_FRAMEBUFFER_OPERATION:
+            cout << "glErr: GL_INVALID_FRAMEBUFFER_OPERATION\n"; break;
+        case GL_CONTEXT_LOST:
+            cout << "glErr: GL_CONTEXT_LOST\n"; break;
+        case GL_TABLE_TOO_LARGE:
+            cout << "glErr: GL_TABLE_TOO_LARGE\n"; break;
+        default:
+            cout << "glErr: " << err << "\n"; break;
+        }
+
+        assert(!"glError");
+    }
+}
+
+#ifdef _DEBUG
+#define GL_ASSERT COglShaderBase::dumpGlErrors();
+#else
 #define GL_ASSERT
+#endif // _DEBUG
+
+
 #define HDTIMELOG(X)
 //#define CHECK_GLSL_STATE
 #define GL_IGNORE_ERROR
@@ -68,7 +108,7 @@ COglArg::COglArg(float val)
     fval = val;
 }
 
-COglArg::COglArg(float* val, int numFloats)
+COglArg::COglArg(const float* val, int numFloats)
 {
     switch(numFloats)
     {
@@ -101,15 +141,15 @@ void  COglArg::set(float val)
     fval = val;
 }
 
-void  COglArg::set(float* val)
+void  COglArg::set(const float* val)
 {
     switch(type)
     {
     case eFloat :  fval = *val;                            break;
-    case eFloat2:  memcpy( fvalptr, val, sizeof(float)*2) ; break;
-    case eFloat3:  memcpy( fvalptr, val, sizeof(float)*3) ; break;
-    case eFloat4:  memcpy( fvalptr, val, sizeof(float)*4) ; break;
-    case eFloat16: memcpy( fvalptr, val, sizeof(float)*16); break;
+    case eFloat2:  memcpy( fvalArr, val, sizeof(float)*2) ; break;
+    case eFloat3:  memcpy( fvalArr, val, sizeof(float)*3) ; break;
+    case eFloat4:  memcpy( fvalArr, val, sizeof(float)*4) ; break;
+    case eFloat16: memcpy( fvalArr, val, sizeof(float)*16); break;
     default: assert(0);
     }
 }
@@ -142,149 +182,148 @@ float* COglArg::getFloatPtr()
         return 0;
     }
 
-    return fvalptr;
+    return fvalArr;
 }
 
 float COglArg::getFloatAt(int idx)
 {
     switch( type )
     {
-    case eFloat2:  if( idx >= 0 && idx < 2 ) return fvalptr[idx]; else { assert(!"range error"); }  break;
-    case eFloat3:  if( idx >= 0 && idx < 3 ) return fvalptr[idx]; else { assert(!"range error"); }  break;
-    case eFloat4:  if( idx >= 0 && idx < 4 ) return fvalptr[idx]; else { assert(!"range error"); }  break;
-    case eFloat16: if( idx >= 0 && idx < 16) return fvalptr[idx]; else { assert(!"range error"); }  break;
+    case eFloat2:  if( idx >= 0 && idx < 2 ) return fvalArr[idx]; else { assert(!"range error"); }  break;
+    case eFloat3:  if( idx >= 0 && idx < 3 ) return fvalArr[idx]; else { assert(!"range error"); }  break;
+    case eFloat4:  if( idx >= 0 && idx < 4 ) return fvalArr[idx]; else { assert(!"range error"); }  break;
+    case eFloat16: if( idx >= 0 && idx < 16) return fvalArr[idx]; else { assert(!"range error"); }  break;
     default: assert(0); 
     } 
 
     return 0.0f;
 }
 
-void COglArg::allocFloat(float* val, int numFloats)
+void COglArg::allocFloat(const float* val, int numFloats)
 {
-    fvalptr = new float[numFloats];
-    memcpy( fvalptr, val, sizeof(float)*numFloats);
+    assert(numFloats <= 4);
+    memcpy( fvalArr, val, sizeof(float)*numFloats);
 }
 
 COglArg::~COglArg()
 {
-    if( type >= eFloat2 || type <= eFloat16 )
-        delete [] fvalptr;
 }
 
 
-bool COglShader::mEnabled = true; //user override of global shader usage
+bool COglShaderBase::mEnabled = true; //user override of global shader usage
 
-COglShader::COglShader()
-    : m_Error(false)
-	, m_TextureUnitStates(0)
-    , m_DefaultsLoaded(false)
-    , m_Bound(false)
-    , m_GeomShaderInType(GL_TRIANGLES)
-    , m_GeomShaderOutType(GL_TRIANGLES)
+COglShaderBase::COglShaderBase()
+    : COglExtensions()
+    , m_error(false)
+	, m_textureUnitStates(0)
+    , m_defaultsLoaded(false)
+    , m_bound(false)
+    , m_geomShaderInType(GL_TRIANGLES)
+    , m_geomShaderOutType(GL_TRIANGLES)
 {
 }
 
-COglShader::~COglShader()
+COglShaderBase::~COglShaderBase()
 {
-    HLOG(_T("~COglShader()"));
+    HLOG(_T("~COglShaderBase()"));
 #if TEXTURE_SUPPORT
     clearTextures();
 #endif
 }
 
-bool COglShader::isEnabled()
+bool COglShaderBase::isEnabled()
 {
     return mEnabled;
 }
 
-void COglShader::enable(bool set)
+void COglShaderBase::enable(bool set)
 {
     mEnabled = set;
 }
 
-void COglShader::setVariablei( const std::string& name, int  value )
+void COglShaderBase::setVariablei( const string& name, int  value )
 {
-    if( !m_DefaultsLoaded ) 
+    if( !m_defaultsLoaded ) 
         loadDefaultVariables();
 
-    auto it = m_ArgumentMap.find( name );
-    if( it == m_ArgumentMap.end() )
-        m_ArgumentMap.insert(make_pair(name, make_shared<COglArg>(value)));
+    auto it = m_argumentMap.find( name );
+    if( it == m_argumentMap.end() )
+        m_argumentMap.insert(make_pair(name, make_shared<COglArg>(value)));
     else
         it->second->set(value);
 
-    if(m_Bound)
+    if(m_bound)
     {
 		int progId = programID();
 		int dbg = glGetUniformLocationARB(progId, "DepthPeel");
         int argLocation = glGetUniformLocationARB( progId, name.c_str()); GL_ASSERT;
         if( argLocation >= 0 )
         {
-            glUniform1iARB( argLocation, value ); GL_ASSERT;
+            glUniform1i( argLocation, value ); GL_ASSERT;
         }
     }
 }
 
-void COglShader::setVariable( const std::string& name, float  value )
+void COglShaderBase::setVariable( const string& name, float  value )
 {
-    if( !m_DefaultsLoaded ) 
+    if( !m_defaultsLoaded ) 
         loadDefaultVariables();
 
     ArgMapType::iterator it;
 
-    it = m_ArgumentMap.find( name );
-    if( it == m_ArgumentMap.end() )
-        m_ArgumentMap.insert( ArgMapType::value_type( name, new COglArg( value ) ) );
+    it = m_argumentMap.find( name );
+    if( it == m_argumentMap.end() )
+        m_argumentMap.insert( ArgMapType::value_type( name, new COglArg( value ) ) );
     else
         it->second->set(value);
 
-    if(m_Bound)
+    if(m_bound)
     {
         int argLocation = glGetUniformLocationARB( programID(), name.c_str()); GL_ASSERT;
         if( argLocation >= 0 )
         {
-            glUniform1fARB( argLocation, value ); GL_ASSERT;
+            glUniform1f( argLocation, value ); GL_ASSERT;
         }
     }
 }
 
-void COglShader::setVariable( const std::string& name, col4f& value )
+void COglShaderBase::setVariable( const string& name, const col4f& value )
 {
-    if( !m_DefaultsLoaded ) 
+    if( !m_defaultsLoaded ) 
         loadDefaultVariables();
 
     ArgMapType::iterator it;
 
-    it = m_ArgumentMap.find( name );
-    if( it == m_ArgumentMap.end() )
-        m_ArgumentMap.insert( ArgMapType::value_type( name, new COglArg( (float*)value, 4 ) ) );
+    it = m_argumentMap.find( name );
+    if( it == m_argumentMap.end() )
+        m_argumentMap.insert( ArgMapType::value_type( name, new COglArg( value, 4 ) ) );
     else
         it->second->set(value);
 
-    if(m_Bound)
+    if(m_bound)
     {
         int argLocation = glGetUniformLocationARB( programID(), name.c_str()); GL_ASSERT;
         if( argLocation >= 0 )
         {
-            glUniform4fARB( argLocation, value.r, value.g, value.b, value.o );  GL_ASSERT;
+            glUniform4fv(argLocation, 1, value); GL_ASSERT;
         }
     }
 }
 
-void COglShader::setVariable( const std::string& name, m44f&  value )
+void COglShaderBase::setVariable( const string& name, const m44f&  value )
 {
-    if( !m_DefaultsLoaded ) 
+    if( !m_defaultsLoaded ) 
         loadDefaultVariables();
 
     ArgMapType::iterator it;
 
-    it = m_ArgumentMap.find( name );
-    if( it == m_ArgumentMap.end() )
-        m_ArgumentMap.insert( ArgMapType::value_type( name, new COglArg( value.transposef(), 16 ) ) );
+    it = m_argumentMap.find( name );
+    if( it == m_argumentMap.end() )
+        m_argumentMap.insert( ArgMapType::value_type( name, new COglArg( value.transposef(), 16 ) ) );
     else
         it->second->set( value.transposef() );
 
-    if(m_Bound)
+    if(m_bound)
     {
         int argLocation = glGetUniformLocationARB( programID(), name.c_str()); GL_ASSERT;
         if( argLocation >= 0 )
@@ -295,77 +334,77 @@ void COglShader::setVariable( const std::string& name, m44f&  value )
 
 }
 
-void COglShader::setVariable( const std::string& name, p4f&   value )
+void COglShaderBase::setVariable( const string& name, const p4f&   value )
 {
-    if( !m_DefaultsLoaded ) 
+    if( !m_defaultsLoaded ) 
         loadDefaultVariables();
 
     ArgMapType::iterator it;
 
-    it = m_ArgumentMap.find( name );
-    if( it == m_ArgumentMap.end() )
-        m_ArgumentMap.insert( ArgMapType::value_type( name, new COglArg( (float*)value, 4 ) ) );
+    it = m_argumentMap.find( name );
+    if( it == m_argumentMap.end() )
+        m_argumentMap.insert( ArgMapType::value_type( name, new COglArg( value, 4 ) ) );
     else
         it->second->set(value);
 
-    if(m_Bound)
+    if(m_bound)
     {
         int argLocation = glGetUniformLocationARB( programID(), name.c_str()); GL_ASSERT;
         if( argLocation >= 0 )
         {
-            glUniform4fARB( argLocation, value.x, value.y, value.z, value.w ); GL_ASSERT;
+            glUniform4fv(argLocation, 1, value); GL_ASSERT;
         }
     }
 }
 
-void COglShader::setVariable( const std::string& name, p3f&   value )
+void COglShaderBase::setVariable( const string& name, const p3f&   value )
 {
-    if( !m_DefaultsLoaded ) 
+    if( !m_defaultsLoaded ) 
         loadDefaultVariables();
 
     ArgMapType::iterator it;
 
-    it = m_ArgumentMap.find( name );
-    if( it == m_ArgumentMap.end() )
-        m_ArgumentMap.insert( ArgMapType::value_type( name, new COglArg( (float*)value, 3 ) ) );
+    it = m_argumentMap.find( name );
+    if( it == m_argumentMap.end() )
+        m_argumentMap.insert( ArgMapType::value_type( name, new COglArg( value, 3 ) ) );
     else
         it->second->set(value);
 
-    if(m_Bound)
+    if(m_bound)
     {
         int argLocation = glGetUniformLocationARB( programID(), name.c_str()); GL_ASSERT;
         if( argLocation >= 0 )
         {
-            glUniform3fARB( argLocation, value.x, value.y, value.z );  GL_ASSERT;
+            glUniform3fv(argLocation, 1, (const float*)value); GL_ASSERT;
         }
     }
 }
 
-void COglShader::setVariable( const std::string& name, p2f&   value )
+void COglShaderBase::setVariable( const string& name, const p2f& value )
 {
-    if( !m_DefaultsLoaded ) 
+    if( !m_defaultsLoaded ) 
         loadDefaultVariables();
 
     ArgMapType::iterator it;
 
-    it = m_ArgumentMap.find( name );
-    if( it == m_ArgumentMap.end() )
-        m_ArgumentMap.insert( ArgMapType::value_type( name, new COglArg( (float*)value, 2 ) ) );
+    it = m_argumentMap.find( name );
+    if( it == m_argumentMap.end() )
+        m_argumentMap.insert( ArgMapType::value_type( name, new COglArg( value, 2 ) ) );
     else
         it->second->set(value);
 
-    if(m_Bound)
+    if(m_bound)
     {
         int argLocation = glGetUniformLocationARB( programID(), name.c_str()); GL_ASSERT;
         if( argLocation >= 0 )
         {
-            glUniform2fARB( argLocation, value.x, value.y );  GL_ASSERT;
+            glUniform2fv(argLocation, 1, value); GL_ASSERT;
         }
     }
 }
 
 #if HAS_SHADER_SUBROUTINES
-void COglShader::setFragSubRoutine(const char* name)
+void COglShaderBase::setFragSubRoutine(const char* name)
 {
 	GLuint subIdx = glGetSubroutineIndex(programID(), GL_FRAGMENT_SHADER, name);
 	if (subIdx >= 0) {
@@ -373,7 +412,7 @@ void COglShader::setFragSubRoutine(const char* name)
 	}
 }
 
-void COglShader::setVertSubRoutine(const char* name)
+void COglShaderBase::setVertSubRoutine(const char* name)
 {
 	GLuint subIdx = glGetSubroutineIndex(programID(), GL_VERTEX_SHADER, name);
 	if (subIdx >= 0) {
@@ -382,16 +421,18 @@ void COglShader::setVertSubRoutine(const char* name)
 }
 #endif
 
-#if TEXTURE_SUPPORT
 void   clearTextures();
-void COglShader::clearTextures()
+void COglShaderBase::clearTextures()
 {
+#if TEXTURE_SUPPORT
     m_TextureMap.clear();
+#endif
 }
 
-bool COglShader::setTexture( const std::string& textureShaderName, const std::string& filename, bool flipImage )
+bool COglShaderBase::setTexture( const string& textureShaderName, const string& filename, bool flipImage )
 {
-    HLOG(Format(_T("COglShader::setTexture %s %s"),textureShaderName,filename));
+#if TEXTURE_SUPPORT
+    HLOG(Format(_T("COglShaderBase::setTexture %s %s"),textureShaderName,filename));
 
     auto iter = m_TextureMap.find( textureShaderName );
     if(iter != m_TextureMap.end() )
@@ -436,20 +477,25 @@ bool COglShader::setTexture( const std::string& textureShaderName, const std::st
 
     m_TextureMap.insert( TextureMapType::value_type( textureShaderName, img ) );
 #endif
+#endif
     return true;
 }
 
-bool COglShader::hasTexture ( const std::string& textureShaderName)
+bool COglShaderBase::hasTexture ( const string& textureShaderName) const
 {
+#if TEXTURE_SUPPORT
     TextureMapType::iterator target = m_TextureMap.find( textureShaderName );
     return target != m_TextureMap.end();
+#endif
+    return false;
 }
 
-bool COglShader::setTexture ( const std::string& textureShaderName, COglTexture* texture, bool takeOwnerShip )
+bool COglShaderBase::setTexture ( const string& textureShaderName, COglTexture* texture, bool takeOwnerShip )
 {
-    // HLOG(Format(_T("COglShader::setTexture %s %s"),textureShaderName, takeOwnerShip ? _T("shader will delete") : _T("shader will NOT delete")));
+#if TEXTURE_SUPPORT
+    // HLOG(Format(_T("COglShaderBase::setTexture %s %s"),textureShaderName, takeOwnerShip ? _T("shader will delete") : _T("shader will NOT delete")));
 
-    if( !m_DefaultsLoaded ) 
+    if( !m_defaultsLoaded ) 
         loadDefaultVariables();
 
     if( !texture )
@@ -493,11 +539,15 @@ bool COglShader::setTexture ( const std::string& textureShaderName, COglTexture*
     }
 
     return true;
+#else
+    return false;
+#endif
 }
 
-COglTexture* COglShader::getTexture( const std::string& textureShaderName )
+COglTexture* COglShaderBase::getTexture( const string& textureShaderName )
 {
-    if( !m_DefaultsLoaded ) 
+#if TEXTURE_SUPPORT
+    if( !m_defaultsLoaded )
         loadDefaultVariables();
 
     TextureMapType::iterator target = m_TextureMap.find( textureShaderName );
@@ -505,10 +555,9 @@ COglTexture* COglShader::getTexture( const std::string& textureShaderName )
 
     if( target != m_TextureMap.end() )
         return target->second;     
-
+#endif
     return 0;
 }
-#endif
 
 #define GET_EXT_POINTER(name, type) name = (type)wglGetProcAddress(#name)
 
@@ -523,13 +572,13 @@ namespace
 
             glGetIntegerv(GL_NUM_EXTENSIONS, &numExt);
             for (GLint i = 0; i < numExt; i++) {
-                const GLubyte* pName = COglShader::glGetStringi(GL_EXTENSIONS, i);
+                const GLubyte* pName = COglShaderBase::glGetStringi(GL_EXTENSIONS, i);
             }
         }
     }
 }
 
-bool COglShader::hasShaderError(int obj)
+bool COglShaderBase::hasShaderError(int obj) const
 {
 #ifdef GLSL_VERBOSE
     int infologLength = 0;
@@ -546,14 +595,14 @@ bool COglShader::hasShaderError(int obj)
 		string wErr = string(err);
 
 //		cout << err << endl;
-		HLOG( Format( _T("compiling shader \"%s\":\n%s\n\n"),(const std::string&)m_Name, wErr));
+		HLOG( Format( _T("compiling shader \"%s\":\n%s\n\n"),(const string&)m_Name, wErr));
 		delete [] err;
 	}
 #endif
 	return false;
 }
 
-bool COglShader::hasProgramError(int obj)
+bool COglShaderBase::hasProgramError(int obj) const
 {
 #ifdef GLSL_VERBOSE
     int infologLength = 0;	
@@ -567,7 +616,7 @@ bool COglShader::hasProgramError(int obj)
 		err[charsWritten] = '\0';
 
 		string wErr = string(err);
-		HLOG( Format( _T("linking shader \"%s\":\n%s"),(const std::string&)m_Name, wErr) );
+		HLOG( Format( _T("linking shader \"%s\":\n%s"),(const string&)m_Name, wErr) );
 
 		delete [] err;
 	}
@@ -575,7 +624,7 @@ bool COglShader::hasProgramError(int obj)
 	return false;
 }
 
-string COglShader::getDataDir()
+string COglShaderBase::getDataDir()
 {
 #ifdef OPENGLIB_EXPORTS
     return getGUIWrapper()->getExeDirectory().getBuffer();
@@ -622,7 +671,7 @@ static char* getVariableName(char* str)
     return name;
 }
 
-static bool doesFileExist( const std::string& pathFile )
+static bool doesFileExist( const string& pathFile )
 {
 	if (pathFile.empty())
 		return false;
@@ -632,9 +681,9 @@ static bool doesFileExist( const std::string& pathFile )
 	return ok;
 }
 
-static string getCheckedImagePath(const std::string& str)
+static string getCheckedImagePath(const string& str)
 {
-    string fname = COglShader::getDataDir();
+    string fname = COglShaderBase::getDataDir();
 
     if( !fname.empty() )
     {
@@ -649,17 +698,19 @@ static string getCheckedImagePath(const std::string& str)
     return fname;
 }
 
-void COglShader::loadDefaultVariables()
+void COglShaderBase::loadDefaultVariables()
 {
-    m_DefaultsLoaded = true; 
-
+    static bool firstCall = true;
+    if (!firstCall)
+        return;
+    firstCall = false;
     // LIMBO need to add vertex shader parsing? 
     // LIMBO Do we need more info in the header?
     // LIMBO Should set up a static texture cache for default textures
     // so we only have one default instance of each texture on the card
     for(int i=0; i<3; i++)
     {
-        char* orgSource = 0;
+        const char* orgSource = 0;
         
         switch(i)
         {
@@ -687,7 +738,9 @@ void COglShader::loadDefaultVariables()
         {
             // check for uniform variable declaration containing the STI //* comment tag
 			bool stiDefaultVariable = strstr( source, "//*") ? true : false;
-            if( !strncmp( source, "uniform", 7 ) )
+            int inIdx = strncmp(source, "in", 2);
+            int uniformIdx = strncmp(source, "uniform", 7);
+            if( (uniformIdx != -1) || (inIdx != -1))
             {
                 char* tname  = 0;
 				char* stiArg = 0;
@@ -702,66 +755,81 @@ void COglShader::loadDefaultVariables()
 						stiArg++;
 				}
 
-                if( stiDefaultVariable && (tname = strstr( source, "float" )) )
+                if (tname = strstr( source, "float" ))
                 {
                     vname = getVariableName( tname + 5 );
-                    setVariable( vname, (float)atof( stiArg ));
+                    if (stiDefaultVariable)
+                        setVariable( vname, (float)atof( stiArg ));
+                    else
+                        setVariable(vname, 0);
                 }
-                else if( stiDefaultVariable && (tname = strstr( source, "vec2" )) )
+                else if (tname = strstr( source, "vec2" ))
                 {
                     vname = getVariableName( tname + 4 );
                     p2f val;
-                    int num = sscanf_s( stiArg, "%f %f", &val.x, &val.y ); 
-                    assert(num == 2 && "missing shader defaults");
+                    if (stiDefaultVariable) {
+                        int num = sscanf_s(stiArg, "%f %f", &val.x, &val.y);
+                        assert(num == 2 && "missing shader defaults");
 
-                    setVariable( vname, val);
+                    }
+                    setVariable(vname, val);
                 }
-                else if( stiDefaultVariable && (tname = strstr( source, "vec3" )) )
+                else if (tname = strstr( source, "vec3" ))
                 {
                     vname = getVariableName( tname + 4 );
                     p3f val;
-                    int num = sscanf_s( stiArg, "%f %f %f", &val.x, &val.y, &val.z );
-                    assert(num == 3 && "missing shader defaults");
-
+                    if (stiDefaultVariable) {
+                        int num = sscanf_s(stiArg, "%f %f %f", &val.x, &val.y, &val.z);
+                        assert(num == 3 && "missing shader defaults");
+                    }
                     setVariable( vname, val);
                 }
-                else if( stiDefaultVariable && (tname = strstr( source, "vec4" )) )
+                else if (tname = strstr( source, "vec4" ))
                 {
                     vname = getVariableName( tname + 4 );
                     col4f col;
-                    int num = sscanf_s( stiArg, "%f %f %f %f", &col.r, &col.g, &col.b, &col.o );
-                    assert(num == 4 && "missing shader defaults");
-
+                    if (stiDefaultVariable) {
+                        int num = sscanf_s(stiArg, "%f %f %f %f", &col.r, &col.g, &col.b, &col.o);
+                        assert(num == 4 && "missing shader defaults");
+                    }
                     setVariable( vname, col);
                 }
-#if TEXTURE_SUPPORT
                 else if( tname = strstr( source, "sampler2DRect" ) )
                 {
                     vname = getVariableName( tname + 14 );
 					if( !stiArg )
 					{
-						setTexture( string(vname), 0 );
+                        COglTexture* pDummy = nullptr;
+						setTexture( vname, pDummy, false);
 					}
                     else if( strstr( stiArg, "GraphicsRGBABuffer") )
                     {
+#if TEXTURE_SUPPORT
                         setTexture( vname, new COglGraphicsColorBuffer, true );
+#endif
                     }
                     else if( strstr( stiArg, "GraphicsDepthBuffer") )
                     {
+#if TEXTURE_SUPPORT
                         setTexture( vname, new COglGraphicsDepthBuffer(), true );
+#endif
                     }
                     else if( strstr( stiArg, "SystemRGBABuffer") )
                     {
+#if TEXTURE_SUPPORT
                         setTexture( vname, new COglSystemImageBuffer(GL_BGRA_EXT), true );
+#endif
                     }
                     else if( strstr( stiArg, "SystemAlphaBuffer") )
                     {
+#if TEXTURE_SUPPORT
                         setTexture( vname, new COglSystemImageBuffer(GL_ALPHA), true );
+#endif
                     }
                     else
                     {
                         string path = getCheckedImagePath( stiArg );
-                        if( path.GetLength() )
+                        if( path.length() )
                             setTexture( string(vname), path );
 						else
 							setTexture( string(vname), 0 ); // need to make sure the texture is present and gets a slot for ATI
@@ -780,7 +848,7 @@ void COglShader::loadDefaultVariables()
 					else
 					{
 						string path = getCheckedImagePath( stiArg );
-						if( path.GetLength() )
+						if( path.length() )
 							setTexture( string(vname), path );
 						else
 							setTexture( string(vname), 0 ); // need to make sure the texture is present and gets a slot for ATI
@@ -808,13 +876,12 @@ void COglShader::loadDefaultVariables()
 #else
 						path = getCheckedImagePath( stiArg );
 #endif
-						if( path.GetLength() )
+						if( path.length() )
 							setTexture( string(vname), path );
 						else
 							setTexture( string(vname), 0 ); // need to make sure the texture is present and gets a slot for ATI
 					}
 				}
-#endif
                 else if( stiDefaultVariable )
                 {
                     assert(!"unknown type");
@@ -825,20 +892,22 @@ void COglShader::loadDefaultVariables()
 
         delete [] sourceCpy;
     }
+    m_defaultsLoaded = true;
+    firstCall = false;
 }
 
-#define LOG_AND_RETURN(a,b) if(a) { m_Error = true; m_Log = b; return false;}
+#define LOG_AND_RETURN(a,b) if(a) { m_error = true; m_log = b; return false;}
 
-bool COglShader::load()
+bool COglShaderBase::load()
 {
-    HDTIMELOG("Entering COglShader::load()");
+    HDTIMELOG("Entering COglShaderBase::load()");
     CHECK_GLSL_STATE;
 
     // Get Vertex And Fragment Shader Sources
-    char * isource = getShaderIncludeSource();
-    char * fsource = getFragmentShaderSource();
-    char * vsource = getVertexShaderSource();
-    char * gsource = getGeometryShaderSource();
+    const char * isource = getShaderIncludeSource();
+    const char * fsource = getFragmentShaderSource();
+    const char * vsource = getVertexShaderSource();
+    const char * gsource = getGeometryShaderSource();
 
     // insert the 'shader include source' in the fragment source
     // we may want to extend this in the future
@@ -860,107 +929,107 @@ bool COglShader::load()
 
     LOG_AND_RETURN( !source || !vsource, "Failed to access shader code" )
 
-    if( !m_DefaultsLoaded ) 
-        loadDefaultVariables();
-
     // Create Shader And Program Objects
-    int& progID = programID();
-    int& vertID = vertexID (); 
-    int& fragID = fragmentID();
-    int& geomID = geometryID();
 
-    progID  = glCreateProgramObjectARB();
-    vertID  = glCreateShaderObjectARB(GL_VERTEX_SHADER_ARB);
-    fragID  = glCreateShaderObjectARB(GL_FRAGMENT_SHADER_ARB);
-    geomID  = gsource ? glCreateShaderObjectARB(GL_GEOMETRY_SHADER_EXT) : 0;
+    _programId = glCreateProgramObjectARB(); GL_ASSERT;
+    _vertexId  = glCreateShaderObjectARB(GL_VERTEX_SHADER_ARB); GL_ASSERT;
+    _fragmentId = glCreateShaderObjectARB(GL_FRAGMENT_SHADER_ARB); GL_ASSERT;
+    _geometryId = gsource ? glCreateShaderObjectARB(GL_GEOMETRY_SHADER_EXT) : 0; GL_ASSERT;
 
-    LOG_AND_RETURN( !progID || !vertID || !fragID, "Shader compilation failed" )
+    LOG_AND_RETURN( !_programId || !_vertexId || !_fragmentId, "Shader compilation failed" )
 
-    if(gsource && !geomID)
-        LOG_AND_RETURN( gsource && !geomID , "Your card and or driver does not support geometry shaders")
+    if(gsource && !_geometryId)
+        LOG_AND_RETURN( gsource && !_geometryId, "Your card and or driver does not support geometry shaders")
 
     // Load Shader Sources
-    glShaderSourceARB( vertID, 1, (const GLcharARB**)&vsource, NULL); GL_ASSERT;
-    glShaderSourceARB( fragID, 1, (const GLcharARB**) &source, NULL); GL_ASSERT;
+    glShaderSourceARB(_vertexId, 1, (const GLcharARB**)&vsource, NULL); GL_ASSERT;
+    glShaderSourceARB(_fragmentId, 1, (const GLcharARB**) &source, NULL); GL_ASSERT;
 
-    if( gsource && geomID )
-        glShaderSourceARB( geomID, 1, (const GLcharARB**)&gsource, NULL); GL_ASSERT;
+    if (gsource && _geometryId) {
+        glShaderSourceARB(_geometryId, 1, (const GLcharARB**)&gsource, NULL); GL_ASSERT;
+    }
 
     // Compile The Shaders
-    glCompileShaderARB( vertID); 
-	hasShaderError( vertID );
+    glCompileShaderARB(_vertexId); GL_ASSERT;
+	hasShaderError(_vertexId);
 
-    glCompileShaderARB( fragID );   
-	hasShaderError( fragID );
+    glCompileShaderARB(_fragmentId); GL_ASSERT;
+	hasShaderError(_fragmentId);
 
-    if( gsource && geomID )
+    if( gsource && _geometryId)
 	{
-        glCompileShaderARB( geomID );
-		hasShaderError( geomID );
+        glCompileShaderARB(_geometryId); GL_ASSERT;
+		hasShaderError(_geometryId);
 	}
 
     // Attach The Shader Objects To The Program Object
-    glAttachObjectARB( progID, vertID );   GL_ASSERT;
-    glAttachObjectARB( progID, fragID );   GL_ASSERT;
+    glAttachObjectARB(_programId, _vertexId);   GL_ASSERT;
+    glAttachObjectARB(_programId, _fragmentId);   GL_ASSERT;
 
-    if( gsource && geomID && glProgramParameteriEXT )
+    if( gsource && _geometryId && glProgramParameteriEXT )
     {
-        glAttachObjectARB( progID, geomID ); GL_ASSERT;
+        glAttachObjectARB(_programId, _geometryId); GL_ASSERT;
 
-		glProgramParameteriEXT(progID, GL_GEOMETRY_INPUT_TYPE_EXT,  m_GeomShaderInType  );
-		glProgramParameteriEXT(progID, GL_GEOMETRY_OUTPUT_TYPE_EXT, m_GeomShaderOutType );
+		glProgramParameteriEXT(_programId, GL_GEOMETRY_INPUT_TYPE_EXT,  m_geomShaderInType  ); GL_ASSERT;
+		glProgramParameteriEXT(_programId, GL_GEOMETRY_OUTPUT_TYPE_EXT, m_geomShaderOutType ); GL_ASSERT;
 
 		int temp;
-		glGetIntegerv(GL_MAX_GEOMETRY_OUTPUT_VERTICES_EXT,&temp);
-		glProgramParameteriEXT(progID, GL_GEOMETRY_VERTICES_OUT_EXT,temp);
+		glGetIntegerv(GL_MAX_GEOMETRY_OUTPUT_VERTICES_EXT,&temp); GL_ASSERT;
+		glProgramParameteriEXT(_programId, GL_GEOMETRY_VERTICES_OUT_EXT,temp); GL_ASSERT;
     }
 
     // Link The Program Object
-    glLinkProgramARB( progID );  
+    glLinkProgramARB(_programId); GL_ASSERT
     delete [] source; // NB: living with the leak if we have an error condition
 
-	initUniform();
-    HDTIMELOG("Succesfully completed COglShader::load()");
+    bind();
+    if (!m_defaultsLoaded)
+        loadDefaultVariables();
+
+    initUniform();
+    unBind();
+
+    HDTIMELOG("Succesfully completed COglShaderBase::load()");
     return true;
 }
 
- void COglShader::setGeomShaderIOtype( int intype, int outtype)
+ void COglShaderBase::setGeomShaderIOtype( int intype, int outtype)
  {
-    m_GeomShaderInType = intype;
-    m_GeomShaderOutType = outtype;
+    m_geomShaderInType = intype;
+    m_geomShaderOutType = outtype;
  }
 
-bool COglShader::unLoad()
+bool COglShaderBase::unLoad()
 {
     CHECK_GLSL_STATE;
     return true;
 }
 
-bool COglShader::bind()
+bool COglShaderBase::bind()
 {
     GL_IGNORE_ERROR;    //ignore any rogue errors from other areas of the system
     CHECK_GLSL_STATE;
     
-    assert(!m_Bound); // logic error all shaders must be bound and unbound 
+    assert(!m_bound); // logic error all shaders must be bound and unbound 
 
-    int& progID = programID();
-    if( progID && !m_Error )
+    int progID = programID();
+    if( progID && !m_error )
     {
-        glUseProgramObjectARB( progID ); // Use The Program Object Instead Of Fixed Function OpenGL
+        glUseProgramObjectARB( progID ); GL_ASSERT; // Use The Program Object Instead Of Fixed Function OpenGL
         hasProgramError( progID );       // this can show additional errors...
     }
 
-    else if(m_Error)              // some error state, so stop trying to load or bind
-        glUseProgramObjectARB(0); // Fixed Function OpenGL
-   
-    else // must be first time, shader needs loading
+    else if (m_error) {             // some error state, so stop trying to load or bind
+        glUseProgramObjectARB(0); GL_ASSERT; // Fixed Function OpenGL
+
+    } else // must be first time, shader needs loading
     {
         if( !load() )
             return false;
    
         else
         {
-            glUseProgramObjectARB( progID ); // Use The Program Object Instead Of Fixed Function OpenGL
+            glUseProgramObjectARB( progID ); GL_ASSERT; // Use The Program Object Instead Of Fixed Function OpenGL
 
             if( hasProgramError( progID ) )
             {
@@ -976,8 +1045,8 @@ bool COglShader::bind()
     //bind all the textures now 
     if( m_TextureMap.size() )
     {
-        assert( !m_TextureUnitStates ); // texture states should have been destroyed at end of each render pass
-        m_TextureUnitStates = new ActiveTextureUnits;
+        assert( !m_textureUnitStates ); // texture states should have been destroyed at end of each render pass
+        m_textureUnitStates = new ActiveTextureUnits;
 
 		int texUnit = -1;
 
@@ -996,7 +1065,7 @@ bool COglShader::bind()
 			int type = texture ? texture->get_type() : GL_TEXTURE_2D;
 			int hwid = texture ? texture->m_hwID : 0;
 
-            m_TextureUnitStates->activateUnit( texUnit, type );               GL_ASSERT;
+            m_textureUnitStates->activateUnit( texUnit, type );               GL_ASSERT;
 
 			if( texture )
 			{
@@ -1015,7 +1084,7 @@ bool COglShader::bind()
 
             int samplerLocation = glGetUniformLocationARB( progID, Uni2Ansi(textureName));  GL_ASSERT;
             
-            HLOG(Format("Bound texture %s unit: %d loc: %d hwid: %d",(const std::string&)textureName, texUnit, samplerLocation, hwid ));
+            HLOG(Format("Bound texture %s unit: %d loc: %d hwid: %d",(const string&)textureName, texUnit, samplerLocation, hwid ));
 
             if( samplerLocation >= 0 )
             {
@@ -1026,9 +1095,9 @@ bool COglShader::bind()
 #endif
 
     //send all the arguments
-    if(m_ArgumentMap.size())
+    if(m_argumentMap.size())
     {
-        for( ArgMapType::iterator arg = m_ArgumentMap.begin(); arg != m_ArgumentMap.end(); arg++ )
+        for( ArgMapType::iterator arg = m_argumentMap.begin(); arg != m_argumentMap.end(); arg++ )
         {
             string argName =  arg->first;
             COglArg& argVal  = *arg->second;
@@ -1053,28 +1122,28 @@ bool COglShader::bind()
                         argval = Format(" %.1f %.1f %.1f %.1f",val[0],val[1],val[2],val[3]);break;
                     }
                 }
-                HLOG(Format("Binding argName:%s val:%s",(const std::string&)argName,(const std::string&)argval));
+                HLOG(Format("Binding argName:%s val:%s",(const string&)argName,(const string&)argval));
                 */
 
                 switch( argVal.getType() )
                 {
                 case COglArg::eInt: 
-                    glUniform1iARB( argLocation, argVal.getInt() );
+                    glUniform1i( argLocation, argVal.getInt() ); GL_ASSERT;
                     break;
                 case COglArg::eFloat:
-                    glUniform1fARB( argLocation, argVal.getFloat() ); 
+                    glUniform1f( argLocation, argVal.getFloat() );  GL_ASSERT;
                     break;
                 case COglArg::eFloat2: 
-                    glUniform2fARB( argLocation, argVal.getFloatAt(0),  argVal.getFloatAt(1)); 
+                    glUniform2fv(argLocation, 1, argVal.getFloatPtr()); GL_ASSERT;
                     break;
                 case COglArg::eFloat3:
-                    glUniform3fARB( argLocation, argVal.getFloatAt(0),  argVal.getFloatAt(1), argVal.getFloatAt(2)); 
+                    glUniform3fv(argLocation, 1, argVal.getFloatPtr()); GL_ASSERT;
                     break;
                 case COglArg::eFloat4:
-                    glUniform4fARB( argLocation, argVal.getFloatAt(0),  argVal.getFloatAt(1), argVal.getFloatAt(2), argVal.getFloatAt(3)); 
+                    glUniform4fv(argLocation, 1, argVal.getFloatPtr()); GL_ASSERT;
                     break;
                 case COglArg::eFloat16:
-                    glUniformMatrix4fv( argLocation, 1, false, argVal.getFloatPtr());   
+                    glUniformMatrix4fv( argLocation, 1, false, argVal.getFloatPtr());    GL_ASSERT;
                     break;
                 default: assert(0);
                 }
@@ -1082,19 +1151,19 @@ bool COglShader::bind()
         }
     }
 
-    m_Bound = true;
-    return m_Error;
+    m_bound = true;
+    return m_error;
 }
 
-bool COglShader::getVariable( const std::string& name, string& type, string& value )
+bool COglShaderBase::getVariable( const string& name, string& type, string& value ) const
 {
     bool found = false;
 
-    if(m_ArgumentMap.size())
+    if(m_argumentMap.size())
     {
-        ArgMapType::iterator arg = m_ArgumentMap.find( name );
+        auto arg = m_argumentMap.find( name );
         stringstream ss;
-        if( arg != m_ArgumentMap.end() )
+        if( arg != m_argumentMap.end() )
         {
             found = true;
             COglArg& argVal = *arg->second;
@@ -1134,10 +1203,10 @@ bool COglShader::getVariable( const std::string& name, string& type, string& val
     return found;
 }
 
-bool COglShader::getVariablei( const std::string& name, int& value )
+bool COglShaderBase::getVariablei( const string& name, int& value ) const
 {
-    ArgMapType::iterator arg = m_ArgumentMap.find( name );
-    if( arg != m_ArgumentMap.end() )
+    auto arg = m_argumentMap.find( name );
+    if( arg != m_argumentMap.end() )
     {
         COglArg& argVal = *arg->second;
         assert( argVal.getType() == COglArg::eInt );
@@ -1150,10 +1219,10 @@ bool COglShader::getVariablei( const std::string& name, int& value )
     return false;
 }
 
-bool COglShader::getVariable( const std::string& name, float& value )
+bool COglShaderBase::getVariable( const string& name, float& value ) const
 {
-    ArgMapType::iterator arg = m_ArgumentMap.find( name );
-    if( arg != m_ArgumentMap.end() )
+    auto arg = m_argumentMap.find( name );
+    if( arg != m_argumentMap.end() )
     {
         COglArg& argVal = *arg->second;
         assert( argVal.getType() == COglArg::eFloat );
@@ -1166,10 +1235,10 @@ bool COglShader::getVariable( const std::string& name, float& value )
     return false;
 }
 
-bool COglShader::getVariable( const std::string& name, col4f& value )
+bool COglShaderBase::getVariable( const string& name, col4f& value ) const
 {
-    ArgMapType::iterator arg = m_ArgumentMap.find( name );
-    if( arg != m_ArgumentMap.end() )
+    auto arg = m_argumentMap.find( name );
+    if( arg != m_argumentMap.end() )
     {
         COglArg& argVal = *arg->second;
         assert( argVal.getType() == COglArg::eFloat4 );
@@ -1184,10 +1253,10 @@ bool COglShader::getVariable( const std::string& name, col4f& value )
     return false;
 }
 
-bool COglShader::getVariable( const std::string& name, m44f&  value )
+bool COglShaderBase::getVariable( const string& name, m44f&  value ) const
 {
-    ArgMapType::iterator arg = m_ArgumentMap.find( name );
-    if( arg != m_ArgumentMap.end() )
+    auto arg = m_argumentMap.find( name );
+    if( arg != m_argumentMap.end() )
     {
         COglArg& argVal = *arg->second;
         assert( argVal.getType() == COglArg::eFloat16 );
@@ -1201,10 +1270,10 @@ bool COglShader::getVariable( const std::string& name, m44f&  value )
     return false;
 }
 
-bool COglShader::getVariable( const std::string& name, p4f&   value )
+bool COglShaderBase::getVariable( const string& name, p4f&   value ) const
 {
-    ArgMapType::iterator arg = m_ArgumentMap.find( name );
-    if( arg != m_ArgumentMap.end() )
+    auto arg = m_argumentMap.find( name );
+    if( arg != m_argumentMap.end() )
     {
         COglArg& argVal = *arg->second;
         assert( argVal.getType() == COglArg::eFloat4 );
@@ -1219,10 +1288,10 @@ bool COglShader::getVariable( const std::string& name, p4f&   value )
     return false;
 }
 
-bool COglShader::getVariable( const std::string& name, p3f&   value )
+bool COglShaderBase::getVariable( const string& name, p3f&   value ) const
 {
-    ArgMapType::iterator arg = m_ArgumentMap.find( name );
-    if( arg != m_ArgumentMap.end() )
+    auto arg = m_argumentMap.find( name );
+    if( arg != m_argumentMap.end() )
     {
         COglArg& argVal = *arg->second;
         assert( argVal.getType() == COglArg::eFloat3 );
@@ -1237,10 +1306,10 @@ bool COglShader::getVariable( const std::string& name, p3f&   value )
     return false;
 }
 
-bool COglShader::getVariable( const std::string& name, p2f&   value )
+bool COglShaderBase::getVariable( const string& name, p2f&   value ) const
 {
-    ArgMapType::iterator arg = m_ArgumentMap.find( name );
-    if( arg != m_ArgumentMap.end() )
+    auto arg = m_argumentMap.find( name );
+    if( arg != m_argumentMap.end() )
     {
         COglArg& argVal = *arg->second;
         assert( argVal.getType() == COglArg::eFloat2 );        
@@ -1255,10 +1324,10 @@ bool COglShader::getVariable( const std::string& name, p2f&   value )
     return false;
 }
 
-bool COglShader::unBind()
+bool COglShaderBase::unBind()
 {    
     CHECK_GLSL_STATE;
-    assert(m_Bound); // logic error can't unbind an unbound shader
+    assert(m_bound); // logic error can't unbind an unbound shader
 
     glUseProgramObjectARB(0);   GL_ASSERT; // Back to Fixed Function OpenGL
 
@@ -1266,12 +1335,133 @@ bool COglShader::unBind()
 	//reset all the states of all the texture units
 	if( m_TextureMap.size() )
 	{
-		assert( m_TextureUnitStates );
-		delete m_TextureUnitStates; //the destructor fires the state cleanup code
-		m_TextureUnitStates = 0;
+		assert( m_textureUnitStates );
+		delete m_textureUnitStates; //the destructor fires the state cleanup code
+		m_textureUnitStates = 0;
 	}
 #endif
 
-    m_Bound = false;   
+    m_bound = false;   
     return true;
+}
+
+int COglShaderBase::programID() const
+{
+    return _programId;
+}
+
+int COglShaderBase::vertexID() const
+{
+    return _vertexId;
+}
+
+int COglShaderBase::fragmentID() const
+{
+    return _fragmentId;
+}
+
+int COglShaderBase::geometryID() const
+{
+    return _geometryId;
+}
+
+void COglShader::setIncludeSrcFile(const string& filename)
+{
+    ifstream in(filename);
+    string src;
+    char buf[2048];
+    while (in.good() && !in.eof()) {
+        in.getline(buf, 2048);
+        src += string(buf) + "\n";
+    }
+    setIncludeSrc(src);
+}
+
+void COglShader::setVertexSrcFile(const string& filename)
+{
+    ifstream in(filename);
+    string src;
+    char buf[2048];
+    while (in.good() && !in.eof()) {
+        in.getline(buf, 2048);
+        src += string(buf) + "\n";
+    }
+    setVertexSrc(src);
+}
+
+void COglShader::setFragmentSrcFile(const string& filename)
+{
+    ifstream in(filename);
+    string src;
+    char buf[2048];
+    while (in.good() && !in.eof()) {
+        in.getline(buf, 2048);
+        src += string(buf) + "\n";
+    }
+    setFragmentSrc(src);
+}
+
+void COglShader::setGeometrySrcFile(const string& filename)
+{
+    ifstream in(filename);
+    string src;
+    char buf[2048];
+    while (in.good() && !in.eof()) {
+        in.getline(buf, 2048);
+        src += string(buf) + "\n";
+    }
+    setGeometrySrc(src);
+}
+
+void COglShader::setIncludeSrc(const string& src)
+{
+    _shaderIncSrc = src;
+}
+
+void COglShader::setVertexSrc(const string& src)
+{
+    _vertSrc = src;
+}
+
+void COglShader::setFragmentSrc(const string& src)
+{
+    _fragSrc = src;
+}
+
+void COglShader::setGeometrySrc(const string& src)
+{
+    _geomSrc = src;
+}
+
+const char* COglShader::getShaderIncludeSource() const
+{
+    if (!_shaderIncSrc.empty())
+        return _shaderIncSrc.data();
+    return nullptr;
+}
+
+const char* COglShader::getVertexShaderSource() const
+{
+    if (!_vertSrc.empty())
+        return _vertSrc.data();
+    return nullptr;
+}
+
+const char* COglShader::getFragmentShaderSource() const
+{
+    if (!_fragSrc.empty())
+        return _fragSrc.data();
+    return nullptr;
+}
+
+const char* COglShader::getGeometryShaderSource() const
+{
+    if (!_geomSrc.empty())
+        return _geomSrc.data();
+    return nullptr;
+}
+
+void COglShader::initUniform()
+{
+
 }

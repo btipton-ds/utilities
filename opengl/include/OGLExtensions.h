@@ -236,17 +236,17 @@ public:
     static PFNGLGETNAMEDFRAMEBUFFERATTACHMENTPARAMETERIVPROC glGetNamedFramebufferAttachmentParameteriv;
     static PFNGLGETNAMEDFRAMEBUFFERPARAMETERIVPROC glGetNamedFramebufferParameteriv;
     static PFNGLGETNAMEDRENDERBUFFERPARAMETERIVPROC glGetNamedRenderbufferParameteriv;
-    static PFNGLGETNCOLORTABLEPROC glGetnColorTable;
+//    static PFNGLGETNCOLORTABLEPROC glGetnColorTable;
     static PFNGLGETNCOMPRESSEDTEXIMAGEPROC glGetnCompressedTexImage;
-    static PFNGLGETNCONVOLUTIONFILTERPROC glGetnConvolutionFilter;
-    static PFNGLGETNHISTOGRAMPROC glGetnHistogram;
-    static PFNGLGETNMAPDVPROC glGetnMapdv;
-    static PFNGLGETNMAPFVPROC glGetnMapfv;
-    static PFNGLGETNMAPIVPROC glGetnMapiv;
-    static PFNGLGETNMINMAXPROC glGetnMinmax;
-    static PFNGLGETNPIXELMAPFVPROC glGetnPixelMapfv;
-    static PFNGLGETNPIXELMAPUIVPROC glGetnPixelMapuiv;
-    static PFNGLGETNPIXELMAPUSVPROC glGetnPixelMapusv;
+//    static PFNGLGETNCONVOLUTIONFILTERPROC glGetnConvolutionFilter;
+//    static PFNGLGETNHISTOGRAMPROC glGetnHistogram;
+//    static PFNGLGETNMAPDVPROC glGetnMapdv;
+//    static PFNGLGETNMAPFVPROC glGetnMapfv;
+//    static PFNGLGETNMAPIVPROC glGetnMapiv;
+//    static PFNGLGETNMINMAXPROC glGetnMinmax;
+//    static PFNGLGETNPIXELMAPFVPROC glGetnPixelMapfv;
+//    static PFNGLGETNPIXELMAPUIVPROC glGetnPixelMapuiv;
+//    static PFNGLGETNPIXELMAPUSVPROC glGetnPixelMapusv;
     static PFNGLGETNPOLYGONSTIPPLEPROC glGetnPolygonStipple;
     static PFNGLGETNSEPARABLEFILTERPROC glGetnSeparableFilter;
     static PFNGLGETNTEXIMAGEPROC glGetnTexImage;
@@ -362,11 +362,11 @@ public:
     static PFNGLMINSAMPLESHADINGPROC glMinSampleShading;
     static PFNGLMULTIDRAWARRAYSPROC glMultiDrawArrays;
     static PFNGLMULTIDRAWARRAYSINDIRECTPROC glMultiDrawArraysIndirect;
-    static PFNGLMULTIDRAWARRAYSINDIRECTCOUNTPROC glMultiDrawArraysIndirectCount;
+//    static PFNGLMULTIDRAWARRAYSINDIRECTCOUNTPROC glMultiDrawArraysIndirectCount;
     static PFNGLMULTIDRAWELEMENTSPROC glMultiDrawElements;
     static PFNGLMULTIDRAWELEMENTSBASEVERTEXPROC glMultiDrawElementsBaseVertex;
     static PFNGLMULTIDRAWELEMENTSINDIRECTPROC glMultiDrawElementsIndirect;
-    static PFNGLMULTIDRAWELEMENTSINDIRECTCOUNTPROC glMultiDrawElementsIndirectCount;
+//    static PFNGLMULTIDRAWELEMENTSINDIRECTCOUNTPROC glMultiDrawElementsIndirectCount;
     static PFNGLMULTITEXCOORD1DPROC glMultiTexCoord1d;
     static PFNGLMULTITEXCOORD1DVPROC glMultiTexCoord1dv;
     static PFNGLMULTITEXCOORD1FPROC glMultiTexCoord1f;
@@ -771,5 +771,6 @@ public:
     static PFNGLWINDOWPOS3SPROC glWindowPos3s;
     static PFNGLWINDOWPOS3SVPROC glWindowPos3sv;
 #endif
+    COglExtensions();
 };
 

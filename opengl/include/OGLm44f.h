@@ -6,6 +6,7 @@
 /** .
 typical operations on a 4x4 matrix of floats
  */
+
 class m44f
 {
 public:
@@ -39,9 +40,8 @@ public:
 
 	m33f rotationalDifference(const m44f& rh) const;
 
-	p4f v[4];
 private:
-	float gl[16];
+	float gl[16] = {};
 };
 
 p3f operator *(const p3f& lhs, const m44f& rhs);
@@ -53,6 +53,7 @@ inline m44f::m44f()
 }
 inline m44f::m44f(const p3f& a, const p3f& b, const p3f& c)
 { 
+	p4f* v = (p4f*)gl;
 	v[0] = a; 
 	v[0].w = 0.0f; 
 	v[1] = b; 
@@ -63,14 +64,16 @@ inline m44f::m44f(const p3f& a, const p3f& b, const p3f& c)
 }
 inline m44f::m44f(const p4f& a, const p4f& b, const p4f& c, const p4f& d)
 { 
-	v[0] = a; 
+	p4f* v = (p4f*)gl;
+	v[0] = a;
 	v[1] = b; 
 	v[2] = c;  
 	v[3] = d; 
 }
 inline m44f::m44f(const m33f& rot)
 { 
-	v[0] = rot.v[0]; 
+	p4f* v = (p4f*)gl;
+	v[0] = rot.v[0];
 	v[0].w = 0.0f; 
 	v[1] = rot.v[1]; 
 	v[1].w = 0.0f; 
@@ -81,7 +84,8 @@ inline m44f::m44f(const m33f& rot)
 //	m44f::m44f( const m33f& rot, const p3f& tra) { v[0]=rot.v[0]; v[0].w=tra.x; v[1]=rot.v[1]; v[1].w=tra.y; v[2]=rot.v[2]; v[2].w=tra.z; v[3].reset();}
 inline m44f::m44f(const m33f& rot, const p3f& tra)
 { 
-	v[0] = rot.v[0]; 
+	p4f* v = (p4f*)gl;
+	v[0] = rot.v[0];
 	v[0].w = 0.0f; 
 	v[1] = rot.v[1]; 
 	v[1].w = 0.0f; 
@@ -93,6 +97,7 @@ inline m44f::m44f(const m33f& rot, const p3f& tra)
 
 inline p4f m44f::operator*(const p4f& inVec) const
 {
+	p4f* v = (p4f*)gl;
 	p4f retVec(0.0f, 0.0f, 0.0f, 0.0f);
 	retVec.x = v[0].x * inVec.x + v[0].y * inVec.y + v[0].z * inVec.z + v[0].w * inVec.w;
 	retVec.y = v[1].x * inVec.x + v[1].y * inVec.y + v[1].z * inVec.z + v[1].w * inVec.w;
@@ -103,6 +108,7 @@ inline p4f m44f::operator*(const p4f& inVec) const
 
 inline p3f m44f::operator*(const p3f& inVec) const
 {
+	p4f* v = (p4f*)gl;
 	p3f retVec(0.0f, 0.0f, 0.0f);
 	retVec.x = v[0].x * inVec.x + v[0].y * inVec.y + v[0].z * inVec.z;
 	retVec.y = v[1].x * inVec.x + v[1].y * inVec.y + v[1].z * inVec.z;
@@ -113,6 +119,7 @@ inline p3f m44f::operator*(const p3f& inVec) const
 
 inline m44f  m44f::transpose() const
 {
+	p4f* v = (p4f*)gl;
 	m44f x;
 	x[0].x = v[0].x;  x[0].y = v[1].x;  x[0].z = v[2].x;  x[0].w = v[3].x;
 	x[1].x = v[0].y;  x[1].y = v[1].y;  x[1].z = v[2].y;  x[1].w = v[3].y;
@@ -123,6 +130,7 @@ inline m44f  m44f::transpose() const
 
 inline bool m44f::isIdentity()
 {
+	p4f* v = (p4f*)gl;
 	return
 		areEqual(v[0].x, 1.0f) && areEqual(v[0].y, 0.0f) && areEqual(v[0].z, 0.0f) && areEqual(v[0].w, 0.0f) &&
 		areEqual(v[1].x, 0.0f) && areEqual(v[1].y, 1.0f) && areEqual(v[1].z, 0.0f) && areEqual(v[1].w, 0.0f) &&
@@ -132,6 +140,7 @@ inline bool m44f::isIdentity()
 
 inline m44f& m44f::identity()
 {
+	p4f* v = (p4f*)gl;
 	v[0].x = 1.0f;  v[0].y = 0.0f;  v[0].z = 0.0f;  v[0].w = 0.0f;
 	v[1].x = 0.0f;  v[1].y = 1.0f;  v[1].z = 0.0f;  v[1].w = 0.0f;
 	v[2].x = 0.0f;  v[2].y = 0.0f;  v[2].z = 1.0f;  v[2].w = 0.0f;
@@ -140,6 +149,7 @@ inline m44f& m44f::identity()
 }
 inline m44f::operator float* () const
 {
+	p4f* v = (p4f*)gl;
 	float* cgl = ((m44f*)this)->gl; // breaking the const rule
 	cgl[0] = v[0].x; cgl[1] = v[0].y; cgl[2] = v[0].z; cgl[3] = v[0].w;
 	cgl[4] = v[1].x; cgl[5] = v[1].y; cgl[6] = v[1].z; cgl[7] = v[1].w;
@@ -151,6 +161,7 @@ inline m44f::operator float* () const
 
 inline float* m44f::transposef() const
 {
+	p4f* v = (p4f*)gl;
 	float* cgl = ((m44f*)this)->gl; // breaking the const rule
 	cgl[0] = v[0].x; cgl[4] = v[0].y; cgl[8] = v[0].z; cgl[12] = v[0].w;
 	cgl[1] = v[1].x; cgl[5] = v[1].y; cgl[9] = v[1].z; cgl[13] = v[1].w;
@@ -162,6 +173,7 @@ inline float* m44f::transposef() const
 
 inline void m44f::set(float* gl44Mat)
 {
+	p4f* v = (p4f*)gl;
 	float* cgl = gl44Mat;
 	v[0].x = cgl[0];  v[0].y = cgl[4];  v[0].z = cgl[8];  v[0].w = cgl[12];
 	v[1].x = cgl[1];  v[1].y = cgl[5];  v[1].z = cgl[9];  v[1].w = cgl[13];
@@ -171,12 +183,14 @@ inline void m44f::set(float* gl44Mat)
 
 inline p4f& m44f::operator [] (int idx)
 { 
-	assert(idx >= 0 && idx < 4); 
+	p4f* v = (p4f*)gl;
+	assert(idx >= 0 && idx < 4);
 	return v[idx]; 
 }
 inline const p4f& m44f::operator [] (int idx)const
 { 
-	assert(idx >= 0 && idx < 4); 
+	p4f* v = (p4f*)gl;
+	assert(idx >= 0 && idx < 4);
 	return v[idx]; 
 }
 
@@ -211,25 +225,27 @@ inline m44f m44f::operator*=(const m44f& m)
 
 inline m44f m44f::operator* (const m44f& m) const
 {
-	return m44f(p4f(v[0].x * m.v[0].x + v[0].y * m.v[1].x + v[0].z * m.v[2].x + v[0].w * m.v[3].x,
-		v[0].x * m.v[0].y + v[0].y * m.v[1].y + v[0].z * m.v[2].y + v[0].w * m.v[3].y,
-		v[0].x * m.v[0].z + v[0].y * m.v[1].z + v[0].z * m.v[2].z + v[0].w * m.v[3].z,
-		v[0].x * m.v[0].w + v[0].y * m.v[1].w + v[0].z * m.v[2].w + v[0].w * m.v[3].w),
+	p4f* v = (p4f*)gl;
+	p4f* mv = (p4f*)m.gl;
+	return m44f(p4f(v[0].x * mv[0].x + v[0].y * mv[1].x + v[0].z * mv[2].x + v[0].w * mv[3].x,
+		v[0].x * mv[0].y + v[0].y * mv[1].y + v[0].z * mv[2].y + v[0].w * mv[3].y,
+		v[0].x * mv[0].z + v[0].y * mv[1].z + v[0].z * mv[2].z + v[0].w * mv[3].z,
+		v[0].x * mv[0].w + v[0].y * mv[1].w + v[0].z * mv[2].w + v[0].w * mv[3].w),
 
-		p4f(v[1].x * m.v[0].x + v[1].y * m.v[1].x + v[1].z * m.v[2].x + v[1].w * m.v[3].x,
-			v[1].x * m.v[0].y + v[1].y * m.v[1].y + v[1].z * m.v[2].y + v[1].w * m.v[3].y,
-			v[1].x * m.v[0].z + v[1].y * m.v[1].z + v[1].z * m.v[2].z + v[1].w * m.v[3].z,
-			v[1].x * m.v[0].w + v[1].y * m.v[1].w + v[1].z * m.v[2].w + v[1].w * m.v[3].w),
+		p4f(v[1].x * mv[0].x + v[1].y * mv[1].x + v[1].z * mv[2].x + v[1].w * mv[3].x,
+			v[1].x * mv[0].y + v[1].y * mv[1].y + v[1].z * mv[2].y + v[1].w * mv[3].y,
+			v[1].x * mv[0].z + v[1].y * mv[1].z + v[1].z * mv[2].z + v[1].w * mv[3].z,
+			v[1].x * mv[0].w + v[1].y * mv[1].w + v[1].z * mv[2].w + v[1].w * mv[3].w),
 
-		p4f(v[2].x * m.v[0].x + v[2].y * m.v[1].x + v[2].z * m.v[2].x + v[2].w * m.v[3].x,
-			v[2].x * m.v[0].y + v[2].y * m.v[1].y + v[2].z * m.v[2].y + v[2].w * m.v[3].y,
-			v[2].x * m.v[0].z + v[2].y * m.v[1].z + v[2].z * m.v[2].z + v[2].w * m.v[3].z,
-			v[2].x * m.v[0].w + v[2].y * m.v[1].w + v[2].z * m.v[2].w + v[2].w * m.v[3].w),
+		p4f(v[2].x * mv[0].x + v[2].y * mv[1].x + v[2].z * mv[2].x + v[2].w * mv[3].x,
+			v[2].x * mv[0].y + v[2].y * mv[1].y + v[2].z * mv[2].y + v[2].w * mv[3].y,
+			v[2].x * mv[0].z + v[2].y * mv[1].z + v[2].z * mv[2].z + v[2].w * mv[3].z,
+			v[2].x * mv[0].w + v[2].y * mv[1].w + v[2].z * mv[2].w + v[2].w * mv[3].w),
 
-		p4f(v[3].x * m.v[0].x + v[3].y * m.v[1].x + v[3].z * m.v[2].x + v[3].w * m.v[3].x,
-			v[3].x * m.v[0].y + v[3].y * m.v[1].y + v[3].z * m.v[2].y + v[3].w * m.v[3].y,
-			v[3].x * m.v[0].z + v[3].y * m.v[1].z + v[3].z * m.v[2].z + v[3].w * m.v[3].z,
-			v[3].x * m.v[0].w + v[3].y * m.v[1].w + v[3].z * m.v[2].w + v[3].w * m.v[3].w));
+		p4f(v[3].x * mv[0].x + v[3].y * mv[1].x + v[3].z * mv[2].x + v[3].w * mv[3].x,
+			v[3].x * mv[0].y + v[3].y * mv[1].y + v[3].z * mv[2].y + v[3].w * mv[3].y,
+			v[3].x * mv[0].z + v[3].y * mv[1].z + v[3].z * mv[2].z + v[3].w * mv[3].z,
+			v[3].x * mv[0].w + v[3].y * mv[1].w + v[3].z * mv[2].w + v[3].w * mv[3].w));
 };
 
 inline p3f operator *(const p3f& lhs, const m44f& rhs)
@@ -242,6 +258,8 @@ inline m44f m44f::inverse() const
 {
 	m44f a(*this); // As a evolves from original mat into identity
 	m44f b;   // b evolves from identity into inverse(a)
+	p4f* av = (p4f*)a.gl;
+	p4f* bv = (p4f*)b.gl;
 	int  i, j, i1;
 
 	// Loop over cols of a from left to right, eliminating above and below diag
@@ -250,29 +268,29 @@ inline m44f m44f::inverse() const
 		i1 = j;             // Row with largest pivot candidate
 		for (i = j + 1; i < 4; i++)
 		{
-			if (fabs(a.v[i][j]) > fabs(a.v[i1][j]))
+			if (fabs(av[i][j]) > fabs(av[i1][j]))
 			{
 				i1 = i;
 
 				// Swap rows i1 and j in a and b to p pivot on diagonal
-				p4f tmp = a.v[j];
-				a.v[j] = a.v[i1]; a.v[i1] = tmp; // swap(a.v[i1], a.v[j]);
-				tmp = b.v[j];
-				b.v[j] = b.v[i1]; b.v[i1] = tmp; // swap(b.v[i1], b.v[j]);
+				p4f tmp = av[j];
+				av[j] = av[i1]; av[i1] = tmp; // swap(av[i1], av[j]);
+				tmp = bv[j];
+				bv[j] = bv[i1]; bv[i1] = tmp; // swap(bv[i1], bv[j]);
 			}
 		}
-		assert(a.v[j][j] != 0);
+		assert(av[j][j] != 0);
 
-		b.v[j] = b.v[j] / a.v[j][j];
-		a.v[j] = a.v[j] / a.v[j][j];
+		bv[j] = bv[j] / av[j][j];
+		av[j] = av[j] / av[j][j];
 
 		// Eliminate off-diagonal elems in col j of a, doing identical ops to b
 		for (i = 0; i < 4; i++)
 		{
 			if (i != j)
 			{
-				b.v[i] = b.v[i] - b.v[j] * a.v[i][j];
-				a.v[i] = a.v[i] - a.v[j] * a.v[i][j];
+				bv[i] = bv[i] - bv[j] * av[i][j];
+				av[i] = av[i] - av[j] * av[i][j];
 			}
 		}
 	}

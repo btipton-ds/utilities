@@ -71,7 +71,6 @@ public:
 	void set(float* gl44Mat);
 
 	float x, y, z;
-	long  tag;
 };
 
 inline p3f operator* (const double s, const p3f& v) 
@@ -84,42 +83,36 @@ inline p3f::p3f()
 	x = 0.0f;
 	y = 0.0f;
 	z = 0.0f;
-	tag = 0;
 }
 inline p3f::p3f(const p3f& rh)
 {
 	x = rh.x;
 	y = rh.y;
 	z = rh.z;
-	tag = rh.tag;
 }
 inline p3f::p3f(const p2f& rh)
 {
 	x = rh.x;
 	y = rh.y;
 	z = 0.0f;
-	tag = 0;
 }
 inline p3f::p3f(float x_, float y_, float z_)
 {
 	x = x_;
 	y = y_;
 	z = z_;
-	tag = 0;
 }
 inline p3f::p3f(double x_, double y_, double z_)
 {
 	x = float(x_);
 	y = float(y_);
 	z = float(z_);
-	tag = 0;
 }
 inline p3f::p3f(const float* p)
 {
 	x = p[0];
 	y = p[1];
 	z = p[2];
-	tag = 0;
 }
 
 inline bool p3f::equal(const p3f& rh) const
@@ -227,7 +220,6 @@ inline p3f& p3f::operator= (const p3f& rh)
 	x = rh.x;
 	y = rh.y;
 	z = rh.z;
-	tag = rh.tag;
 	return *this;
 }
 inline p3f  p3f::operator+ (const p3f& rh) const
