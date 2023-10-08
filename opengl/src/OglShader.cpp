@@ -983,10 +983,24 @@ bool COglShaderBase::load()
     delete [] source; // NB: living with the leak if we have an error condition
 
     bind();
+    // These are required. If they fail, abort
+    m_vertLoc = glGetAttribLocation(_programId, _vertAttribName.c_str()); GL_ASSERT;
+    m_normLoc = glGetAttribLocation(_programId, _normalAttribName.c_str()); GL_ASSERT;
+
+    if (!_texParamAttribName.empty()) {
+        m_texParamLoc = glGetAttribLocation(_programId, _texParamAttribName.c_str()); GL_ASSERT;
+    }
+
+    if (!_colorAttribName.empty()) {
+        m_colorLoc = glGetAttribLocation(_programId, _colorAttribName.c_str()); GL_ASSERT;
+    }
+
     if (!m_defaultsLoaded)
         loadDefaultVariables();
 
     initUniform();
+    CHECK_GLSL_STATE;
+
     unBind();
 
     HDTIMELOG("Succesfully completed COglShaderBase::load()");

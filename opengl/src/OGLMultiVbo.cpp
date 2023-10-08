@@ -4,6 +4,7 @@
 #include <assert.h>
 
 #include <OglMultiVboHandler.h>
+#include <OglShader.h>
 
 #ifdef WIN32
 #include <Windows.h>
@@ -16,6 +17,12 @@
 #define VBO_VALID_UNKNOWN 0
 #define VBO_VALID_TRUE 1
 #define VBO_VALID_FALSE 2
+
+#ifdef _DEBUG
+#define GL_ASSERT COglShaderBase::dumpGlErrors();
+#else
+#define GL_ASSERT
+#endif // _DEBUG
 
 /*
 The batch size is empiracle and dependent on GPU cores, memory, triangle count, how often faces will be edited and more.
@@ -442,8 +449,11 @@ void COglMultiVBO::setUseRegionalNormal(bool set)
 }
 
 // change comments on following 2 lines to turn on asserts
-//#define GL_ASSERT2 GL_ASSERT
-#define GL_ASSERT2
+#ifdef _DEBUG
+#define GL_ASSERT COglShaderBase::dumpGlErrors();
+#else
+#define GL_ASSERT
+#endif // _DEBUG
 
 bool COglMultiVBO::setIndexVBO(int key, const vector<unsigned int>& indices)
 {
@@ -470,7 +480,7 @@ bool COglMultiVBO::clearIndexVBO()
     return true;
 }
 
-bool COglMultiVBO::drawVBO(int key, DrawVertexColorMode drawColors) const
+bool COglMultiVBO::drawVBO(const COglShaderBase* pShader, int key, DrawVertexColorMode drawColors) const
 {
     auto iter = m_elementVBOIDMap.find(key);
     if (iter != m_elementVBOIDMap.end()) {
@@ -482,7 +492,7 @@ bool COglMultiVBO::drawVBO(int key, DrawVertexColorMode drawColors) const
 
         GLuint elementIdxVboID = iter->second.getVboId();
 
-        return drawVBO(numElements, elementIdxVboID, drawColors);
+        return drawVBO(pShader, numElements, elementIdxVboID, drawColors);
 
     }
 
@@ -528,30 +538,29 @@ bool COglMultiVBO::areVBOsValid(size_t numElements, GLuint elementIdxVboID, Draw
     return true;
 }
 
-bool COglMultiVBO::bindCommon(size_t numElements) const
+bool COglMultiVBO::bindCommon(const COglShaderBase* pShader, size_t numElements) const
 {
-    glEnableClientState(GL_VERTEX_ARRAY);            GL_ASSERT2;
-
-    if (m_normalVboID)
-        glEnableClientState(GL_NORMAL_ARRAY);
-    if (m_textureVboID)
-        glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-
     //bind the verteces
-    glBindBuffer(GL_ARRAY_BUFFER, m_vertexVboID);       GL_ASSERT2;
-    glVertexPointer(3, GL_FLOAT, 0, 0);
+    glEnableClientState(GL_VERTEX_ARRAY);            GL_ASSERT;
+    glBindBuffer(GL_ARRAY_BUFFER, m_vertexVboID);       GL_ASSERT;
+    glEnableVertexAttribArray(pShader->getVertexLoc()); GL_ASSERT;
+    glVertexAttribPointer(pShader->getVertexLoc(), 3, GL_FLOAT, 0, 0, 0); GL_ASSERT;
 
     //bind the normals
     if (m_normalVboID)
     {
-        glBindBuffer(GL_ARRAY_BUFFER, m_normalVboID);      GL_ASSERT2;
-        glNormalPointer(GL_FLOAT, 0, 0);
+        glEnableClientState(GL_NORMAL_ARRAY); GL_ASSERT;
+        glBindBuffer(GL_ARRAY_BUFFER, m_normalVboID);      GL_ASSERT;
+        glEnableVertexAttribArray(pShader->getNormalLoc()); GL_ASSERT;
+        glVertexAttribPointer(pShader->getNormalLoc(), 3, GL_FLOAT, 0, 0, 0); GL_ASSERT;
     }
 
-    if (m_textureVboID)
+    if (m_textureVboID && pShader->getTexParamLoc() != -1)
     {
-        glBindBuffer(GL_ARRAY_BUFFER, m_textureVboID);   GL_ASSERT2;
-        glTexCoordPointer(2, GL_FLOAT, 0, 0);
+        glEnableClientState(GL_TEXTURE_COORD_ARRAY); GL_ASSERT;
+        glBindBuffer(GL_ARRAY_BUFFER, m_textureVboID);   GL_ASSERT;
+        glEnableVertexAttribArray(pShader->getTexParamLoc()); GL_ASSERT;
+        glVertexAttribPointer(pShader->getTexParamLoc(), 2, GL_FLOAT, 0, 0, 0); GL_ASSERT;
     }
 
     return true;
@@ -560,14 +569,16 @@ bool COglMultiVBO::bindCommon(size_t numElements) const
 void COglMultiVBO::unbindCommon() const
 {
     // revert state
-    glDisableClientState(GL_VERTEX_ARRAY);            GL_ASSERT2;
+    glDisableClientState(GL_VERTEX_ARRAY);            GL_ASSERT;
 
-    if (m_normalVboID)
-        glDisableClientState(GL_NORMAL_ARRAY);
-    if (m_textureVboID)
-        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    if (m_normalVboID) {
+        glDisableClientState(GL_NORMAL_ARRAY); GL_ASSERT;
+    }
+    if (m_textureVboID) {
+        glDisableClientState(GL_TEXTURE_COORD_ARRAY); GL_ASSERT;
+    }
 
-    glBindBuffer(GL_ARRAY_BUFFER, 0);                  GL_ASSERT2;
+    glBindBuffer(GL_ARRAY_BUFFER, 0);  GL_ASSERT;
 }
 
 template<class T>
@@ -591,26 +602,27 @@ inline bool COglMultiVBO::assureVBOValid(const std::vector<T>& vec, GLuint& vboI
     }
 }
 
-bool COglMultiVBO::drawVBO(GLsizei numElements, GLuint elementIdxVboID, DrawVertexColorMode drawColors) const
+bool COglMultiVBO::drawVBO(const COglShaderBase* pShader, GLsizei numElements, GLuint elementIdxVboID, DrawVertexColorMode drawColors) const
 {
     bool drawingColors = false;
     int priorCulling = -1;
 
-    glPushAttrib(GL_ALL_ATTRIB_BITS);                GL_ASSERT2;
-    glPushClientAttrib(GL_CLIENT_VERTEX_ARRAY_BIT);
+    glPushAttrib(GL_ALL_ATTRIB_BITS);                GL_ASSERT;
+    glPushClientAttrib(GL_CLIENT_VERTEX_ARRAY_BIT); GL_ASSERT;
 
     // Enable vertex and normal arrays
-    if (!areVBOsValid(numElements, elementIdxVboID, drawColors) || !bindCommon(numElements)) {
+    if (!areVBOsValid(numElements, elementIdxVboID, drawColors) || !bindCommon(pShader, numElements)) {
         assert(!"COglMultiVBO not valid");
-        areVBOsValid(numElements, elementIdxVboID, drawColors);
-        bindCommon(numElements);
+        areVBOsValid(numElements, elementIdxVboID, drawColors); GL_ASSERT;
+        bindCommon(pShader, numElements); GL_ASSERT;
         return false;
     }
 
     if (m_colorVboID && drawColors == DRAW_COLOR) {
-        glEnable(GL_COLOR_MATERIAL);
-        glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-        glEnableClientState(GL_COLOR_ARRAY);
+        glEnable(GL_COLOR_MATERIAL); GL_ASSERT;
+        glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE); GL_ASSERT;
+        glEnableClientState(GL_COLOR_ARRAY); GL_ASSERT;
+        glVertexAttribPointer(pShader->getColorLoc(), 4, GL_FLOAT, 0, 0, 0); GL_ASSERT;
     }
 #if 0	// Good chance something similar to this is necessary,
 		// but I haven't yet found the right formulation to get
@@ -623,19 +635,19 @@ bool COglMultiVBO::drawVBO(GLsizei numElements, GLuint elementIdxVboID, DrawVert
     }
 #endif
 
-    if (drawColors == DRAW_COLOR && m_colorVboID)
+    if (drawColors == DRAW_COLOR && m_colorVboID && pShader->getColorLoc() != -1)
     {
-        glBindBuffer(GL_ARRAY_BUFFER, m_colorVboID);     GL_ASSERT2;
-        glColorPointer(4, GL_UNSIGNED_BYTE, 0, 0);
+        glBindBuffer(GL_ARRAY_BUFFER, m_colorVboID);     GL_ASSERT;
+        glVertexAttribPointer(pShader->getColorLoc(), 4, GL_FLOAT, 0, 0, 0); GL_ASSERT;
 
         drawingColors = true;
     }
-    else if (drawColors == DRAW_COLOR_BACK && m_backColorVboID)
+    else if (drawColors == DRAW_COLOR_BACK && m_backColorVboID && pShader->getColorLoc() != -1)
     {
-        glGetIntegerv(GL_CULL_FACE_MODE, &priorCulling);
-        glCullFace(GL_BACK);
-        glBindBuffer(GL_ARRAY_BUFFER, m_backColorVboID);     GL_ASSERT2;
-        glColorPointer(4, GL_UNSIGNED_BYTE, 0, 0);
+        glGetIntegerv(GL_CULL_FACE_MODE, &priorCulling); GL_ASSERT;
+        glCullFace(GL_BACK); GL_ASSERT;
+        glBindBuffer(GL_ARRAY_BUFFER, m_backColorVboID);     GL_ASSERT;
+        glVertexAttribPointer(pShader->getColorLoc(), 4, GL_FLOAT, 0, 0, 0); GL_ASSERT;
 
         drawingColors = true;
     }
@@ -643,13 +655,13 @@ bool COglMultiVBO::drawVBO(GLsizei numElements, GLuint elementIdxVboID, DrawVert
     // Render the triangles
     if (numElements && (m_primitiveType == GL_TRIANGLES || m_primitiveType == GL_QUADS || m_primitiveType == GL_LINES || m_primitiveType == GL_LINE_STRIP))
     {
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementIdxVboID);       GL_ASSERT2;
-        glDrawElements(m_primitiveType, numElements, GL_UNSIGNED_INT, 0); GL_ASSERT2;
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementIdxVboID);       GL_ASSERT;
+        glDrawElements(m_primitiveType, numElements, GL_UNSIGNED_INT, 0); GL_ASSERT;
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); GL_ASSERT;
     }
     else
     {
-        glDrawArrays(m_primitiveType, 0, (GLsizei)m_numVerts);      GL_ASSERT2;
+        glDrawArrays(m_primitiveType, 0, (GLsizei)m_numVerts);      GL_ASSERT;
     }
 
     unbindCommon();
@@ -661,12 +673,12 @@ bool COglMultiVBO::drawVBO(GLsizei numElements, GLuint elementIdxVboID, DrawVert
         glCullFace(priorCulling);
 
     glPopAttrib();
-    glPopClientAttrib();                                GL_ASSERT2;
+    glPopClientAttrib();                                GL_ASSERT;
 
     return true;
 }
 
-bool COglMultiVBO::drawVBO(const vector<unsigned int>& indices, DrawVertexColorMode drawColors) const
+bool COglMultiVBO::drawVBO(const COglShaderBase* pShader, const vector<unsigned int>& indices, DrawVertexColorMode drawColors) const
 {
     assert(m_valid != VBO_VALID_FALSE);
     if (m_valid == VBO_VALID_FALSE)
@@ -701,11 +713,11 @@ bool COglMultiVBO::drawVBO(const vector<unsigned int>& indices, DrawVertexColorM
             return false;
         m_valid = VBO_VALID_TRUE;
     }
-    glPushAttrib(GL_ALL_ATTRIB_BITS);                GL_ASSERT2;
+    glPushAttrib(GL_ALL_ATTRIB_BITS);                GL_ASSERT;
     glPushClientAttrib(GL_CLIENT_VERTEX_ARRAY_BIT);
 
     // Enable vertex and normal arrays
-    glEnableClientState(GL_VERTEX_ARRAY);            GL_ASSERT2;
+    glEnableClientState(GL_VERTEX_ARRAY);            GL_ASSERT;
 
     if (m_normalVboID)
         glEnableClientState(GL_NORMAL_ARRAY);
@@ -717,45 +729,47 @@ bool COglMultiVBO::drawVBO(const vector<unsigned int>& indices, DrawVertexColorM
     //bind the normals
     if (m_normalVboID)
     {
-        glBindBuffer(GL_ARRAY_BUFFER, m_normalVboID);      GL_ASSERT2;
+        glBindBuffer(GL_ARRAY_BUFFER, m_normalVboID);      GL_ASSERT;
         glNormalPointer(GL_FLOAT, 0, 0);
     }
 
     //bind the verteces
-    glBindBuffer(GL_ARRAY_BUFFER, m_vertexVboID);       GL_ASSERT2;
+    glBindBuffer(GL_ARRAY_BUFFER, m_vertexVboID);       GL_ASSERT;
     glVertexPointer(3, GL_FLOAT, 0, 0);
 
+#if 0
     if (m_textureVboID)
     {
-        glBindBuffer(GL_ARRAY_BUFFER, m_textureVboID);   GL_ASSERT2;
+        glBindBuffer(GL_ARRAY_BUFFER, m_textureVboID);   GL_ASSERT;
         glTexCoordPointer(2, GL_FLOAT, 0, 0);
     }
 
     if (m_colorVboID && (drawColors == DRAW_COLOR))
     {
-        glBindBuffer(GL_ARRAY_BUFFER, m_colorVboID);     GL_ASSERT2;
+        glBindBuffer(GL_ARRAY_BUFFER, m_colorVboID);     GL_ASSERT;
         glColorPointer(4, GL_UNSIGNED_BYTE, 0, 0);
     }
     else if (m_backColorVboID && (drawColors == DRAW_COLOR_BACK))
     {
         glGetIntegerv(GL_CULL_FACE_MODE, &priorCulling);
         glCullFace(GL_BACK);
-        glBindBuffer(GL_ARRAY_BUFFER, m_backColorVboID);     GL_ASSERT2;
+        glBindBuffer(GL_ARRAY_BUFFER, m_backColorVboID);     GL_ASSERT;
         glColorPointer(4, GL_UNSIGNED_BYTE, 0, 0);
     }
+#endif
 
     // Render the triangles
     if (indices.size() > 0 && m_primitiveType == GL_TRIANGLES)
     {
-        glDrawElements(m_primitiveType, (GLsizei)indices.size(), GL_UNSIGNED_INT, indices.data()); GL_ASSERT2;
+        glDrawElements(m_primitiveType, (GLsizei)indices.size(), GL_UNSIGNED_INT, indices.data()); GL_ASSERT;
     }
     else
     {
-        glDrawArrays(m_primitiveType, 0, (GLsizei)m_numVerts);      GL_ASSERT2;
+        glDrawArrays(m_primitiveType, 0, (GLsizei)m_numVerts);      GL_ASSERT;
     }
 
     // revert state
-    glDisableClientState(GL_VERTEX_ARRAY);            GL_ASSERT2;
+    glDisableClientState(GL_VERTEX_ARRAY);            GL_ASSERT;
 
     if (m_normalVboID)
         glDisableClientState(GL_NORMAL_ARRAY);
@@ -764,13 +778,13 @@ bool COglMultiVBO::drawVBO(const vector<unsigned int>& indices, DrawVertexColorM
     if (m_colorVboID)
         glDisableClientState(GL_COLOR_ARRAY);
 
-    glBindBuffer(GL_ARRAY_BUFFER, 0);                  GL_ASSERT2;
+    glBindBuffer(GL_ARRAY_BUFFER, 0);                  GL_ASSERT;
 
     if (priorCulling != -1)
         glCullFace(priorCulling);
 
     glPopAttrib();
-    glPopClientAttrib();                                GL_ASSERT2;
+    glPopClientAttrib();                                GL_ASSERT;
 
     return true;
 }

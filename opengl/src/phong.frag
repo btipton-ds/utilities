@@ -42,6 +42,7 @@ void main() {
     float intensity = 0.0;
     for (int i = 0; i < fragNumLights; i++) {
         float dp = abs(dot(fragLights[i], fragNormal));
+		dp = length(fragNormal);
         intensity += dp;
     }
 
@@ -49,6 +50,7 @@ void main() {
 
     float ambient = fragAmbient;
     intensity = ambient + (1.0 - ambient) * intensity;
+    intensity = intensity;
 
     outColor = intensity * vec4(fragColor, 1);
 }

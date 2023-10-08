@@ -16,6 +16,8 @@
 //
 // If someone can find a way to hyperlink to a relative file, please do that.
 
+class COglShaderBase;
+
 class COglMultiVBO : public COglExtensions
 {
     friend class COglMultiVboHandler;
@@ -54,9 +56,9 @@ public:
     // If drawColors = DRAW_COLOR_NONE, color array buffer is not used
     // If drawColors = DRAW_COLOR, color array buffer is used
     // If drawColors = DRAW_COLOR_BACK, cull face is set to back face and back color array buffer is used
-    virtual bool drawVBO(int key, DrawVertexColorMode drawColors = DRAW_COLOR_NONE) const;
-    virtual bool drawVBO(GLsizei numElements, GLuint indexVBOId, DrawVertexColorMode drawColors = DRAW_COLOR_NONE) const;
-    virtual bool drawVBO(const std::vector<unsigned int>& indices = std::vector<unsigned int>(), DrawVertexColorMode drawColors = DRAW_COLOR_NONE) const;
+    virtual bool drawVBO(const COglShaderBase* pShader, int key, DrawVertexColorMode drawColors = DRAW_COLOR_NONE) const;
+    virtual bool drawVBO(const COglShaderBase* pShader, GLsizei numElements, GLuint indexVBOId, DrawVertexColorMode drawColors = DRAW_COLOR_NONE) const;
+    virtual bool drawVBO(const COglShaderBase* pShader, const std::vector<unsigned int>& indices = std::vector<unsigned int>(), DrawVertexColorMode drawColors = DRAW_COLOR_NONE) const;
 
     bool usingSmoothNormals() { return m_smoothNormals; }
     bool usingRegionalNormals() { return m_regionalNormals; }
@@ -96,7 +98,7 @@ public:
     bool getVBOArray(GLuint vboId, std::vector<unsigned int>& values) const;
 protected:
     bool areVBOsValid(size_t numElements, GLuint elementIdxVboID, DrawVertexColorMode drawColors) const;
-    bool bindCommon(size_t numElements) const;
+    bool bindCommon(const COglShaderBase* pShader, size_t numElements) const;
     void unbindCommon() const;
     template<class T>
     static bool assureVBOValid(const std::vector<T>& vec, GLuint& vboID, int& valid);

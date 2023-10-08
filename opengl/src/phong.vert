@@ -57,10 +57,10 @@ void main() {
     gl_Position = proj * modelView * vec4(inPosition, 1.0);
 	vec3 blackColor = vec3(0.0, 0.0, 0.0);
 	
-	if (inColor == blackColor)
-		fragColor = defColor;
-	else
+	if (defColor == blackColor)
 		fragColor = inColor;
-		
+	else
+		fragColor = defColor;
+
     fragNormal = normalize((modelView * vec4(inNormal, 0.0)).xyz);
 }

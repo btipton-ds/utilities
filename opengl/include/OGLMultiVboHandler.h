@@ -11,6 +11,7 @@
 // OGLMultiVboHandler.html
 //
 // If someone can find a way to hyperlink to a relative file, please do that.
+class COglShaderBase;
 
 class COglMultiVboHandler : public COglExtensions
 {
@@ -75,6 +76,8 @@ public:
 
     COglMultiVboHandler(int primitiveType, int maxKeyIndex);
     ~COglMultiVboHandler();
+
+    void setShader(const COglShaderBase* pShader);
 
     // This defines the draw order for keys.
     // Drawing is done in layers, with lowest numbered layer first.
@@ -186,11 +189,17 @@ private:
     std::vector<bool> m_keysToDraw;
     bool m_clearAllLayers = true;
     size_t m_layerBitMask = 0;
+    const COglShaderBase* m_pShader = nullptr;
     std::vector<int> m_keysLayer;
     std::vector<std::vector<int>> m_layersKeys;
     std::vector<std::shared_ptr<VertexBatch>> m_batches;
     std::map<long, std::shared_ptr<OGLIndices>> m_entityKeyToOGLIndicesMap;
 };
+
+inline void COglMultiVboHandler::setShader(const COglShaderBase* pShader)
+{
+    m_pShader = pShader;
+}
 
 inline bool COglMultiVboHandler::empty() const
 {

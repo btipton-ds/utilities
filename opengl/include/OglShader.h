@@ -51,6 +51,11 @@ public:
     static std::string getDataDir();
 
     virtual int shaderResID() { return 0; }
+    void setShaderVertexAttribName(const std::string& name);
+    void setShaderNormalAttribName(const std::string& name);
+    void setShaderTexParamAttribName(const std::string& name);
+    void setShaderColorAttribName(const std::string& name);
+
 
     bool bind(); // Sets uniforms on bind
     bool unBind();
@@ -96,6 +101,11 @@ public:
     int fragmentID() const;
     int geometryID() const;
 
+    GLuint getVertexLoc() const;
+    GLuint getNormalLoc() const;
+    GLuint getTexParamLoc() const;
+    GLuint getColorLoc() const;
+
 protected:
 	virtual void initUniform() = 0;
     bool unLoad();
@@ -121,17 +131,19 @@ private:
     TextureMapType  m_TextureMap;  /// map of images keyed to shader inputs
 #endif
     void   clearTextures();
-    ArgMapType  m_argumentMap; /// map of arguments matched to shader inputs
-
-    ActiveTextureUnits* m_textureUnitStates; /// texture units bound to the card, primary use is gl state management
-
 
     static bool mEnabled;
-
-    int _programId = 0, _vertexId = 0, _fragmentId = 0, _geometryId = 0;
     bool m_defaultsLoaded;
     bool m_bound;
 
+    GLuint m_vertLoc = -1, m_normLoc = -1, m_texParamLoc = -1, m_colorLoc = -1;
+    std::string _vertAttribName, _normalAttribName, _texParamAttribName, _colorAttribName;
+
+    int _programId = 0, _vertexId = 0, _fragmentId = 0, _geometryId = 0;
+
+    ArgMapType  m_argumentMap; /// map of arguments matched to shader inputs
+
+    ActiveTextureUnits* m_textureUnitStates; /// texture units bound to the card, primary use is gl state management
 };
 
 inline bool COglShaderBase::bound() const { 
@@ -143,6 +155,45 @@ inline const std::string COglShaderBase::getName() const
     return m_name;
 }
 
+inline void COglShaderBase::setShaderVertexAttribName(const std::string& name)
+{
+    _vertAttribName = name;
+}
+
+inline void COglShaderBase::setShaderNormalAttribName(const std::string& name)
+{
+    _normalAttribName = name;;
+}
+
+inline void COglShaderBase::setShaderTexParamAttribName(const std::string& name)
+{
+    _texParamAttribName = name;
+}
+
+inline void COglShaderBase::setShaderColorAttribName(const std::string& name)
+{
+    _colorAttribName = name;
+}
+
+inline GLuint COglShaderBase::getVertexLoc() const
+{
+    return m_vertLoc;
+}
+
+inline GLuint COglShaderBase::getNormalLoc() const
+{
+    return m_normLoc;
+}
+
+inline GLuint COglShaderBase::getTexParamLoc() const
+{
+    return m_texParamLoc;
+}
+
+inline GLuint COglShaderBase::getColorLoc() const
+{
+    return m_colorLoc;
+}
 
 class COglShader : public COglShaderBase
 {

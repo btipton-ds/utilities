@@ -729,19 +729,19 @@ void COglMultiVboHandler::draw(int key, COglMultiVBO::DrawVertexColorMode drawCo
 {
     for (size_t idx = 0; idx < m_batches.size(); idx++) {
         const auto& pBatch = m_batches[idx];
-        pBatch->m_VBO.drawVBO(key, drawColors); // Draw using list 0, normal edge vert ids
+        pBatch->m_VBO.drawVBO(m_pShader, key, drawColors); // Draw using list 0, normal edge vert ids
     }
 }
 
 void COglMultiVboHandler::bindCommonBuffers(shared_ptr<VertexBatch> batchPtr) const
 {
     auto& vbo = batchPtr->m_VBO;
-    batchPtr->m_VBO.bindCommon(vbo.m_numVerts);
+    batchPtr->m_VBO.bindCommon(m_pShader, vbo.m_numVerts);
 }
 
 void COglMultiVboHandler::drawKeyForBatch(int key, shared_ptr<VertexBatch> batchPtr, COglMultiVBO::DrawVertexColorMode drawColors) const
 {
-    batchPtr->m_VBO.drawVBO(key, drawColors);
+    batchPtr->m_VBO.drawVBO(m_pShader, key, drawColors);
 }
 
 void COglMultiVboHandler::drawTexturedFaces(std::shared_ptr<VertexBatch> batchPtr) const

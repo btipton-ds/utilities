@@ -31,7 +31,7 @@ inline void COglMultiVboHandler::drawAllKeys(PRE_FUNC preDrawFunc, POST_FUNC pos
                     for (const auto& rec : batchPtr->m_texturedFaces) {
 
                         preDrawTexFunc(rec->m_texId);
-                        batchPtr->m_VBO.drawVBO(rec->m_elementIndices);
+                        batchPtr->m_VBO.drawVBO(m_pShader, rec->m_elementIndices);
                         postDrawTexFunc();
                     }
                     drawTexturedFaces(batchPtr);
