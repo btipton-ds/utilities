@@ -41,16 +41,15 @@ layout(location = 0) out vec4 outColor;
 void main() {
     float intensity = 0.0;
     for (int i = 0; i < fragNumLights; i++) {
-        float dp = abs(dot(fragLights[i], fragNormal));
-		dp = length(fragNormal);
-        intensity += dp;
+        float dp = dot(fragLights[i], fragNormal);
+		if (dp > 0)
+			intensity += dp;
     }
 
     intensity = min(intensity, 1.0);
 
     float ambient = fragAmbient;
     intensity = ambient + (1.0 - ambient) * intensity;
-    intensity = intensity;
 
     outColor = intensity * vec4(fragColor, 1);
 }
