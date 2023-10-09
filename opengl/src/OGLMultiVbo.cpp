@@ -541,7 +541,6 @@ bool COglMultiVBO::areVBOsValid(size_t numElements, GLuint elementIdxVboID, Draw
 bool COglMultiVBO::bindCommon(const COglShaderBase* pShader, size_t numElements) const
 {
     //bind the verteces
-    glEnableClientState(GL_VERTEX_ARRAY);            GL_ASSERT;
     glBindBuffer(GL_ARRAY_BUFFER, m_vertexVboID);       GL_ASSERT;
     glEnableVertexAttribArray(pShader->getVertexLoc()); GL_ASSERT;
     glVertexAttribPointer(pShader->getVertexLoc(), 3, GL_FLOAT, 0, 0, 0); GL_ASSERT;
@@ -549,7 +548,6 @@ bool COglMultiVBO::bindCommon(const COglShaderBase* pShader, size_t numElements)
     //bind the normals
     if (m_normalVboID)
     {
-        glEnableClientState(GL_NORMAL_ARRAY); GL_ASSERT;
         glBindBuffer(GL_ARRAY_BUFFER, m_normalVboID);      GL_ASSERT;
         glEnableVertexAttribArray(pShader->getNormalLoc()); GL_ASSERT;
         glVertexAttribPointer(pShader->getNormalLoc(), 3, GL_FLOAT, 0, 0, 0); GL_ASSERT;
@@ -557,7 +555,6 @@ bool COglMultiVBO::bindCommon(const COglShaderBase* pShader, size_t numElements)
 
     if (m_textureVboID && pShader->getTexParamLoc() != -1)
     {
-        glEnableClientState(GL_TEXTURE_COORD_ARRAY); GL_ASSERT;
         glBindBuffer(GL_ARRAY_BUFFER, m_textureVboID);   GL_ASSERT;
         glEnableVertexAttribArray(pShader->getTexParamLoc()); GL_ASSERT;
         glVertexAttribPointer(pShader->getTexParamLoc(), 2, GL_FLOAT, 0, 0, 0); GL_ASSERT;
