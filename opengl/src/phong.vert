@@ -30,13 +30,13 @@ This file is part of the VulkanQuickStart Project.
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-layout(binding = 0) uniform UniformBufferObject {
+uniform UniformBufferObject {
 	mat4 modelView;
 	mat4 proj;
-	vec3 lightDir[2];
 	vec3 defColor;
-    int numLights;
 	float ambient;
+    int numLights;
+	vec3 lightDir[8];
 };
 
 layout(location = 0) in vec3 inPosition;
@@ -47,7 +47,7 @@ layout(location = 0) out vec3 fragColor;
 layout(location = 1) out vec3 fragNormal;
 layout(location = 2) out float fragAmbient;
 layout(location = 3) out int fragNumLights;
-layout(location = 4) out vec3 fragLights[2];
+layout(location = 4) out vec3 fragLights[8];
 
 void main() {
     fragAmbient = ambient;
