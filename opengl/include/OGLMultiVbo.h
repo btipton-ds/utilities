@@ -24,6 +24,7 @@ class COglMultiVBO : public COglExtensions
 public:
     enum DrawVertexColorMode {
         DRAW_COLOR_NONE,
+        DRAW_COLOR_SKIP,
         DRAW_COLOR,
         DRAW_COLOR_BACK,
     };

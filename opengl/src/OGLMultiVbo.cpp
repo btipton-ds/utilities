@@ -601,6 +601,9 @@ inline bool COglMultiVBO::assureVBOValid(const std::vector<T>& vec, GLuint& vboI
 
 bool COglMultiVBO::drawVBO(const COglShaderBase* pShader, GLsizei numElements, GLuint elementIdxVboID, DrawVertexColorMode drawColors) const
 {
+    if (drawColors == DRAW_COLOR_SKIP)
+        return true;
+
     bool drawingColors = false;
     int priorCulling = -1;
 
