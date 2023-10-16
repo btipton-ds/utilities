@@ -716,7 +716,7 @@ void COglMultiVboHandler::includeElementIndices(int key, const OGLIndices& batch
     }
 }
 
-void COglMultiVboHandler::endSettingElementVBOs()
+void COglMultiVboHandler::endSettingElementIndices()
 {
     for (auto& pBatch : m_batches) {
         for (const auto& pair : pBatch->m_indexMap) {

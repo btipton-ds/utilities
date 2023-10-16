@@ -106,7 +106,7 @@ public:
 
     void beginSettingElementIndices(size_t layerBitMask);
     void includeElementIndices(int key, const OGLIndices& batchIndices, GLuint texId = 0);
-    void endSettingElementVBOs();
+    void endSettingElementIndices();
     void draw(int key, COglMultiVBO::DrawVertexColorMode drawColors = COglMultiVBO::DRAW_COLOR_NONE) const;
 
     // For best speed, we need to bind all the common buffers for a batch, then draw every key that batch uses.
