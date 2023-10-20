@@ -63,7 +63,7 @@ void main() {
 	};
 	
     for (int i = 0; i < fragNumLights; i++) {
-        float dp = dot(lights[i], fragNormal);
+        float dp = abs(dot(lights[i], fragNormal));
 		if (dp > 0)
 			intensity += dp;
     }
