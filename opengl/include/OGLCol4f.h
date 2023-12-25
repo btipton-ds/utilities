@@ -1,5 +1,5 @@
 #pragma once
-#include <OglMath.h> 
+#include <OGLMath.h> 
 
 /** .
 class with typical operations for color

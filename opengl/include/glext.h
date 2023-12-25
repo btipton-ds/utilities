@@ -4,7 +4,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 /*
 ** Copyright 2013-2020 The Khronos Group Inc.
 ** SPDX-License-Identifier: MIT

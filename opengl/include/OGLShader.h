@@ -13,13 +13,18 @@
 //#include <wglext.h>
 #endif
 
+#else
+#define __cdecl
+#define UINT unsigned int
+#define LPVOID void*
 #endif
 
 #include <OGLExtensions.h>
-#include <OglCol4f.h>
+#include <OGLCol4f.h>
 
 //this macro is for use in COglShader derived classes
 #define CHECK_GLSL_STATE   assert( wglGetCurrentContext() ); GL_ASSERT; if( !isEnabled() || m_error )  return 0
+
 
 class COglArg;
 class COglTexture;
