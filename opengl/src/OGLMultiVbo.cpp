@@ -8,11 +8,13 @@
 
 #ifdef WIN32
 #include <Windows.h>
-#include <gl/GL.h>
-#include "glext.h"
-
-#endif // WIN32
-
+#include <GL/gl.h>
+#include <GL/glext.h>
+#include <GL/wglext.h>
+#else
+#include "/usr/include/GL/gl.h"
+#include "/usr/include/GL/glext.h"
+#endif
 
 #define VBO_VALID_UNKNOWN 0
 #define VBO_VALID_TRUE 1

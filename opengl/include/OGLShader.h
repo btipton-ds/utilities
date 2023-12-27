@@ -6,22 +6,20 @@
 
 #ifdef WIN32
 #include <Windows.h>
-#include </usr/include/GL/gl.h>
-#include <glext.h>
-
-#ifndef __wglext_h_
-//#include <wglext.h>
-#endif
+#include <GL/gl.h>
+#include <GL/glext.h>
+#include <GL/wglext.h>
 
 #include <OGLExtensions.h>
 #define CHECK_GLSL_STATE   assert( wglGetCurrentContext() ); GL_ASSERT; if( !isEnabled() || m_error )  return 0
 #else
+
 #define __cdecl
 #define UINT unsigned int
 #define LPVOID void*
 #define CHECK_GLSL_STATE
-#include </usr/include/GL/gl.h>
-#include </usr/include/GL/glext.h>
+#include "/usr/include/GL/gl.h"
+#include "/usr/include/GL/glext.h"
 #endif
 
 #include <OGLCol4f.h>
