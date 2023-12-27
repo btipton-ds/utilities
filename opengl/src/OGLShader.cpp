@@ -6,9 +6,14 @@
 #ifdef WIN32
 #include <Windows.h>
 #include <gl/GL.h>
+#else
+#define GL_GLEXT_PROTOTYPES
+#include </usr/include/GL/gl.h>
+#include </usr/include/GL/glext.h>
 #endif
 
 //#include <Kernel/OpenGLib/glu.h> // LIMBO not picking up from the precompiled header in 64 bit
+#include <string.h> 
 #include <vector>
 #include <map>
 #include <set>
@@ -17,7 +22,7 @@
 #include <fstream>
 #include <filesystem>
 #include <iostream>
-#include <OglShader.h>
+#include <OGLShader.h>
 
 using namespace std;
 
@@ -213,6 +218,7 @@ COglArg::~COglArg()
 
 bool COglShaderBase::mEnabled = true; //user override of global shader usage
 
+#ifdef WIN32
 COglShaderBase::COglShaderBase()
     : COglExtensions()
     , m_error(false)
@@ -223,6 +229,17 @@ COglShaderBase::COglShaderBase()
     , m_geomShaderOutType(GL_TRIANGLES)
 {
 }
+#else
+COglShaderBase::COglShaderBase()
+    : m_error(false)
+	, m_textureUnitStates(0)
+    , m_defaultsLoaded(false)
+    , m_bound(false)
+    , m_geomShaderInType(GL_TRIANGLES)
+    , m_geomShaderOutType(GL_TRIANGLES)
+{
+}
+#endif
 
 COglShaderBase::~COglShaderBase()
 {
@@ -567,6 +584,7 @@ namespace
 
     bool checkOglExtension(const char* name)
     {
+#ifdef WIN32
         static GLint numExt;
         static set<string> names;
         if (numExt == 0) {
@@ -576,6 +594,8 @@ namespace
                 const GLubyte* pName = COglShaderBase::glGetStringi(GL_EXTENSIONS, i);
             }
         }
+#endif
+	return true;
     }
 }
 
@@ -661,9 +681,9 @@ static char* getVariableName(char* str)
 {
     assert(str && strlen(str));
     const unsigned int bufsize = 24;
-    static char name[24];
+    static char name[256];
     name[0] = '\0';
-    sscanf_s(str, "%s", name, bufsize);
+    sscanf(str, "%s", name);
     
     size_t sz = strlen(name);
     if(name[sz-1]==';')
@@ -724,8 +744,8 @@ void COglShaderBase::loadDefaultVariables()
             continue;
 
         size_t end = strlen(orgSource);
-        char* sourceCpy = new char[ end+1 ];
-        strcpy_s(sourceCpy, end + 1,orgSource);
+        char* sourceCpy = new char[ end + 1 ];
+        strcpy(sourceCpy, orgSource);
         sourceCpy[end] = '\0';
         char* source  = sourceCpy; // don't change the original source
         char* endChar = &source[end];
@@ -769,7 +789,7 @@ void COglShaderBase::loadDefaultVariables()
                     vname = getVariableName( tname + 4 );
                     p2f val;
                     if (stiDefaultVariable) {
-                        int num = sscanf_s(stiArg, "%f %f", &val.x, &val.y);
+                        int num = sscanf(stiArg, "%f %f", &val.x, &val.y);
                         assert(num == 2 && "missing shader defaults");
 
                     }
@@ -780,7 +800,7 @@ void COglShaderBase::loadDefaultVariables()
                     vname = getVariableName( tname + 4 );
                     p3f val;
                     if (stiDefaultVariable) {
-                        int num = sscanf_s(stiArg, "%f %f %f", &val.x, &val.y, &val.z);
+                        int num = sscanf(stiArg, "%f %f %f", &val.x, &val.y, &val.z);
                         assert(num == 3 && "missing shader defaults");
                     }
                     setVariable( vname, val);
@@ -790,7 +810,7 @@ void COglShaderBase::loadDefaultVariables()
                     vname = getVariableName( tname + 4 );
                     col4f col;
                     if (stiDefaultVariable) {
-                        int num = sscanf_s(stiArg, "%f %f %f %f", &col.r, &col.g, &col.b, &col.o);
+                        int num = sscanf(stiArg, "%f %f %f %f", &col.r, &col.g, &col.b, &col.o);
                         assert(num == 4 && "missing shader defaults");
                     }
                     setVariable( vname, col);

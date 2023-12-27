@@ -1,10 +1,9 @@
 #pragma once
 
-#ifdef WIN32
-#include <Windows.h>
-#include <GL/gl.h>
-#include <glext.h>
-#include <wglext.h>
+#define GL_GLEXT_PROTOTYPES
+#ifndef WIN32
+#include "/usr/include/GL/gl.h"
+#include "/usr/include/GL/glext.h"
 #endif
 
 #define HAS_SHADER_SUBROUTINES 1
@@ -15,9 +14,10 @@
 class COglExtensions
 {
 public:
-#ifdef WIN32
-    static bool hasVBOSupport();    //< pretty much a given, but just in case
 
+    static bool hasVBOSupport();    //< pretty much a given, but just in case
+    COglExtensions();
+#ifdef WIN32
     static PFNGLACTIVESHADERPROGRAMPROC glActiveShaderProgram;
     static PFNGLACTIVETEXTUREPROC glActiveTexture;
     static PFNGLATTACHOBJECTARBPROC glAttachObjectARB;
@@ -78,7 +78,7 @@ public:
     static PFNGLCLEARNAMEDFRAMEBUFFERUIVPROC glClearNamedFramebufferuiv;
     static PFNGLCLEARTEXIMAGEPROC glClearTexImage;
     static PFNGLCLEARTEXSUBIMAGEPROC glClearTexSubImage;
-    static PFNGLCLIENTACTIVETEXTUREPROC glClientActiveTexture;
+    //static PFNGLCLIENTACTIVETEXTUREPROC glClientActiveTexture;
     static PFNGLCLIENTWAITSYNCPROC glClientWaitSync;
     static PFNGLCLIPCONTROLPROC glClipControl;
     static PFNGLCOLORMASKIPROC glColorMaski;
@@ -351,8 +351,8 @@ public:
     static PFNGLISVERTEXARRAYPROC glIsVertexArray;
     static PFNGLLINKPROGRAMPROC glLinkProgram;
     static PFNGLLINKPROGRAMARBPROC glLinkProgramARB;
-    static PFNGLLOADTRANSPOSEMATRIXDPROC glLoadTransposeMatrixd;
-    static PFNGLLOADTRANSPOSEMATRIXFPROC glLoadTransposeMatrixf;
+//    static PFNGLLOADTRANSPOSEMATRIXDPROC glLoadTransposeMatrixd;
+    //static PFNGLLOADTRANSPOSEMATRIXFPROC glLoadTransposeMatrixf;
     static PFNGLMAPBUFFERPROC glMapBuffer;
     static PFNGLMAPBUFFERRANGEPROC glMapBufferRange;
     static PFNGLMAPNAMEDBUFFERPROC glMapNamedBuffer;
@@ -367,38 +367,38 @@ public:
     static PFNGLMULTIDRAWELEMENTSBASEVERTEXPROC glMultiDrawElementsBaseVertex;
     static PFNGLMULTIDRAWELEMENTSINDIRECTPROC glMultiDrawElementsIndirect;
 //    static PFNGLMULTIDRAWELEMENTSINDIRECTCOUNTPROC glMultiDrawElementsIndirectCount;
-    static PFNGLMULTITEXCOORD1DPROC glMultiTexCoord1d;
-    static PFNGLMULTITEXCOORD1DVPROC glMultiTexCoord1dv;
-    static PFNGLMULTITEXCOORD1FPROC glMultiTexCoord1f;
-    static PFNGLMULTITEXCOORD1FVPROC glMultiTexCoord1fv;
-    static PFNGLMULTITEXCOORD1IPROC glMultiTexCoord1i;
-    static PFNGLMULTITEXCOORD1IVPROC glMultiTexCoord1iv;
-    static PFNGLMULTITEXCOORD1SPROC glMultiTexCoord1s;
-    static PFNGLMULTITEXCOORD1SVPROC glMultiTexCoord1sv;
-    static PFNGLMULTITEXCOORD2DPROC glMultiTexCoord2d;
-    static PFNGLMULTITEXCOORD2DVPROC glMultiTexCoord2dv;
-    static PFNGLMULTITEXCOORD2FPROC glMultiTexCoord2f;
-    static PFNGLMULTITEXCOORD2FVPROC glMultiTexCoord2fv;
-    static PFNGLMULTITEXCOORD2IPROC glMultiTexCoord2i;
-    static PFNGLMULTITEXCOORD2IVPROC glMultiTexCoord2iv;
-    static PFNGLMULTITEXCOORD2SPROC glMultiTexCoord2s;
-    static PFNGLMULTITEXCOORD2SVPROC glMultiTexCoord2sv;
-    static PFNGLMULTITEXCOORD3DPROC glMultiTexCoord3d;
-    static PFNGLMULTITEXCOORD3DVPROC glMultiTexCoord3dv;
-    static PFNGLMULTITEXCOORD3FPROC glMultiTexCoord3f;
-    static PFNGLMULTITEXCOORD3FVPROC glMultiTexCoord3fv;
-    static PFNGLMULTITEXCOORD3IPROC glMultiTexCoord3i;
-    static PFNGLMULTITEXCOORD3IVPROC glMultiTexCoord3iv;
-    static PFNGLMULTITEXCOORD3SPROC glMultiTexCoord3s;
-    static PFNGLMULTITEXCOORD3SVPROC glMultiTexCoord3sv;
-    static PFNGLMULTITEXCOORD4DPROC glMultiTexCoord4d;
-    static PFNGLMULTITEXCOORD4DVPROC glMultiTexCoord4dv;
-    static PFNGLMULTITEXCOORD4FPROC glMultiTexCoord4f;
-    static PFNGLMULTITEXCOORD4FVPROC glMultiTexCoord4fv;
-    static PFNGLMULTITEXCOORD4IPROC glMultiTexCoord4i;
-    static PFNGLMULTITEXCOORD4IVPROC glMultiTexCoord4iv;
-    static PFNGLMULTITEXCOORD4SPROC glMultiTexCoord4s;
-    static PFNGLMULTITEXCOORD4SVPROC glMultiTexCoord4sv;
+//    static PFNGLMULTITEXCOORD1DPROC glMultiTexCoord1d;
+//    static PFNGLMULTITEXCOORD1DVPROC glMultiTexCoord1dv;
+//    static PFNGLMULTITEXCOORD1FPROC glMultiTexCoord1f;
+//    static PFNGLMULTITEXCOORD1FVPROC glMultiTexCoord1fv;
+//    static PFNGLMULTITEXCOORD1IPROC glMultiTexCoord1i;
+//    static PFNGLMULTITEXCOORD1IVPROC glMultiTexCoord1iv;
+//    static PFNGLMULTITEXCOORD1SPROC glMultiTexCoord1s;
+//    static PFNGLMULTITEXCOORD1SVPROC glMultiTexCoord1sv;
+//    static PFNGLMULTITEXCOORD2DPROC glMultiTexCoord2d;
+//    static PFNGLMULTITEXCOORD2DVPROC glMultiTexCoord2dv;
+//    static PFNGLMULTITEXCOORD2FPROC glMultiTexCoord2f;
+//    static PFNGLMULTITEXCOORD2FVPROC glMultiTexCoord2fv;
+//    static PFNGLMULTITEXCOORD2IPROC glMultiTexCoord2i;
+//    static PFNGLMULTITEXCOORD2IVPROC glMultiTexCoord2iv;
+//    static PFNGLMULTITEXCOORD2SPROC glMultiTexCoord2s;
+//    static PFNGLMULTITEXCOORD2SVPROC glMultiTexCoord2sv;
+//    static PFNGLMULTITEXCOORD3DPROC glMultiTexCoord3d;
+//    static PFNGLMULTITEXCOORD3DVPROC glMultiTexCoord3dv;
+//    static PFNGLMULTITEXCOORD3FPROC glMultiTexCoord3f;
+//    static PFNGLMULTITEXCOORD3FVPROC glMultiTexCoord3fv;
+//    static PFNGLMULTITEXCOORD3IPROC glMultiTexCoord3i;
+//    static PFNGLMULTITEXCOORD3IVPROC glMultiTexCoord3iv;
+//    static PFNGLMULTITEXCOORD3SPROC glMultiTexCoord3s;
+//    static PFNGLMULTITEXCOORD3SVPROC glMultiTexCoord3sv;
+//    static PFNGLMULTITEXCOORD4DPROC glMultiTexCoord4d;
+//    static PFNGLMULTITEXCOORD4DVPROC glMultiTexCoord4dv;
+//    static PFNGLMULTITEXCOORD4FPROC glMultiTexCoord4f;
+//    static PFNGLMULTITEXCOORD4FVPROC glMultiTexCoord4fv;
+//    static PFNGLMULTITEXCOORD4IPROC glMultiTexCoord4i;
+//    static PFNGLMULTITEXCOORD4IVPROC glMultiTexCoord4iv;
+//    static PFNGLMULTITEXCOORD4SPROC glMultiTexCoord4s;
+//    static PFNGLMULTITEXCOORD4SVPROC glMultiTexCoord4sv;
     static PFNGLMULTITEXCOORDP1UIPROC glMultiTexCoordP1ui;
     static PFNGLMULTITEXCOORDP1UIVPROC glMultiTexCoordP1uiv;
     static PFNGLMULTITEXCOORDP2UIPROC glMultiTexCoordP2ui;
@@ -407,8 +407,8 @@ public:
     static PFNGLMULTITEXCOORDP3UIVPROC glMultiTexCoordP3uiv;
     static PFNGLMULTITEXCOORDP4UIPROC glMultiTexCoordP4ui;
     static PFNGLMULTITEXCOORDP4UIVPROC glMultiTexCoordP4uiv;
-    static PFNGLMULTTRANSPOSEMATRIXDPROC glMultTransposeMatrixd;
-    static PFNGLMULTTRANSPOSEMATRIXFPROC glMultTransposeMatrixf;
+//    static PFNGLMULTTRANSPOSEMATRIXDPROC glMultTransposeMatrixd;
+//    static PFNGLMULTTRANSPOSEMATRIXFPROC glMultTransposeMatrixf;
     static PFNGLNAMEDBUFFERDATAPROC glNamedBufferData;
     static PFNGLNAMEDBUFFERSTORAGEPROC glNamedBufferStorage;
     static PFNGLNAMEDBUFFERSUBDATAPROC glNamedBufferSubData;
@@ -771,6 +771,5 @@ public:
     static PFNGLWINDOWPOS3SPROC glWindowPos3s;
     static PFNGLWINDOWPOS3SVPROC glWindowPos3sv;
 #endif
-    COglExtensions();
 };
 

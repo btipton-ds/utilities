@@ -1,7 +1,5 @@
 #pragma once
 
-#include <GL/gl.h>
-
 #include <vector>
 #include <map>
 #include <memory>

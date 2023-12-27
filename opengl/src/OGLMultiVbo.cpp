@@ -3,8 +3,8 @@
 
 #include <assert.h>
 
-#include <OglMultiVboHandler.h>
-#include <OglShader.h>
+#include <OGLMultiVboHandler.h>
+#include <OGLShader.h>
 
 #ifdef WIN32
 #include <Windows.h>
@@ -49,7 +49,9 @@ Another refinement is to our own vertex mangement using partial VBO writing to r
 
 using namespace std;
 
+#ifndef HLOG
 #define HLOG(msg)
+#endif
 
 COglMultiVBO::COglMultiVBO(int m_primitiveType)
     : m_numVerts(0)
@@ -74,6 +76,7 @@ COglMultiVBO::~COglMultiVBO()
 {
     HLOG(_T("~COglMultiVBO()"));
 
+#ifdef WIN32
     if (!wglGetCurrentContext())
     {
         assert(!"Bad gl context");
@@ -81,6 +84,7 @@ COglMultiVBO::~COglMultiVBO()
         HLOG(_T("SKIPPED ~COglMultiVBO() Ogl cleanup... there is no gl context"));
         return;
     }
+#endif
 
     releaseVBOs();
 }
@@ -164,16 +168,20 @@ bool COglMultiVBO::canFitInVboSpace(int numTriangles)
 
 bool COglMultiVBO::isInitialized() const
 {
+#ifdef WIN32
     if (!hasVBOSupport() || !wglGetCurrentContext())
         return false;
+#endif
 
     return glIsBuffer(m_vertexVboID) && glIsBuffer(m_normalVboID);
 }
 
 bool COglMultiVBO::createVBO(GLuint& vboID, int& valid)
 {
+#ifdef WIN32
     if (!hasVBOSupport() || !wglGetCurrentContext())
         return false;
+#endif
 
     assert(!vboID);
 
@@ -194,12 +202,15 @@ bool COglMultiVBO::createVBO(GLuint& vboID, int& valid)
 void COglMultiVBO::releaseVBO(GLuint& vboID, int& valid)
 {
     valid = false;
+
+#ifdef WIN32
     HLOG(_T("COglMultiVBO::releaseVBO"));
     if (!hasVBOSupport() || !wglGetCurrentContext())
     {
         HLOG(_T("Skipping COglMultiVBO::releaseVBO()"));
         return;
     }
+#endif
 
     if (vboID)
     {
@@ -247,8 +258,10 @@ bool COglMultiVBO::copyToVBO(const vector<float>& verts, const vector<float>& no
 bool COglMultiVBO::copyToVBO(const vector<float>& verts, const vector<float>& normals, bool smoothNrmls, const vector<float>& textureCoords, vector<unsigned int>& colors, int id)
 {
     m_valid = VBO_VALID_UNKNOWN;
+#ifdef WIN32
     if (!hasVBOSupport() || !wglGetCurrentContext())
         return false;
+#endif
 
     assert(!verts.empty());
 
@@ -457,7 +470,11 @@ void COglMultiVBO::setUseRegionalNormal(bool set)
 
 bool COglMultiVBO::setIndexVBO(int key, const vector<unsigned int>& indices)
 {
+#ifdef WIN32
     if (!hasVBOSupport() || !wglGetCurrentContext())
+#else
+    if (!hasVBOSupport())
+#endif
         return false;
     auto iter = m_elementVBOIDMap.find(key);
     if (iter == m_elementVBOIDMap.end()) {
@@ -501,15 +518,21 @@ bool COglMultiVBO::drawVBO(const COglShaderBase* pShader, int key, DrawVertexCol
 
 bool COglMultiVBO::areVBOsValid(size_t numElements, GLuint elementIdxVboID, DrawVertexColorMode drawColors) const
 {
+#ifdef WIN32
     if (!hasVBOSupport() || !wglGetCurrentContext())
         return false;
+#endif
 
     if (m_valid != VBO_VALID_TRUE) {
         m_valid = VBO_VALID_FALSE;
         if (!m_numVerts)
             return false;
 
+#ifdef WIN32
         if (!hasVBOSupport() || !wglGetCurrentContext())
+#else
+        if (!hasVBOSupport())
+#endif
             return false;
 
         if (!glIsBuffer(m_vertexVboID))
@@ -691,7 +714,11 @@ bool COglMultiVBO::drawVBO(const COglShaderBase* pShader, const vector<unsigned 
         if (!m_numVerts)
             return false;
 
+#ifdef WIN32
         if (!hasVBOSupport() || !wglGetCurrentContext())
+#else
+        if (!hasVBOSupport())
+#endif
             return false;
 
         if (!glIsBuffer(m_vertexVboID))

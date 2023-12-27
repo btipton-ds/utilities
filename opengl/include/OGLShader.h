@@ -6,24 +6,27 @@
 
 #ifdef WIN32
 #include <Windows.h>
-#include <GL/gl.h>
+#include </usr/include/GL/gl.h>
 #include <glext.h>
 
 #ifndef __wglext_h_
 //#include <wglext.h>
 #endif
 
+#include <OGLExtensions.h>
+#define CHECK_GLSL_STATE   assert( wglGetCurrentContext() ); GL_ASSERT; if( !isEnabled() || m_error )  return 0
 #else
 #define __cdecl
 #define UINT unsigned int
 #define LPVOID void*
+#define CHECK_GLSL_STATE
+#include </usr/include/GL/gl.h>
+#include </usr/include/GL/glext.h>
 #endif
 
-#include <OGLExtensions.h>
 #include <OGLCol4f.h>
 
 //this macro is for use in COglShader derived classes
-#define CHECK_GLSL_STATE   assert( wglGetCurrentContext() ); GL_ASSERT; if( !isEnabled() || m_error )  return 0
 
 
 class COglArg;
@@ -37,7 +40,11 @@ This is a base class to store a shader program
 A shader program consists of a vertex and a fragment component
 Currently this is set up to load shaders from a resource
  */
+ #ifdef WIN32
 class COglShaderBase : public COglExtensions
+#else
+class COglShaderBase
+#endif
 {
 public:
     using ArgMapType = std::map<const std::string, std::shared_ptr<COglArg>>;

@@ -4,7 +4,7 @@
 #include <set>
 
 #include <rgbaColor.h>
-#include <OglMultiVboHandler.h>
+#include <OGLMultiVboHandler.h>
 
 #define VBO_VALID_UNKNOWN 0
 #define VBO_VALID_TRUE 1
