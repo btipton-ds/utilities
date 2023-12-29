@@ -25,7 +25,6 @@ public:
 #ifdef WIN32
     static PFNGLACTIVESHADERPROGRAMPROC glActiveShaderProgram;
     static PFNGLACTIVETEXTUREPROC glActiveTexture;
-    static PFNGLATTACHOBJECTARBPROC glAttachObjectARB;
     static PFNGLATTACHSHADERPROC glAttachShader;
     static PFNGLBEGINCONDITIONALRENDERPROC glBeginConditionalRender;
     static PFNGLBEGINQUERYPROC glBeginQuery;
@@ -92,7 +91,6 @@ public:
     static PFNGLCOLORP4UIPROC glColorP4ui;
     static PFNGLCOLORP4UIVPROC glColorP4uiv;
     static PFNGLCOMPILESHADERPROC glCompileShader;
-    static PFNGLCOMPILESHADERARBPROC glCompileShaderARB;
     static PFNGLCOMPRESSEDTEXIMAGE1DPROC glCompressedTexImage1D;
     static PFNGLCOMPRESSEDTEXIMAGE2DPROC glCompressedTexImage2D;
     static PFNGLCOMPRESSEDTEXIMAGE3DPROC glCompressedTexImage3D;
@@ -112,13 +110,11 @@ public:
     static PFNGLCREATEBUFFERSPROC glCreateBuffers;
     static PFNGLCREATEFRAMEBUFFERSPROC glCreateFramebuffers;
     static PFNGLCREATEPROGRAMPROC glCreateProgram;
-    static PFNGLCREATEPROGRAMOBJECTARBPROC glCreateProgramObjectARB;
     static PFNGLCREATEPROGRAMPIPELINESPROC glCreateProgramPipelines;
     static PFNGLCREATEQUERIESPROC glCreateQueries;
     static PFNGLCREATERENDERBUFFERSPROC glCreateRenderbuffers;
     static PFNGLCREATESAMPLERSPROC glCreateSamplers;
     static PFNGLCREATESHADERPROC glCreateShader;
-    static PFNGLCREATESHADEROBJECTARBPROC glCreateShaderObjectARB;
     static PFNGLCREATESHADERPROGRAMVPROC glCreateShaderProgramv;
     static PFNGLCREATETEXTURESPROC glCreateTextures;
     static PFNGLCREATETRANSFORMFEEDBACKSPROC glCreateTransformFeedbacks;
@@ -128,7 +124,6 @@ public:
     static PFNGLDEBUGMESSAGEINSERTPROC glDebugMessageInsert;
     static PFNGLDELETEBUFFERSPROC glDeleteBuffers;
     static PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers;
-    static PFNGLDELETEOBJECTARBPROC glDeleteObjectARB;
     static PFNGLDELETEPROGRAMPROC glDeleteProgram;
     static PFNGLDELETEPROGRAMPIPELINESPROC glDeleteProgramPipelines;
     static PFNGLDELETEQUERIESPROC glDeleteQueries;
@@ -141,7 +136,6 @@ public:
     static PFNGLDEPTHRANGEARRAYVPROC glDepthRangeArrayv;
     static PFNGLDEPTHRANGEFPROC glDepthRangef;
     static PFNGLDEPTHRANGEINDEXEDPROC glDepthRangeIndexed;
-    static PFNGLDETACHOBJECTARBPROC glDetachObjectARB;
     static PFNGLDETACHSHADERPROC glDetachShader;
     static PFNGLDISABLEIPROC glDisablei;
     static PFNGLDISABLEVERTEXARRAYATTRIBPROC glDisableVertexArrayAttrib;
@@ -442,7 +436,6 @@ public:
     static PFNGLPRIMITIVERESTARTINDEXPROC glPrimitiveRestartIndex;
     static PFNGLPROGRAMBINARYPROC glProgramBinary;
     static PFNGLPROGRAMPARAMETERIPROC glProgramParameteri;
-    static PFNGLPROGRAMPARAMETERIEXTPROC glProgramParameteriEXT;
     static PFNGLPROGRAMUNIFORM1DPROC glProgramUniform1d;
     static PFNGLPROGRAMUNIFORM1DVPROC glProgramUniform1dv;
     static PFNGLPROGRAMUNIFORM1FPROC glProgramUniform1f;

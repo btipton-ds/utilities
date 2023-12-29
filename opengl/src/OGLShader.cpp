@@ -28,43 +28,37 @@ using namespace std;
 
 #define	RETURN_IF_NOT_FIRST_TIME(a) static bool first=true; if(!first) return a; first = false;
 
-void COglShaderBase::dumpGlErrors()
+void COglShaderBase::dumpGlErrors(const char* filename, int lineNumber)
 {
     GLenum err;
     while ((err = glGetError()) && err != GL_NO_ERROR) {
+    	cout << "glErr (" << filename << ":" << lineNumber << "): ";
         switch (err) {
         case GL_INVALID_ENUM:
-            cout << "glErr: GL_INVALID_ENUM\n"; break;
+            cout << "GL_INVALID_ENUM\n"; break;
         case GL_INVALID_VALUE:
-            cout << "glErr: GL_INVALID_VALUE\n"; break;
+            cout << "GL_INVALID_VALUE\n"; break;
         case GL_INVALID_OPERATION:
-            cout << "glErr: GL_INVALID_OPERATION\n"; break;
+            cout << "GL_INVALID_OPERATION\n"; break;
         case GL_STACK_OVERFLOW:
-            cout << "glErr: GL_STACK_OVERFLOW\n"; break;
+            cout << "GL_STACK_OVERFLOW\n"; break;
         case GL_STACK_UNDERFLOW:
-            cout << "glErr: GL_STACK_UNDERFLOW\n"; break;
+            cout << "GL_STACK_UNDERFLOW\n"; break;
         case GL_OUT_OF_MEMORY:
-            cout << "glErr: GL_OUT_OF_MEMORY\n"; break;
+            cout << "GL_OUT_OF_MEMORY\n"; break;
         case GL_INVALID_FRAMEBUFFER_OPERATION:
-            cout << "glErr: GL_INVALID_FRAMEBUFFER_OPERATION\n"; break;
+            cout << "GL_INVALID_FRAMEBUFFER_OPERATION\n"; break;
         case GL_CONTEXT_LOST:
-            cout << "glErr: GL_CONTEXT_LOST\n"; break;
+            cout << "GL_CONTEXT_LOST\n"; break;
         case GL_TABLE_TOO_LARGE:
-            cout << "glErr: GL_TABLE_TOO_LARGE\n"; break;
+            cout << "GL_TABLE_TOO_LARGE\n"; break;
         default:
-            cout << "glErr: " << err << "\n"; break;
+            cout << " Unknown err(" << err << ")\n"; break;
         }
 
         assert(!"glError");
     }
 }
-
-#ifdef _DEBUG
-#define GL_ASSERT COglShaderBase::dumpGlErrors();
-#else
-#define GL_ASSERT
-#endif // _DEBUG
-
 
 #define HDTIMELOG(X)
 //#define CHECK_GLSL_STATE
@@ -952,10 +946,10 @@ bool COglShaderBase::load()
 
     // Create Shader And Program Objects
 
-    _programId = glCreateProgramObjectARB(); GL_ASSERT;
-    _vertexId  = glCreateShaderObjectARB(GL_VERTEX_SHADER_ARB); GL_ASSERT;
-    _fragmentId = glCreateShaderObjectARB(GL_FRAGMENT_SHADER_ARB); GL_ASSERT;
-    _geometryId = gsource ? glCreateShaderObjectARB(GL_GEOMETRY_SHADER_EXT) : 0; GL_ASSERT;
+    _programId = glCreateProgram(); GL_ASSERT;
+    _vertexId  = glCreateShader(GL_VERTEX_SHADER_ARB); GL_ASSERT;
+    _fragmentId = glCreateShader(GL_FRAGMENT_SHADER_ARB); GL_ASSERT;
+    _geometryId = gsource ? glCreateShader(GL_GEOMETRY_SHADER_EXT) : 0; GL_ASSERT;
 
     LOG_AND_RETURN( !_programId || !_vertexId || !_fragmentId, "Shader compilation failed" )
 
@@ -963,44 +957,44 @@ bool COglShaderBase::load()
         LOG_AND_RETURN( gsource && !_geometryId, "Your card and or driver does not support geometry shaders")
 
     // Load Shader Sources
-    glShaderSourceARB(_vertexId, 1, (const GLcharARB**)&vsource, NULL); GL_ASSERT;
-    glShaderSourceARB(_fragmentId, 1, (const GLcharARB**) &source, NULL); GL_ASSERT;
+    glShaderSource(_vertexId, 1, (const GLchar**)&vsource, NULL); GL_ASSERT;
+    glShaderSource(_fragmentId, 1, (const GLchar**) &source, NULL); GL_ASSERT;
 
     if (gsource && _geometryId) {
-        glShaderSourceARB(_geometryId, 1, (const GLcharARB**)&gsource, NULL); GL_ASSERT;
+        glShaderSource(_geometryId, 1, (const GLchar**)&gsource, NULL); GL_ASSERT;
     }
 
     // Compile The Shaders
-    glCompileShaderARB(_vertexId); GL_ASSERT;
+    glCompileShader(_vertexId); GL_ASSERT;
 	hasShaderError(_vertexId);
 
-    glCompileShaderARB(_fragmentId); GL_ASSERT;
+    glCompileShader(_fragmentId); GL_ASSERT;
 	hasShaderError(_fragmentId);
 
     if( gsource && _geometryId)
 	{
-        glCompileShaderARB(_geometryId); GL_ASSERT;
+        glCompileShader(_geometryId); GL_ASSERT;
 		hasShaderError(_geometryId);
 	}
 
     // Attach The Shader Objects To The Program Object
-    glAttachObjectARB(_programId, _vertexId);   GL_ASSERT;
-    glAttachObjectARB(_programId, _fragmentId);   GL_ASSERT;
+    glAttachShader(_programId, _vertexId);   GL_ASSERT;
+    glAttachShader(_programId, _fragmentId);   GL_ASSERT;
 
-    if( gsource && _geometryId && glProgramParameteriEXT )
+    if( gsource && _geometryId && glProgramParameteri )
     {
-        glAttachObjectARB(_programId, _geometryId); GL_ASSERT;
+        glAttachShader(_programId, _geometryId); GL_ASSERT;
 
-		glProgramParameteriEXT(_programId, GL_GEOMETRY_INPUT_TYPE_EXT,  m_geomShaderInType  ); GL_ASSERT;
-		glProgramParameteriEXT(_programId, GL_GEOMETRY_OUTPUT_TYPE_EXT, m_geomShaderOutType ); GL_ASSERT;
+        glProgramParameteri(_programId, GL_GEOMETRY_INPUT_TYPE_EXT,  m_geomShaderInType  ); GL_ASSERT;
+        glProgramParameteri(_programId, GL_GEOMETRY_OUTPUT_TYPE_EXT, m_geomShaderOutType ); GL_ASSERT;
 
 		int temp;
 		glGetIntegerv(GL_MAX_GEOMETRY_OUTPUT_VERTICES_EXT,&temp); GL_ASSERT;
-		glProgramParameteriEXT(_programId, GL_GEOMETRY_VERTICES_OUT_EXT,temp); GL_ASSERT;
+		glProgramParameteri(_programId, GL_GEOMETRY_VERTICES_OUT_EXT,temp); GL_ASSERT;
     }
 
     // Link The Program Object
-    glLinkProgramARB(_programId); GL_ASSERT
+    glLinkProgram(_programId); GL_ASSERT
     delete [] source; // NB: living with the leak if we have an error condition
 
     bind();
@@ -1415,6 +1409,8 @@ void COglShader::setIncludeSrcFile(const string& filename)
 void COglShader::setVertexSrcFile(const string& filename)
 {
     ifstream in(filename);
+    if (!in.good() || !in.is_open())
+    	cout << "Cannot read vertex shader source.\n";
     string src;
     char buf[2048];
     while (in.good() && !in.eof()) {

@@ -24,8 +24,11 @@
 
 #include <OGLCol4f.h>
 
-//this macro is for use in COglShader derived classes
-
+#ifdef _DEBUG
+#define GL_ASSERT COglShaderBase::dumpGlErrors(__FILE__, __LINE__);
+#else
+#define GL_ASSERT
+#endif // _DEBUG
 
 class COglArg;
 class COglTexture;
@@ -47,7 +50,7 @@ class COglShaderBase
 public:
     using ArgMapType = std::map<const std::string, std::shared_ptr<COglArg>>;
 
-    static void dumpGlErrors();
+    static void dumpGlErrors(const char* filename, int lineNumber);
 
 #if TEXTURE_SUPPORT
     using TextureMapType = std::map<const std::string, std::shared_ptr<COglTexture>>;

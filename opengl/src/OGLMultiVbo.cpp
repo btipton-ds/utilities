@@ -20,12 +20,6 @@
 #define VBO_VALID_TRUE 1
 #define VBO_VALID_FALSE 2
 
-#ifdef _DEBUG
-#define GL_ASSERT COglShaderBase::dumpGlErrors();
-#else
-#define GL_ASSERT
-#endif // _DEBUG
-
 /*
 The batch size is empiracle and dependent on GPU cores, memory, triangle count, how often faces will be edited and more.
 Larger VBOs draw faster, smaller can be modified faster IF the bookeeping allows only touching the batches which contain data for the face being modified.
@@ -462,13 +456,6 @@ void COglMultiVBO::setUseRegionalNormal(bool set)
         glBufferData(GL_ARRAY_BUFFER, m_numVerts * 3 * sizeof(float), 0, GL_STATIC_DRAW);  
     }
 }
-
-// change comments on following 2 lines to turn on asserts
-#ifdef _DEBUG
-#define GL_ASSERT COglShaderBase::dumpGlErrors();
-#else
-#define GL_ASSERT
-#endif // _DEBUG
 
 bool COglMultiVBO::setIndexVBO(int key, const vector<unsigned int>& indices)
 {
