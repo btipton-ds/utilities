@@ -144,6 +144,57 @@ namespace MultiCore {
 		}
 	}
 
+	template<class L>
+	void runLambda(L fLambda, const std::vector<size_t>& indexPoolIn, bool multiCore)
+	{
+		if (multiCore) {
+			std::mutex indexPoolMutex;
+			std::vector<size_t> indexPool(indexPoolIn);
+
+			vector<shared_ptr<thread>> threads;
+			threads.resize(getNumCores());
+			for (size_t i = 0; i < threads.size(); i++) {
+				threads[i] = make_shared<thread>(thread([fLambda, &indexPool, &indexPoolMutex]() {
+					bool done = false;
+					while (!done) {
+						size_t index = -1;
+						{
+							std::lock_guard lock(indexPoolMutex);
+							if (indexPool.empty()) {
+								done = true;
+								break;
+							}
+							else {
+								index = indexPool.back();
+								indexPool.pop_back();
+							}
+						}
+						if (index != -1)
+							fLambda(index);
+					}
+				}));
+			}
+
+			for (size_t i = 0; i < threads.size(); i++) {
+				threads[i]->join();
+			}
+		}
+		else {
+			for (size_t index : indexPoolIn)
+				if (index != -1)
+					fLambda(index);
+		}
+	}
+
+	template<class L>
+	void runLambda(L fLambda, size_t numIndices, bool multiCore)
+	{
+		std::vector<size_t> indexPool(numIndices);
+		for (size_t i = 0; i < numIndices; i++)
+			indexPool[i] = numIndices - 1 - i;
+		runLambda(fLambda, indexPool, multiCore);
+	}
+
 	// ********************************************
 	// MultiCore std::vector sorting classes
 	// ********************************************
