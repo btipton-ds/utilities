@@ -159,7 +159,7 @@ namespace MultiCore {
 					while (!done) {
 						size_t index = -1;
 						{
-							std::lock_guard lock(indexPoolMutex);
+							std::lock_guard<mutex> lock(indexPoolMutex);
 							if (indexPool.empty()) {
 								done = true;
 								break;
