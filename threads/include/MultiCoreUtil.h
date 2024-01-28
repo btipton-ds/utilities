@@ -170,7 +170,8 @@ namespace MultiCore {
 							}
 						}
 						if (index != -1)
-							fLambda(index);
+							if (!fLambda(index))
+								break;
 					}
 				}));
 			}
@@ -182,7 +183,8 @@ namespace MultiCore {
 		else {
 			for (size_t index : indexPoolIn)
 				if (index != -1)
-					fLambda(index);
+					if (!fLambda(index))
+						break;
 		}
 	}
 
