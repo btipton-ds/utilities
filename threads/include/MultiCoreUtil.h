@@ -155,19 +155,16 @@ namespace MultiCore {
 			threads.resize(getNumCores());
 			for (size_t i = 0; i < threads.size(); i++) {
 				threads[i] = make_shared<thread>(thread([fLambda, &indexPool, &indexPoolMutex]() {
-					bool done = false;
-					while (!done) {
-						size_t index = -1;
+					size_t index = 0;
+					while (index != -1) {
+						index = -1;
 						{
 							std::lock_guard<mutex> lock(indexPoolMutex);
-							if (indexPool.empty()) {
-								done = true;
-								break;
-							}
-							else {
+							if (!indexPool.empty()) {
 								index = indexPool.back();
 								indexPool.pop_back();
-							}
+							} else
+								break;
 						}
 						if (index != -1)
 							if (!fLambda(index))
