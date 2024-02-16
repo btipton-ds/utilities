@@ -240,18 +240,18 @@ bool COglMultiVBO::copyToVBO(const vector<float>& verts, int dataID)
 {
     m_valid = VBO_VALID_UNKNOWN;
     vector<float> norms, tex;
-    vector<rgbaColor> colors;
+    vector<float> colors;
     return copyToVBO(verts, norms, true, tex, colors, dataID);
 }
 
 bool COglMultiVBO::copyToVBO(const vector<float>& verts, const vector<float>& normals, bool smoothNrmls, const vector<float>& textureCoords, int dataID)
 {
     m_valid = VBO_VALID_UNKNOWN;
-    vector<rgbaColor> colors;
+    vector<float> colors;
     return copyToVBO(verts, normals, smoothNrmls, textureCoords, colors, dataID);
 }
 
-bool COglMultiVBO::copyToVBO(const vector<float>& verts, const vector<float>& normals, bool smoothNrmls, const vector<float>& textureCoords, vector<rgbaColor>& colors, int id)
+bool COglMultiVBO::copyToVBO(const vector<float>& verts, const vector<float>& normals, bool smoothNrmls, const vector<float>& textureCoords, vector<float>& colors, int id)
 {
     m_valid = VBO_VALID_UNKNOWN;
 #ifdef WIN32
@@ -294,8 +294,8 @@ bool COglMultiVBO::copyToVBO(const vector<float>& verts, const vector<float>& no
     if (!colors.empty())
     {
         glBindBuffer(GL_ARRAY_BUFFER, m_colorVboID);
-        glBufferData(GL_ARRAY_BUFFER, (m_numVerts * 4 * sizeof(uint8_t)), colors.data(), GL_STATIC_DRAW); 
-        HLOG(Format(_T("Copied %.1f MB to vbo %d"), (m_numVerts * 4 * sizeof(uint8_t)) / 1048576.0f, m_colorVboID));
+        glBufferData(GL_ARRAY_BUFFER, (m_numVerts * 3 * sizeof(float)), colors.data(), GL_STATIC_DRAW); 
+        HLOG(Format(_T("Copied %.1f MB to vbo %d"), (m_numVerts * 3 * sizeof(float)) / 1048576.0f, m_colorVboID));
     }
 
     if (!textureCoords.empty())
@@ -380,7 +380,7 @@ bool COglMultiVBO::reverseNormals()
     return true;
 }
 
-bool COglMultiVBO::copyColorsToExistingVBO(const vector<rgbaColor>& colors)
+bool COglMultiVBO::copyColorsToExistingVBO(const vector<float>& colors)
 {
     m_valid = VBO_VALID_UNKNOWN;
     if (m_numVerts != colors.size())
@@ -395,14 +395,14 @@ bool COglMultiVBO::copyColorsToExistingVBO(const vector<rgbaColor>& colors)
     }
 
     glBindBuffer(GL_ARRAY_BUFFER, m_colorVboID);   
-    glBufferData(GL_ARRAY_BUFFER, (m_numVerts * sizeof(rgbaColor)), colors.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, (m_numVerts * sizeof(float)), colors.data(), GL_STATIC_DRAW);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);   
 
     return true;
 }
 
-bool COglMultiVBO::copyBackColorsToExistingVBO(const vector<rgbaColor>& backColors)
+bool COglMultiVBO::copyBackColorsToExistingVBO(const vector<float>& backColors)
 {
     m_valid = VBO_VALID_UNKNOWN;
     if (m_numVerts != backColors.size())
@@ -634,7 +634,8 @@ bool COglMultiVBO::drawVBO(const COglShaderBase* pShader, GLsizei numElements, G
         glEnable(GL_COLOR_MATERIAL); GL_ASSERT;
         glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE); GL_ASSERT;
         glEnableClientState(GL_COLOR_ARRAY); GL_ASSERT;
-        glVertexAttribPointer(pShader->getColorLoc(), 4, GL_UNSIGNED_BYTE, 0, 0, 0); GL_ASSERT;
+        glEnableVertexAttribArray(pShader->getColorLoc()); GL_ASSERT;
+        glVertexAttribPointer(pShader->getColorLoc(), 3, GL_FLOAT, 0, 0, 0); GL_ASSERT;
     }
 #if 0	// Good chance something similar to this is necessary,
 		// but I haven't yet found the right formulation to get
@@ -650,7 +651,7 @@ bool COglMultiVBO::drawVBO(const COglShaderBase* pShader, GLsizei numElements, G
     if (drawColors == DRAW_COLOR && m_colorVboID && pShader->getColorLoc() != -1)
     {
         glBindBuffer(GL_ARRAY_BUFFER, m_colorVboID);     GL_ASSERT;
-        glVertexAttribPointer(pShader->getColorLoc(), 4, GL_UNSIGNED_BYTE, 0, 0, 0); GL_ASSERT;
+        glVertexAttribPointer(pShader->getColorLoc(), 3, GL_FLOAT, 0, 0, 0); GL_ASSERT;
 
         drawingColors = true;
     }
@@ -659,7 +660,7 @@ bool COglMultiVBO::drawVBO(const COglShaderBase* pShader, GLsizei numElements, G
         glGetIntegerv(GL_CULL_FACE_MODE, &priorCulling); GL_ASSERT;
         glCullFace(GL_BACK); GL_ASSERT;
         glBindBuffer(GL_ARRAY_BUFFER, m_backColorVboID);     GL_ASSERT;
-        glVertexAttribPointer(pShader->getColorLoc(), 4, GL_UNSIGNED_BYTE, 0, 0, 0); GL_ASSERT;
+        glVertexAttribPointer(pShader->getColorLoc(), 3, GL_FLOAT, 0, 0, 0); GL_ASSERT;
 
         drawingColors = true;
     }
