@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 #include <limits.h>
+#include <rgbaColor.h>
 
 #include <OGLExtensions.h>
 #define _SIZE_T_ERROR SIZE_MAX
@@ -40,7 +41,8 @@ public:
     void dumpToStream(std::ostream& out) const;
 
     virtual bool copyToVBO(const std::vector<float>& verts, const std::vector<float>& normals, bool smoothNrmls, const std::vector<float>& textureCoords, int dataID = 0);    ///replaces whatever was there before, normal size == vertex size && tex size is 2/3 of vertex size or has no size
-    virtual bool copyToVBO(const std::vector<float>& verts, const std::vector<float>& normals, bool smoothNrmls, const std::vector<float>& textureCoords, std::vector<unsigned int>& colors, int dataID = 0);    ///replaces whatever was there before, normal size == vertex size && tex size is 2/3 of vertex size or has no size
+    virtual bool copyToVBO(const std::vector<float>& verts, const std::vector<float>& normals, bool smoothNrmls, const std::vector<float>& textureCoords, 
+        std::vector<rgbaColor>& colors, int dataID = 0);    ///replaces whatever was there before, normal size == vertex size && tex size is 2/3 of vertex size or has no size
     virtual bool copyToVBO(const std::vector<float>& verts, int dataID = 0);    ///replaces whatever was there before, normal size == vertex size && tex size is 2/3 of vertex size or has no size
 
     // For best performance, the object keeps large, complete VBOs for all the geometry (verts, normals etc) and the caller draws from that VBO using 
@@ -73,8 +75,8 @@ public:
 
     bool reverseNormals();
 
-    bool copyColorsToExistingVBO(const std::vector<unsigned int>& colors);
-    bool copyBackColorsToExistingVBO(const std::vector<unsigned int>& backColors);
+    bool copyColorsToExistingVBO(const std::vector<rgbaColor>& colors);
+    bool copyBackColorsToExistingVBO(const std::vector<rgbaColor>& backColors);
 
     bool isInitialized() const;
     int  dataID() const { return m_dataID; } //<  the id passed in when the vbo was created
