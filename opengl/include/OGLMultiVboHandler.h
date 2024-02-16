@@ -169,7 +169,7 @@ private:
     // Returns the vertex index in the block.
     // If no released storage is found, batchIndex doesn't change
     // If the data fits in released storage, it is consumed and the batchIndex may change
-    void getStorageFor(size_t numVertsNeeded, size_t& batchIndex, size_t& chunkIndex, size_t& blockSizeInChunks);
+    void getStorageFor(size_t numVertsNeeded, bool needColorStorage, size_t& batchIndex, size_t& chunkIndex, size_t& blockSizeInChunks);
 
     void setFaceTessellationInner(size_t batchIndex, size_t chunkIndex, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
         const std::vector<float>& colors, const std::vector<unsigned int>& triIndices, OGLIndices& glIndicesOut);
