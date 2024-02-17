@@ -41,7 +41,8 @@ public:
 
     virtual bool copyToVBO(const std::vector<float>& verts, const std::vector<float>& normals, bool smoothNrmls, const std::vector<float>& textureCoords, int dataID = 0);    ///replaces whatever was there before, normal size == vertex size && tex size is 2/3 of vertex size or has no size
     virtual bool copyToVBO(const std::vector<float>& verts, const std::vector<float>& normals, bool smoothNrmls, const std::vector<float>& textureCoords, 
-        std::vector<float>& colors, int dataID = 0);    ///replaces whatever was there before, normal size == vertex size && tex size is 2/3 of vertex size or has no size
+        const std::vector<float>& colors, int dataID = 0);    ///replaces whatever was there before, normal size == vertex size && tex size is 2/3 of vertex size or has no size
+    virtual bool copyToVBO(const std::vector<float>& verts, const std::vector<float>& colors, int dataID = 0);    ///replaces whatever was there before, normal size == vertex size && tex size is 2/3 of vertex size or has no size
     virtual bool copyToVBO(const std::vector<float>& verts, int dataID = 0);    ///replaces whatever was there before, normal size == vertex size && tex size is 2/3 of vertex size or has no size
 
     // For best performance, the object keeps large, complete VBOs for all the geometry (verts, normals etc) and the caller draws from that VBO using 

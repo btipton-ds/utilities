@@ -103,7 +103,8 @@ public:
 
     void beginEdgeTesselation();
     const OGLIndices* setEdgeStripTessellation(long entityKey, const std::vector<float>& lineStripPoints);
-    const OGLIndices* setEdgeSegTessellation(long entityKey, int changeNumber, const std::vector<float>& points, const std::vector<int>& indices);
+    const OGLIndices* setEdgeSegTessellation(long entityKey, int changeNumber, const std::vector<float>& points, const std::vector<unsigned int>& indices);
+    const OGLIndices* setEdgeSegTessellation(long entityKey, int changeNumber, const std::vector<float>& points, const std::vector<float>& colors, const std::vector<unsigned int>& indices);
     void endEdgeTesselation();
 
     bool getRawData(long entityKey, std::vector<unsigned int>& indices) const;
@@ -175,7 +176,7 @@ private:
         const std::vector<float>& colors, const std::vector<unsigned int>& triIndices, OGLIndices& glIndicesOut);
 
     void setEdgeStripTessellationInner(size_t batchIndex, size_t vertChunkIndex, const std::vector<float>& lineStripPts, OGLIndices& glIndicesOut);
-    void setEdgeSegTessellationInner(size_t batchIndex, size_t vertChunkIndex, const std::vector<float>& pts, const std::vector<int>& indices, OGLIndices& glIndicesOut);
+    void setEdgeSegTessellationInner(size_t batchIndex, size_t vertChunkIndex, const std::vector<float>& pts, const std::vector<float>& colors, const std::vector<unsigned int>& indices, OGLIndices& glIndicesOut);
 
     // Supporting methods for drawKeys
     void bindCommonBuffers(std::shared_ptr<VertexBatch> batchPtr) const;

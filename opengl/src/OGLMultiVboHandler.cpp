@@ -558,7 +558,14 @@ const COglMultiVboHandler::OGLIndices* COglMultiVboHandler::setEdgeStripTessella
     return pOglIndices.get();
 }
 
-const COglMultiVboHandler::OGLIndices* COglMultiVboHandler::setEdgeSegTessellation(long entityKey, int changeNumber, const std::vector<float>& points, const std::vector<int>& indices)
+const COglMultiVboHandler::OGLIndices* COglMultiVboHandler::setEdgeSegTessellation(long entityKey, int changeNumber, const std::vector<float>& points, const std::vector<unsigned int>& indices)
+{
+    vector<float> colors;
+    return setEdgeSegTessellation(entityKey, changeNumber, points, colors, indices);
+}
+
+const COglMultiVboHandler::OGLIndices* COglMultiVboHandler::setEdgeSegTessellation(long entityKey, int changeNumber, const std::vector<float>& points, 
+    const std::vector<float>& colors, const std::vector<unsigned int>& indices)
 {
     assert(m_insideBeginEdgeTessellation);
     size_t numVerts = points.size() / 3;
@@ -566,7 +573,7 @@ const COglMultiVboHandler::OGLIndices* COglMultiVboHandler::setEdgeSegTessellati
     size_t batchIndex, vertChunkIndex, blockSizeInChunks;
     getStorageFor(numVerts, false, batchIndex, vertChunkIndex, blockSizeInChunks);
     shared_ptr<OGLIndices> pOglIndices = make_shared<OGLIndices>();
-    setEdgeSegTessellationInner(batchIndex, vertChunkIndex, points, indices, *pOglIndices);
+    setEdgeSegTessellationInner(batchIndex, vertChunkIndex, points, colors, indices, *pOglIndices);
     pOglIndices->m_chunkIdx = vertChunkIndex;
     pOglIndices->m_numChunks = blockSizeInChunks;
     pOglIndices->m_changeNumber = changeNumber;
@@ -604,7 +611,7 @@ void COglMultiVboHandler::setEdgeStripTessellationInner(size_t batchIndex, size_
     }
 }
 
-void COglMultiVboHandler::setEdgeSegTessellationInner(size_t batchIndex, size_t vertChunkIndex, const std::vector<float>& pts, const std::vector<int>& indicesIn, OGLIndices& glIndicesOut)
+void COglMultiVboHandler::setEdgeSegTessellationInner(size_t batchIndex, size_t vertChunkIndex, const std::vector<float>& pts, const std::vector<float>& colors, const std::vector<unsigned int>& indicesIn, OGLIndices& glIndicesOut)
 {
     const size_t numVerts = pts.size() / 3;
     unsigned int vertBaseIndex = (unsigned int) (vertChunkIndex * vertChunkSize());
@@ -627,6 +634,17 @@ void COglMultiVboHandler::setEdgeSegTessellationInner(size_t batchIndex, size_t 
         }
     }
 
+    if (!colors.empty()) {
+        if (batchPtr->m_colors.size() < spaceRequired)
+            batchPtr->m_colors.resize(spaceRequired);
+
+        for (size_t vertIdx = 0; vertIdx < numVerts; vertIdx++) {
+            for (int j = 0; j < 3; j++) {
+                batchPtr->m_colors[3 * (vertBaseIndex + vertIdx) + j] = colors[3 * vertIdx + j];
+            }
+        }
+    }
+
     for (size_t i = 0; i < indicesIn.size(); i++) {
         glIndicesOut.m_elementIndices.push_back(vertBaseIndex + indicesIn[i]);
     }
@@ -641,7 +659,7 @@ void COglMultiVboHandler::endEdgeTesselation()
         if (pBatch && pBatch->m_needsUpdate) {
             pBatch->m_needsUpdate = false;
             if (!pBatch->m_points.empty()) {
-                pBatch->m_VBO.copyToVBO(pBatch->m_points);
+                pBatch->m_VBO.copyToVBO(pBatch->m_points, pBatch->m_colors);
             }
         }
     }

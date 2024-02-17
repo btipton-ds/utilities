@@ -236,6 +236,13 @@ bool COglMultiVBO::isValid_unbindsVBO(GLuint& vboID)
     return false;
 }
 
+bool COglMultiVBO::copyToVBO(const vector<float>& verts, const vector<float>& colors, int dataID)
+{
+    m_valid = VBO_VALID_UNKNOWN;
+    vector<float> norms, tex;
+    return copyToVBO(verts, norms, false, tex, colors, dataID);
+}
+
 bool COglMultiVBO::copyToVBO(const vector<float>& verts, int dataID)
 {
     m_valid = VBO_VALID_UNKNOWN;
@@ -251,7 +258,7 @@ bool COglMultiVBO::copyToVBO(const vector<float>& verts, const vector<float>& no
     return copyToVBO(verts, normals, smoothNrmls, textureCoords, colors, dataID);
 }
 
-bool COglMultiVBO::copyToVBO(const vector<float>& verts, const vector<float>& normals, bool smoothNrmls, const vector<float>& textureCoords, vector<float>& colors, int id)
+bool COglMultiVBO::copyToVBO(const vector<float>& verts, const vector<float>& normals, bool smoothNrmls, const vector<float>& textureCoords, const vector<float>& colors, int id)
 {
     m_valid = VBO_VALID_UNKNOWN;
 #ifdef WIN32
