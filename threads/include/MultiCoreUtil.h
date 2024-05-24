@@ -129,14 +129,15 @@ namespace MultiCore {
 	void runLambda(L fLambda, bool multiCore)
 	{
 		if (multiCore) {
-			vector<shared_ptr<thread>> threads;
-			threads.resize(getNumCores());
-			for (size_t i = 0; i < threads.size(); i++) {
-				threads[i] = make_shared<thread>(fLambda, i, threads.size());
+			size_t numCores = getNumCores();
+			vector<thread> threads;
+			threads.reserve(numCores);
+			for (size_t i = 0; i < numCores; i++) {
+				threads.push_back(move(thread(fLambda, i, numCores)));
 			}
 
 			for (size_t i = 0; i < threads.size(); i++) {
-				threads[i]->join();
+				threads[i].join();
 			}
 		}
 		else {
@@ -151,15 +152,16 @@ namespace MultiCore {
 			std::mutex indexPoolMutex;
 			std::vector<size_t> indexPool(indexPoolIn);
 
-			vector<shared_ptr<thread>> threads;
-			threads.resize(getNumCores());
-			for (size_t i = 0; i < threads.size(); i++) {
-				threads[i] = make_shared<thread>(thread([fLambda, &indexPool, &indexPoolMutex]() {
+			size_t numThreads = getNumCores();
+			vector<thread> threads;
+			threads.reserve(numThreads);
+			for (size_t i = 0; i < numThreads; i++) {
+				threads.push_back(thread([fLambda, &indexPool, &indexPoolMutex]() {
 					size_t index = 0;
 					while (index != -1) {
 						index = -1;
 						{
-							std::lock_guard<mutex> lock(indexPoolMutex);
+							std::lock_guard<mutex> lock(indexPoolMutex); // Tested that mutex overhead is minimal.
 							if (!indexPool.empty()) {
 								index = indexPool.back();
 								indexPool.pop_back();
@@ -174,7 +176,7 @@ namespace MultiCore {
 			}
 
 			for (size_t i = 0; i < threads.size(); i++) {
-				threads[i]->join();
+				threads[i].join();
 			}
 		}
 		else {
