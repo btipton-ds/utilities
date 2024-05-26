@@ -30,6 +30,32 @@ This file is part of the DistFieldHexMesh application/library.
 #include <algorithm>
 #include <pool_allocator.h>
 
+namespace
+{
+
+static ::MultiCore::local_heap s_mainThreadHeap(1024);
+static thread_local ::MultiCore::local_heap* s_pHeap = &s_mainThreadHeap;
+
+}
+
+void ::MultiCore::local_heap::pushThreadHeapPtr(::MultiCore::local_heap* pHeap)
+{
+	if (s_pHeap)
+		s_pHeap->_priorHeap = s_pHeap;
+	s_pHeap = pHeap;
+}
+
+void ::MultiCore::local_heap::popThreadHeapPtr()
+{
+	if (s_pHeap)
+		s_pHeap = s_pHeap->_priorHeap;
+}
+
+::MultiCore::local_heap* ::MultiCore::local_heap::getThreadHeapPtr()
+{
+	return s_pHeap;
+}
+
 ::MultiCore::local_heap::local_heap(size_t blockSizeChunks, size_t chunkSizeBytes)
 	: _blockSizeChunks(blockSizeChunks)
 	, _chunkSizeBytes(chunkSizeBytes + sizeof(size_t))

@@ -39,7 +39,7 @@ namespace MultiCore
 {
 
 template<class T>
-class vector {
+class vector : private local_heap_user {
 private:
 	template <int IterType>
 	class _iterator
@@ -95,9 +95,8 @@ public:
 
 	vector() = default;
 	vector(const vector& src) = default;
-	vector(::MultiCore::local_heap& heap);
-	vector(const std::vector<T>& src, ::MultiCore::local_heap& heap);
-	vector(const std::initializer_list<T>& src, ::MultiCore::local_heap& heap);
+	vector(const std::vector<T>& src);
+	vector(const std::initializer_list<T>& src);
 
 	operator std::vector<T>() const;
 
@@ -140,7 +139,6 @@ public:
 
 private:
 	std::vector<T> _data;
-	::MultiCore::local_heap* _pHeap;
 };
 
 }

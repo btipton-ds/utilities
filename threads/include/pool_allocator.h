@@ -46,6 +46,16 @@ namespace MultiCore
 
 class local_heap {
 public:
+	static void pushThreadHeapPtr(local_heap* pHeap);
+	static void popThreadHeapPtr();
+	static local_heap* getThreadHeapPtr();
+
+	class scoped_set_thread_heap {
+	public:
+		scoped_set_thread_heap(local_heap* pHeap);
+		~scoped_set_thread_heap();
+	};
+
 	local_heap(size_t blockSizeChunks, size_t chunkSizeBytes = 32);
 	
 	void* alloc(size_t bytes);
@@ -81,6 +91,49 @@ private:
 	_STD vector<size_t> _freeAvailChunks;
 
 	size_t _availChunkInfoIdx = -1; // Sorted indices into _availChunks
+
+	local_heap* _priorHeap = nullptr;
 };
 
+class local_heap_user
+{
+protected:
+	void* alloc(size_t bytes) const;
+	void free(void* ptr) const;
+
+private:
+	local_heap* getHeap() const;
+
+	mutable local_heap* _pOurHeap = nullptr;
+
+};
+
+inline local_heap::scoped_set_thread_heap::scoped_set_thread_heap(local_heap* pHeap)
+{
+	pushThreadHeapPtr(pHeap);
 }
+
+inline local_heap::scoped_set_thread_heap::~scoped_set_thread_heap()
+{
+	popThreadHeapPtr();
+}
+
+inline void* local_heap_user::alloc(size_t bytes) const
+{
+	return getHeap()->alloc(bytes);
+}
+
+inline void local_heap_user::free(void* ptr) const
+{
+	getHeap()->free(ptr);
+}
+
+inline local_heap* local_heap_user::getHeap() const
+{
+	if (!_pOurHeap)
+		_pOurHeap = local_heap::getThreadHeapPtr();
+	return _pOurHeap;
+}
+
+}
+
