@@ -39,13 +39,13 @@ namespace MultiCore {
 TEMPL_DECL
 	VECTOR_DECL::vector(const std::vector<T>& src)
 {
-	insert(end(), src.begin(), src.end());
+	insert(end(), src);
 }
 
 TEMPL_DECL
 VECTOR_DECL::vector(const std::initializer_list<T>& src)
 {
-	insert(end(), src.begin(), src.end());
+	insert(end(), src);
 }
 
 TEMPL_DECL
@@ -59,67 +59,117 @@ VECTOR_DECL::operator std::vector<T>() const
 TEMPL_DECL
 void VECTOR_DECL::clear()
 {
+	_size = 0;
 	_data.clear();
 }
 
 TEMPL_DECL
 bool VECTOR_DECL::empty()
 {
-	return _data.empty();
+	return _size == 0;
 }
 
 
 TEMPL_DECL
 size_t VECTOR_DECL::size() const
 {
-	return _data.size();
+	assert(_size == _data.size());
+	return _size;
 }
 
 TEMPL_DECL
 void VECTOR_DECL::resize(size_t val)
 {
 	_data.resize(val);
+
+	reserve(val);
+	_size = val;
+	size_t oldSize = _size;
+	for (size_t i = oldSize; i <= _size; i++) {
+		_pData[i] = {};
+	}
 }
 
 TEMPL_DECL
-void VECTOR_DECL::reserve(size_t val)
+void VECTOR_DECL::reserve(size_t newCapacity)
 {
-	_data.reserve(val);
+	_data.reserve(newCapacity);
+	if (newCapacity > _capacity) {
+		_capacity = newCapacity;
+		T* pTmp = _pData;
+		_pData = (T*)alloc(_capacity * sizeof(T));
+
+		if (pTmp) {
+			for (size_t i = 0; i < _size; i++)
+				_pData[i] = pTmp[i];
+
+			free(pTmp);
+		}
+	}
 }
 
 TEMPL_DECL
 template<class ITER_TYPE>
 void VECTOR_DECL::insert(const iterator& at, const ITER_TYPE& begin, const ITER_TYPE& end)
 {
-	_data.insert(_data.begin() + at._index, begin, end);
+	size_t idx = (size_t)(at._pEntry - _pData);
+	_data.insert(_data.begin() + idx, begin, end);
+
+	size_t entriesNeeded = end - begin;
+	resize(_size + entriesNeeded);
+	for (size_t i = _size - 1; i > idx + entriesNeeded; i--)
+		_pData[i] = _pData[i - 1];
+
+	for (auto iter = begin; iter != end; iter++) {
+		_pData[idx++] = *iter;
+	}
 }
 
 TEMPL_DECL
 void VECTOR_DECL::insert(const iterator& at, const T& val)
 {
-	_data.insert(_data.begin() + at._index, val);
+	size_t idx = (size_t)(at._pEntry - _pData);
+	_data.insert(_data.begin() + idx, val);
+
+	resize(_size + 1);
+	for (size_t i = _size - 1; i > idx; i--)
+		_pData[i] = _pData[i - 1];
+
+	_pData[idx] = val;
 }
 
 TEMPL_DECL
 void VECTOR_DECL::insert(const iterator& at, const std::initializer_list<T>& vals)
 {
-	_data.insert(_data.begin() + at._index, vals.begin(), vals.end());
+	size_t idx = (size_t) (at._pEntry - _pData);
+	_data.insert(_data.begin() + idx, vals.begin(), vals.end());
+
+	auto begin = vals.begin();
+	auto end = vals.end();
+
+	size_t entriesNeeded = end - begin;
+	resize(_size + entriesNeeded);
+	for (size_t i = _size - 1; i >= idx + entriesNeeded; i--)
+		_pData[i] = _pData[i - entriesNeeded];
+
+	for (auto iter = begin; iter != end; iter++) {
+		_pData[idx++] = *iter;
+	}
 }
 
 TEMPL_DECL
 VECTOR_DECL::iterator VECTOR_DECL::erase(const iterator& at)
 {
-	size_t idx = at._index;
+	size_t idx = (size_t)(at._pEntry - _pData);
 	_data.erase(_data.begin() + idx);
-	return iterator(this, std::max(size(), idx));
+	return iterator(this, at._pEntry);
 }
 
 TEMPL_DECL
 VECTOR_DECL::iterator VECTOR_DECL::erase(const iterator& begin, const iterator& end)
 {
-	size_t idx = begin._index;
 	_data.erase(begin, end);
-	return iterator(this, std::max(size(), idx));
+	return iterator(this, begin._pEntry);
 }
 
 TEMPL_DECL
@@ -132,85 +182,115 @@ MultiCore::vector<T>& VECTOR_DECL::operator = (const vector& rhs)
 TEMPL_DECL
 _NODISCARD _CONSTEXPR20 typename VECTOR_DECL::const_iterator VECTOR_DECL::begin() const noexcept
 {
-	return const_iterator(this, 0);
+	return const_iterator(this, _pData);
 }
 
 TEMPL_DECL
 _NODISCARD _CONSTEXPR20 typename VECTOR_DECL::iterator VECTOR_DECL::begin() noexcept
 {
-	return iterator(this, 0);
+	return iterator(this, _pData);
 }
 
 TEMPL_DECL
 _NODISCARD _CONSTEXPR20 typename VECTOR_DECL::const_iterator VECTOR_DECL::end() const noexcept
 {
-	return const_iterator(this, size());
+	return const_iterator(this, _pData + _size);
 }
 
 TEMPL_DECL
 _NODISCARD _CONSTEXPR20 typename VECTOR_DECL::iterator VECTOR_DECL::end() noexcept
 {
-	return iterator(this, size());
+	return iterator(this, _pData + _size);
 }
 
 TEMPL_DECL
 _NODISCARD _CONSTEXPR20 typename VECTOR_DECL::const_reverse_iterator VECTOR_DECL::rbegin() const noexcept
 {
-	return const_reverse_iterator(this, size() - 1);
+	return const_reverse_iterator(this, _pData + _size - 1);
 }
 
 TEMPL_DECL
 _NODISCARD _CONSTEXPR20 typename VECTOR_DECL::reverse_iterator VECTOR_DECL::rbegin() noexcept
 {
-	return reverse_iterator(this, size() - 1);
+	return reverse_iterator(this, _pData + _size - 1);
 }
 
 TEMPL_DECL
 _NODISCARD _CONSTEXPR20 typename VECTOR_DECL::const_reverse_iterator VECTOR_DECL::rend() const noexcept
 {
-	return const_reverse_iterator(this, -1);
+	return const_reverse_iterator(this, _pData - 1);
 }
 
 TEMPL_DECL
 _NODISCARD _CONSTEXPR20 typename VECTOR_DECL::reverse_iterator VECTOR_DECL::rend() noexcept
 {
-	return reverse_iterator(this, -1);
+	return reverse_iterator(this, _pData - 1);
 }
 
 TEMPL_DECL
 const T& VECTOR_DECL::front() const
 {
-	return _data.front();
+	assert(!empty());
+	size_t idx = 0;
+	const T* pTData = (const T*)_pData;
+	assert(data[idx] == pTData[idx]);
+	return pTData[idx];
 }
 
 TEMPL_DECL
 T& VECTOR_DECL::front()
 {
-	return _data.front();
+	assert(!empty());
+	size_t idx = 0;
+	T* pTData = (T*)_pData;
+	assert(_data[idx] == pTData[idx]);
+	return pTData[idx];
 }
 
 TEMPL_DECL
 const T& VECTOR_DECL::back() const
 {
-	return _data.back();
+	assert(!empty());
+	size_t idx = _size - 1;
+	if (idx >= _size) {
+		assert(!"Out of bounds");
+	}
+	const T* pTData = (const T*)_pData;
+	assert(_data[idx] == pTData[idx]);
+	return pTData[idx];
 }
 
 TEMPL_DECL
 T& VECTOR_DECL::back()
 {
-	return _data.back();
+	assert(!empty());
+	size_t idx = _size - 1;
+	if (idx >= _size) {
+		assert(!"Out of bounds");
+	}
+	T* pTData = (T*)_pData;
+	assert(_data[idx] == pTData[idx]);
+	return pTData[idx];
 }
 
 TEMPL_DECL
 const T& VECTOR_DECL::operator[](size_t idx) const
 {
-	return _data[idx];
+	if (idx >= _size) {
+		assert(!"Out of bounds");
+	}
+	assert(_data[idx] == _pData[idx]);
+	return _pData[idx];
 }
 
 TEMPL_DECL
 T& VECTOR_DECL::operator[](size_t idx)
 {
-	return _data[idx];
+	if (idx >= _size) {
+		assert(!"Out of bounds");
+	}
+	assert(_data[idx] == _pData[idx]);
+	return _pData[idx];
 }
 
 TEMPL_DECL
@@ -218,20 +298,37 @@ size_t VECTOR_DECL::push_back(const T& val)
 {
 	size_t result = size();
 	_data.push_back(val);
-	return result;
+
+	if (_size + 1 > _capacity) {
+		size_t newCapacity = _capacity;
+		if (newCapacity == 0)
+			newCapacity = 10;
+		else
+			newCapacity += newCapacity; // Double each time
+
+		reserve(newCapacity);
+	}
+
+	_pData[_size] = val;
+	_size += 1;
+
+	return _size;
 }
 
 TEMPL_DECL
 void VECTOR_DECL::pop_back()
 {
 	_data.pop_back();
+
+	assert(_size > 0);
+	_size--;
 }
 
 TEMPL_DECL
 ITER_TEMPL_DECL
-ITER_DECL::_iterator(const MultiCore::vector<T>* pSource, size_t index)
+ITER_DECL::_iterator(const MultiCore::vector<T>* pSource, T* pEntry)
 	: _pSource(const_cast<MultiCore::vector<T>*>(pSource))
-	, _index(index)
+	, _pEntry(pEntry)
 {
 }
 
@@ -240,7 +337,7 @@ ITER_TEMPL_DECL
 bool ITER_DECL::operator == (const _iterator& rhs) const
 {
 	assert(_pSource == _pSource);
-	return _index == rhs._index;
+	return _pEntry == rhs._pEntry;
 }
 
 TEMPL_DECL
@@ -248,7 +345,7 @@ ITER_TEMPL_DECL
 bool ITER_DECL::operator != (const _iterator& rhs) const
 {
 	assert(_pSource == _pSource);
-	return _index != rhs._index;
+	return _pEntry != rhs._pEntry;
 }
 
 TEMPL_DECL
@@ -256,7 +353,7 @@ ITER_TEMPL_DECL
 bool ITER_DECL::operator < (const _iterator& rhs) const
 {
 	assert(_pSource == _pSource);
-	return _index < rhs._index;
+	return _pEntry < rhs._pEntry;
 }
 
 TEMPL_DECL
@@ -264,7 +361,7 @@ ITER_TEMPL_DECL
 bool ITER_DECL::operator > (const _iterator& rhs) const
 {
 	assert(_pSource == _pSource);
-	return _index > rhs._index;
+	return _pEntry > rhs._pEntry;
 }
 
 TEMPL_DECL
@@ -272,9 +369,9 @@ ITER_TEMPL_DECL
 ITER_DECL& ITER_DECL::operator ++ ()
 {
 	if (IterType == FORW_CONST || IterType == FORW)
-		_index++;
+		_pEntry++;
 	else
-		_index--;
+		_pEntry--;
 	return *this;
 }
 
@@ -283,9 +380,9 @@ ITER_TEMPL_DECL
 ITER_DECL& ITER_DECL::operator ++ (int)
 {
 	if (IterType == FORW_CONST || IterType == FORW)
-		_index++;
+		_pEntry++;
 	else
-		_index--;
+		_pEntry--;
 	return *this;
 }
 
@@ -294,9 +391,9 @@ ITER_TEMPL_DECL
 ITER_DECL& ITER_DECL::operator --()
 {
 	if (IterType == FORW_CONST || IterType == FORW)
-		_index--;
+		_pEntry--;
 	else
-		_index++;
+		_pEntry++;
 	return *this;
 }
 
@@ -305,9 +402,9 @@ ITER_TEMPL_DECL
 ITER_DECL& ITER_DECL::operator --(int)
 {
 	if (IterType == FORW_CONST || IterType == FORW)
-		_index--;
+		_pEntry--;
 	else
-		_index++;
+		_pEntry++;
 	return *this;
 }
 
@@ -317,22 +414,10 @@ ITER_DECL ITER_DECL::operator + (size_t rhs) const
 {
 	_iterator result(*this);
 	if (IterType == FORW_CONST || IterType == FORW)
-		result._index += rhs;
+		result._pEntry += rhs;
 	else
-		result._index -= rhs;
+		result._pEntry -= rhs;
 	return result;
-}
-
-TEMPL_DECL
-ITER_TEMPL_DECL
-size_t ITER_DECL::operator + (const _iterator& rhs) const
-{
-	assert(_pSource == rhs._pSource);
-
-	if (IterType == FORW_CONST || IterType == FORW)
-		return _index + rhs._index;
-	else
-		return _index - rhs._index;
 }
 
 TEMPL_DECL
@@ -341,9 +426,9 @@ ITER_DECL ITER_DECL::operator - (size_t rhs) const
 {
 	_iterator result(*this);
 	if (IterType == FORW_CONST || IterType == FORW)
-		result._index -= rhs;
+		result._pEntry -= rhs;
 	else
-		result._index += rhs;
+		result._pEntry += rhs;
 	return result;
 }
 
@@ -352,24 +437,25 @@ ITER_TEMPL_DECL
 size_t ITER_DECL::operator - (const _iterator& rhs) const
 {
 	assert(_pSource == rhs._pSource);
-	if (IterType == FORW_CONST || IterType == FORW)
-		return _index - rhs._index;
-	else
-		return _index + rhs._index;
+	if (IterType == FORW_CONST || IterType == FORW) {
+		return (size_t)(_pEntry - rhs._pEntry);
+	} else {
+		return (size_t)(rhs._pEntry - _pEntry);
+	}
 }
 
 TEMPL_DECL
 ITER_TEMPL_DECL
 T& ITER_DECL::operator *() const
 {
-	return _pSource->operator[](_index);
+	return *_pEntry;
 }
 
 TEMPL_DECL
 ITER_TEMPL_DECL
 T* ITER_DECL::operator->() const
 {
-	return &(_pSource->operator[](_index));
+	return _pEntry;
 }
 
 }

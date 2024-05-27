@@ -42,6 +42,14 @@ namespace MultiCore
 
 	Justification - during early testing, single threaded was faster than multi threaded and the process was only getting 15% of available CPU.
 	In other testing, the app got access to 100% of available CPU.
+
+	The heap for the main thread is set on start up.
+	When processing a block, the block's heap is pushed on the heap stack using scoped_set_thread_heap
+		If the block is in the main thread, it's heap is used for ALL operations. When local variables are destroyed, they are removed from the block's heap
+		If the block is in a different thread, it's heap is used for ALL operations IN THAT THREAD, making the active block the thread local heap. Local variables are destroyed on exit.
+
+	Net result is, all operations in a thread have their own heap as well as their own stack. Persistant data is stored in the block.
+	A bit fragile, but usable.
 */
 
 class local_heap {
@@ -130,8 +138,10 @@ inline void local_heap_user::free(void* ptr) const
 
 inline local_heap* local_heap_user::getHeap() const
 {
+	// We assign the heap on the first usage
 	if (!_pOurHeap)
 		_pOurHeap = local_heap::getThreadHeapPtr();
+
 	return _pOurHeap;
 }
 

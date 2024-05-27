@@ -33,7 +33,7 @@ This file is part of the DistFieldHexMesh application/library.
 namespace
 {
 
-static ::MultiCore::local_heap s_mainThreadHeap(1024);
+static ::MultiCore::local_heap s_mainThreadHeap(4 * 1024);
 static thread_local ::MultiCore::local_heap* s_pHeap = &s_mainThreadHeap;
 
 }
@@ -65,6 +65,7 @@ void ::MultiCore::local_heap::popThreadHeapPtr()
 
 void* ::MultiCore::local_heap::alloc(size_t bytes)
 {
+	assert(bytes < _blockSizeChunks * _chunkSizeBytes);
 	const auto& headerSize = sizeof(BlockHeader);
 	size_t bytesNeeded = bytes + headerSize;
 	size_t numChunks = bytesNeeded / _chunkSizeBytes;
@@ -77,7 +78,6 @@ void* ::MultiCore::local_heap::alloc(size_t bytes)
 	}
 	assert(numChunks < _blockSizeChunks);
 
-	AvailChunk info;
 	if (_topBlockIdx >= _data.size() || (_topChunkIdx + numChunks >= _blockSizeChunks)) {
 		// Not enough room in the block, so make an empty one.
 
@@ -93,12 +93,13 @@ void* ::MultiCore::local_heap::alloc(size_t bytes)
 		_topBlockIdx = (uint32_t)_data.size();
 		_topChunkIdx = 0;
 
-		info._header._numChunks = (uint32_t)numChunks;
-		info._header._blockIdx = _topBlockIdx;
-		info._header._chunkIdx = _topChunkIdx;
-
 		_data.push_back(_STD make_shared<_STD vector<char>>(_blockSizeChunks * _chunkSizeBytes + headerSize, 0));
 	}
+
+	AvailChunk info;
+	info._header._numChunks = (uint32_t)numChunks;
+	info._header._blockIdx = _topBlockIdx;
+	info._header._chunkIdx = _topChunkIdx;
 
 	auto& blkVec = *_data[info._header._blockIdx];
 	size_t startIdx = info._header._chunkIdx * _chunkSizeBytes;
@@ -131,8 +132,7 @@ void ::MultiCore::local_heap::free(void* ptr)
 		if (curChunk._header._numChunks <= numChunksNeeded) {
 			size_t startIdxBytes = curChunk._header._chunkIdx * _chunkSizeBytes;
 			auto& blkVec = *_data[curChunk._header._blockIdx];
-			auto& startAddr = blkVec[startIdxBytes];
-			BlockHeader* pHeader = (BlockHeader*)&startAddr;
+			BlockHeader* pHeader = (BlockHeader*)&blkVec[startIdxBytes];
 			(*pHeader) = curChunk._header;
 
 			// Remove this chunk from the sorted linked list of available chunks

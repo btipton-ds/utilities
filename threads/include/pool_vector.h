@@ -60,7 +60,7 @@ private:
 		using reference = T&;
 #endif
 
-		_iterator(const MultiCore::vector<T>* pSource, size_t index);
+		_iterator(const MultiCore::vector<T>* pSource, T* pEntry);
 		_iterator(const _iterator& src) = default;
 
 		bool operator == (const _iterator& rhs) const;
@@ -74,7 +74,6 @@ private:
 		_iterator& operator --(int);
 
 		_iterator operator + (size_t val) const;
-		size_t operator + (const _iterator& rhs) const;
 
 		_iterator operator - (size_t val) const;
 		size_t operator - (const _iterator& rhs) const;
@@ -83,8 +82,8 @@ private:
 		T* operator->() const;
 
 	private:
+		T* _pEntry;
 		MultiCore::vector<T>* _pSource;
-		size_t _index;
 	};
 
 public:
@@ -138,6 +137,9 @@ public:
 	void pop_back();
 
 private:
+	size_t _size = 0, _capacity = 0;
+	T* _pData = nullptr;
+
 	std::vector<T> _data;
 };
 
