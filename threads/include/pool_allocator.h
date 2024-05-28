@@ -80,9 +80,8 @@ private:
 		uint32_t _numChunks;
 	};
 
-	struct AvailChunk {
-		size_t _nextIdx = -1;
-		size_t _prevIdx = -1;
+	struct AvailBlockHeader {
+		AvailBlockHeader* _pNext = nullptr;
 
 		BlockHeader _header;
 	};
@@ -92,16 +91,9 @@ private:
 	void freeMem(void* ptr);
 
 	BlockHeader* getAvailBlock(size_t numChunksNeeded);
-	void makeBlockAvail(const BlockHeader& header);
+	void addBlockToAvailList(const BlockHeader& header);
 
 	bool isHeaderValid(const void* p, bool pointsToHeader) const;
-
-	inline AvailChunk* availChunkPtr(size_t idx)
-	{
-		if (idx < _availChunks.size())
-			return &_availChunks[idx];
-		return nullptr;
-	}
 
 	const size_t _blockSizeChunks;
 	const size_t _chunkSizeBytes;
@@ -112,10 +104,7 @@ private:
 	using BlockPtr = std::shared_ptr<_STD vector<char>>;
 	_STD vector<BlockPtr> _data;
 
-	_STD vector<AvailChunk> _availChunks;
-	_STD vector<size_t> _availChunkIndexStack;
-
-	size_t _availChunkIdx = -1; // Sorted indices into _availChunks
+	AvailBlockHeader* _pFirstAvailBlock = nullptr; // Sorted indices into _availChunks
 
 	local_heap* _priorHeap = nullptr;
 };

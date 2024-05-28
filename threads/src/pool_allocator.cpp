@@ -61,8 +61,6 @@ void ::MultiCore::local_heap::popThreadHeapPtr()
 	, _chunkSizeBytes(chunkSizeBytes + sizeof(BlockHeader))
 {
 	_data.reserve(10);
-	_availChunks.reserve(100);
-	_availChunkIndexStack.reserve(100);
 }
 
 void* ::MultiCore::local_heap::allocMem(size_t bytes)
@@ -73,7 +71,7 @@ void* ::MultiCore::local_heap::allocMem(size_t bytes)
 		numChunks++;
 
 	BlockHeader* pHeader;
-#if 0
+#if 1
 	pHeader = getAvailBlock(numChunks);
 	if (pHeader != nullptr) {
 		return (char*)pHeader + sizeof(BlockHeader);
@@ -88,9 +86,9 @@ void* ::MultiCore::local_heap::allocMem(size_t bytes)
 			// Store the empty space for the next allocation
 			BlockHeader headerForRemainder;
 			headerForRemainder._blockIdx = _topBlockIdx;
-			headerForRemainder._chunkIdx = (uint32_t) (_topChunkIdx + numChunks);
-			headerForRemainder._numChunks = (uint32_t) (_blockSizeChunks - _topChunkIdx - numChunks);
-			makeBlockAvail(headerForRemainder);
+			headerForRemainder._chunkIdx = (uint32_t) _topChunkIdx;
+			headerForRemainder._numChunks = (uint32_t) (_blockSizeChunks - _topChunkIdx);
+			addBlockToAvailList(headerForRemainder);
 		}
 
 		_topChunkIdx = 0;
@@ -100,17 +98,14 @@ void* ::MultiCore::local_heap::allocMem(size_t bytes)
 		_data.push_back(pBlk);
 	}
 
-	AvailChunk info;
-	info._header._numChunks = (uint32_t)numChunks;
-	info._header._blockIdx = _topBlockIdx;
-	info._header._chunkIdx = _topChunkIdx;
-	info._header._size = (uint32_t)bytes;
-
-	auto& blkVec = *_data[info._header._blockIdx];
-	size_t startIdx = info._header._chunkIdx * _chunkSizeBytes;
+	size_t startIdx = _topChunkIdx * _chunkSizeBytes;
 	
+	auto& blkVec = *_data[_topBlockIdx];
 	pHeader = (BlockHeader*) &blkVec[startIdx];
-	(*pHeader) = info._header;
+	pHeader->_numChunks = (uint32_t)numChunks;
+	pHeader->_blockIdx = _topBlockIdx;
+	pHeader->_chunkIdx = _topChunkIdx;
+	pHeader->_size = (uint32_t)bytes;
 
 	_topChunkIdx += (uint32_t) numChunks;
 	if (_topChunkIdx >= _blockSizeChunks) {
@@ -129,27 +124,23 @@ void ::MultiCore::local_heap::freeMem(void* ptr)
 		char* pc = (char*)ptr - sizeof(BlockHeader);
 		assert(isHeaderValid(pc, true));
 		BlockHeader* pHeader = (BlockHeader*)pc;
-		makeBlockAvail(*pHeader);
+		addBlockToAvailList(*pHeader);
 	}
 }
 
 ::MultiCore::local_heap::BlockHeader* ::MultiCore::local_heap::getAvailBlock(size_t numChunksNeeded)
 {
-	size_t curChunkIdx = _availChunkIdx;
-	while (curChunkIdx != -1) {
-		auto pCurChunk = availChunkPtr(curChunkIdx);
-		if (pCurChunk->_header._numChunks <= numChunksNeeded) {
+	AvailBlockHeader *pCurChunk = _pFirstAvailBlock;
+	AvailBlockHeader* pPriorChunk = nullptr;
+	while (pCurChunk) {
+		if (numChunksNeeded <= pCurChunk->_header._numChunks) {
 			// Remove this chunk from the sorted linked list of available chunks
-			if (curChunkIdx == _availChunkIdx) {
-				_availChunkIdx = pCurChunk->_nextIdx;
+			if (pCurChunk == _pFirstAvailBlock) {
+				_pFirstAvailBlock = pCurChunk->_pNext;
 			} else {
-				availChunkPtr(pCurChunk->_prevIdx)->_nextIdx = pCurChunk->_nextIdx;
-				if (availChunkPtr(pCurChunk->_nextIdx)) {
-					availChunkPtr(pCurChunk->_nextIdx)->_prevIdx = pCurChunk->_prevIdx;
-				}
+				assert(pPriorChunk);
+				pPriorChunk->_pNext = pCurChunk->_pNext;
 			}
-
-			_availChunkIndexStack.push_back(curChunkIdx); // This moves stack memory, but does not move storage memory. It's order independent.
 
 			size_t startIdxBytes = pCurChunk->_header._chunkIdx * _chunkSizeBytes;
 			auto& blkVec = *_data[pCurChunk->_header._blockIdx];
@@ -157,69 +148,55 @@ void ::MultiCore::local_heap::freeMem(void* ptr)
 			(*pHeader) = pCurChunk->_header;
 			return pHeader;
 		}
-		curChunkIdx = pCurChunk->_nextIdx;
+		pPriorChunk = pCurChunk;
+		pCurChunk = pCurChunk->_pNext;
 	}
 
 	return nullptr;
 }
 
-void ::MultiCore::local_heap::makeBlockAvail(const BlockHeader& header)
+void ::MultiCore::local_heap::addBlockToAvailList(const BlockHeader& headerIn)
 {
-	size_t newChunkIdx = -1;
-	if (!_availChunkIndexStack.empty()) {
-		newChunkIdx = _availChunkIndexStack.back();
-		_availChunkIndexStack.pop_back();
-	}
-	else {
-		newChunkIdx = _availChunks.size();
-		_availChunks.push_back(AvailChunk());
-	}
-	AvailChunk* pNewChunk = availChunkPtr(newChunkIdx);
+	AvailBlockHeader* pCurChunk = _pFirstAvailBlock;
+	AvailBlockHeader* pPriorChunk = nullptr;
+
+	BlockHeader header = headerIn;
+	size_t startIdxBytes = header._chunkIdx * _chunkSizeBytes;
+	auto& blkVec = *_data[header._blockIdx];
+	AvailBlockHeader* pNewChunk = (AvailBlockHeader*)&blkVec[startIdxBytes];
 	pNewChunk->_header = header;
+	pNewChunk->_pNext = nullptr;
 
 	bool found = false;
-	size_t curChunkIdx = _availChunkIdx, lastChunkIdx = -1;
-	while (curChunkIdx != -1) {
-		auto pCurChunk = availChunkPtr(curChunkIdx);
-		if (pNewChunk->_header._numChunks <= pCurChunk->_header._numChunks) {
+	while (pCurChunk) {
+		if (header._numChunks <= pCurChunk->_header._numChunks) {
 			found = true;
 			// insert here
-			if (_availChunkIdx == curChunkIdx) {
-				pCurChunk->_prevIdx = newChunkIdx;
-				pNewChunk->_nextIdx = _availChunkIdx;
-				_availChunkIdx = newChunkIdx;
-			}
-			else {
-				pNewChunk->_nextIdx = curChunkIdx;
-				pNewChunk->_prevIdx = pCurChunk->_prevIdx;
-				if (availChunkPtr(pNewChunk->_nextIdx)) {
-					availChunkPtr(pNewChunk->_nextIdx)->_prevIdx = newChunkIdx;
-				}
-				if (availChunkPtr(pNewChunk->_prevIdx)) {
-					availChunkPtr(pNewChunk->_prevIdx)->_nextIdx = newChunkIdx;
-				}
+			if (pCurChunk == _pFirstAvailBlock) {
+				pNewChunk->_pNext = _pFirstAvailBlock;
+				if (_pFirstAvailBlock)
+					_pFirstAvailBlock->_pNext = pNewChunk;
+				else
+					_pFirstAvailBlock = pNewChunk;
+			} else {
+				assert(pPriorChunk);
+				pNewChunk->_pNext = pCurChunk->_pNext;
+				pPriorChunk->_pNext = pNewChunk;
 			}
 			break;
 		}
 
-		lastChunkIdx = curChunkIdx;
-		curChunkIdx = pCurChunk->_nextIdx;
+		pPriorChunk = pCurChunk;
+		pCurChunk = pCurChunk->_pNext;
 	}
 
 	if (!found) {
-		if (_availChunkIdx == -1) {
-			_availChunkIdx = newChunkIdx;
-		} else if (curChunkIdx == _availChunkIdx) {
-			availChunkPtr(_availChunkIdx)->_prevIdx = newChunkIdx;
-			_availChunkIdx = newChunkIdx;
+		if (!_pFirstAvailBlock) {
+			pNewChunk->_pNext = _pFirstAvailBlock;
+			_pFirstAvailBlock = pNewChunk;
 		} else {
-			assert(lastChunkIdx != -1);
-			availChunkPtr(newChunkIdx)->_prevIdx = lastChunkIdx;
-			availChunkPtr(lastChunkIdx)->_nextIdx = newChunkIdx;
-
-			availChunkPtr(newChunkIdx)->_nextIdx = curChunkIdx;
-			if (availChunkPtr(curChunkIdx))
-				availChunkPtr(curChunkIdx)->_prevIdx = newChunkIdx;
+			assert(pPriorChunk);
+			pPriorChunk->_pNext = pNewChunk;
 		}
 	}
 }

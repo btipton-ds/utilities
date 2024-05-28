@@ -133,13 +133,14 @@ void VECTOR_DECL::reserve(size_t newCapacity)
 					assert(!"new data at same address as old data!");
 			}
 #endif // _DEBUG
-			_capacity = newCapacity;
 
 			for (size_t i = 0; i < _size; i++)
 				_pData[i] = pTmp[i];
 
 			free(pTmp);
 		}
+
+		_capacity = newCapacity;
 	}
 }
 
