@@ -228,11 +228,16 @@ MultiCore::vector<T>& VECTOR_DECL::operator = (const vector& rhs)
 {
 	_size = rhs._size;
 	_capacity = _size;
-	free(_pData);
+	if (_pData) {
+		free(_pData);
+		_pData = nullptr;
+	}
 	
-	_pData = alloc<T>(_capacity);
-	for (size_t i = 0; i < _size; i++)
-		_pData[i] = rhs._pData[i];
+	if (_capacity > 0) {
+		_pData = alloc<T>(_capacity);
+		for (size_t i = 0; i < _size; i++)
+			_pData[i] = rhs._pData[i];
+	}
 
 	return *this;
 }

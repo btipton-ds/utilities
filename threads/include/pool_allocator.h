@@ -74,10 +74,10 @@ public:
 
 private:	
 	struct BlockHeader {
+		uint32_t _numChunks;
+		uint32_t _size = 0;
 		uint32_t _blockIdx;
 		uint32_t _chunkIdx;
-		uint32_t _size = 0;
-		uint32_t _numChunks;
 
 		inline bool operator == (const BlockHeader& rhs) const
 		{
@@ -96,6 +96,7 @@ private:
 
 	BlockHeader* getAvailBlock(size_t numChunksNeeded);
 	void addBlockToAvailList(const BlockHeader& header);
+	void insertBlockAt(AvailBlockHeader* pPriorBlock, AvailBlockHeader* pCurBlock, AvailBlockHeader* pNewBlock);
 
 	bool isHeaderValid(const void* p, bool pointsToHeader) const;
 
@@ -133,15 +134,17 @@ T* local_heap::alloc(size_t num)
 template<class T>
 void local_heap::free(T* ptr)
 {
-	assert(isHeaderValid(ptr, false));
-	char* pc = (char*)ptr;
-	BlockHeader* pHeader = (BlockHeader*)(pc - sizeof(BlockHeader));
-	size_t num = pHeader->_size / sizeof(T);
-	for (size_t i = 0; i < num; i++)
-		ptr[i].~T();
+	if (ptr) {
+		assert(isHeaderValid(ptr, false));
+		char* pc = (char*)ptr;
+		BlockHeader* pHeader = (BlockHeader*)(pc - sizeof(BlockHeader));
+		size_t num = pHeader->_size / sizeof(T);
+		for (size_t i = 0; i < num; i++)
+			ptr[i].~T();
 
-	assert(isHeaderValid(ptr, false));
-	freeMem(ptr);
+		assert(isHeaderValid(ptr, false));
+		freeMem(ptr);
+	}
 }
 
 class local_heap_user
