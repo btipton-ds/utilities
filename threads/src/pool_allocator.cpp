@@ -155,16 +155,17 @@ void ::MultiCore::local_heap::freeMem(void* ptr)
 	return nullptr;
 }
 
-void ::MultiCore::local_heap::addBlockToAvailList(const BlockHeader& headerIn)
+void ::MultiCore::local_heap::addBlockToAvailList(const BlockHeader& header)
 {
 	AvailBlockHeader* pCurChunk = _pFirstAvailBlock;
 	AvailBlockHeader* pPriorChunk = nullptr;
 
-	BlockHeader header = headerIn;
 	size_t startIdxBytes = header._chunkIdx * _chunkSizeBytes;
 	auto& blkVec = *_data[header._blockIdx];
 	AvailBlockHeader* pNewChunk = (AvailBlockHeader*)&blkVec[startIdxBytes];
+	assert(pNewChunk->_header == header);
 	pNewChunk->_header = header;
+	pNewChunk->_header._size = -1; // mark as a free block
 	pNewChunk->_pNext = nullptr;
 
 	bool found = false;
@@ -211,7 +212,8 @@ bool ::MultiCore::local_heap::isHeaderValid(const void* p, bool pointsToHeader) 
 	if (pHeader->_numChunks == 0 || pHeader->_numChunks >= _blockSizeChunks)
 		return false;
 
-	if (pHeader->_size == 0 || pHeader->_size >= _blockSizeChunks * _chunkSizeBytes)
+	if (pHeader->_size != -1 /* -1 marks an empty block*/ &&
+		(pHeader->_size == 0 || pHeader->_size >= _blockSizeChunks * _chunkSizeBytes))
 		return false;
 
 	if (pHeader->_blockIdx >= _data.size())

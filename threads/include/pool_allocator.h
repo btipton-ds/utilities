@@ -78,12 +78,16 @@ private:
 		uint32_t _chunkIdx;
 		uint32_t _size = 0;
 		uint32_t _numChunks;
+
+		inline bool operator == (const BlockHeader& rhs) const
+		{
+			return _blockIdx == rhs._blockIdx && _chunkIdx == rhs._chunkIdx && _numChunks == rhs._numChunks;
+		}
 	};
 
 	struct AvailBlockHeader {
-		AvailBlockHeader* _pNext = nullptr;
-
 		BlockHeader _header;
+		AvailBlockHeader* _pNext = nullptr;
 	};
 
 	void* allocMem(size_t bytes);
