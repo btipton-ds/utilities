@@ -40,15 +40,14 @@ static thread_local ::MultiCore::local_heap* s_pHeap = &s_mainThreadHeap;
 
 void ::MultiCore::local_heap::pushThreadHeapPtr(::MultiCore::local_heap* pHeap)
 {
-	if (s_pHeap)
-		s_pHeap->_priorHeap = s_pHeap;
+	pHeap->_priorHeap = s_pHeap;
 	s_pHeap = pHeap;
 }
 
 void ::MultiCore::local_heap::popThreadHeapPtr()
 {
-	if (s_pHeap)
-		s_pHeap = s_pHeap->_priorHeap;
+	assert(s_pHeap);
+	s_pHeap = s_pHeap->_priorHeap;
 }
 
 ::MultiCore::local_heap* ::MultiCore::local_heap::getThreadHeapPtr()
