@@ -49,6 +49,14 @@ VECTOR_DECL::vector(const std::initializer_list<T>& src)
 }
 
 TEMPL_DECL
+VECTOR_DECL::~vector()
+{
+	clear();
+	free(_pData);
+	_pData = nullptr;
+}
+
+TEMPL_DECL
 VECTOR_DECL::operator std::vector<T>() const
 {
 	std::vector<T> result;
@@ -59,8 +67,14 @@ VECTOR_DECL::operator std::vector<T>() const
 TEMPL_DECL
 void VECTOR_DECL::clear()
 {
+	for (size_t i = 0; i < _capacity; i++) {
+		_pData[i].~T();
+	}
 	_size = 0;
+
+#if DUPLICATE_STD_TESTS	
 	_data.clear();
+#endif
 }
 
 TEMPL_DECL
@@ -73,14 +87,18 @@ bool VECTOR_DECL::empty()
 TEMPL_DECL
 size_t VECTOR_DECL::size() const
 {
+#if DUPLICATE_STD_TESTS	
 	assert(_size == _data.size());
+#endif
 	return _size;
 }
 
 TEMPL_DECL
 void VECTOR_DECL::resize(size_t val)
 {
+#if DUPLICATE_STD_TESTS	
 	_data.resize(val);
+#endif
 
 	reserve(val);
 	_size = val;
@@ -93,13 +111,30 @@ void VECTOR_DECL::resize(size_t val)
 TEMPL_DECL
 void VECTOR_DECL::reserve(size_t newCapacity)
 {
+#if DUPLICATE_STD_TESTS	
 	_data.reserve(newCapacity);
+#endif
 	if (newCapacity > _capacity) {
-		_capacity = newCapacity;
 		T* pTmp = _pData;
-		_pData = (T*)alloc(_capacity * sizeof(T));
+		_pData = alloc<T>(newCapacity);
 
 		if (pTmp) {
+#ifdef _DEBUG
+			{
+				auto pTmp0 = (char*)pTmp;
+				auto pTmp1 = pTmp0 + _capacity * sizeof(T);
+				auto pDat0 = (char*)_pData;
+				auto pDat1 = pDat0 + newCapacity * sizeof(T);
+				if (pTmp0 < pDat0)
+					assert(pTmp1 < pDat0);
+				else if (pDat0 < pTmp0)
+					assert(pDat1 < pTmp0);
+				else
+					assert(!"new data at same address as old data!");
+			}
+#endif // _DEBUG
+			_capacity = newCapacity;
+
 			for (size_t i = 0; i < _size; i++)
 				_pData[i] = pTmp[i];
 
@@ -113,7 +148,9 @@ template<class ITER_TYPE>
 void VECTOR_DECL::insert(const iterator& at, const ITER_TYPE& begin, const ITER_TYPE& end)
 {
 	size_t idx = (size_t)(at._pEntry - _pData);
+#if DUPLICATE_STD_TESTS	
 	_data.insert(_data.begin() + idx, begin, end);
+#endif
 
 	size_t entriesNeeded = end - begin;
 	resize(_size + entriesNeeded);
@@ -129,7 +166,9 @@ TEMPL_DECL
 void VECTOR_DECL::insert(const iterator& at, const T& val)
 {
 	size_t idx = (size_t)(at._pEntry - _pData);
+#if DUPLICATE_STD_TESTS	
 	_data.insert(_data.begin() + idx, val);
+#endif
 
 	resize(_size + 1);
 	for (size_t i = _size - 1; i > idx; i--)
@@ -142,7 +181,9 @@ TEMPL_DECL
 void VECTOR_DECL::insert(const iterator& at, const std::initializer_list<T>& vals)
 {
 	size_t idx = (size_t) (at._pEntry - _pData);
+#if DUPLICATE_STD_TESTS	
 	_data.insert(_data.begin() + idx, vals.begin(), vals.end());
+#endif
 
 	auto begin = vals.begin();
 	auto end = vals.end();
@@ -161,21 +202,37 @@ TEMPL_DECL
 VECTOR_DECL::iterator VECTOR_DECL::erase(const iterator& at)
 {
 	size_t idx = (size_t)(at._pEntry - _pData);
+#if DUPLICATE_STD_TESTS	
 	_data.erase(_data.begin() + idx);
+#endif
+
+	for (size_t i = idx; i < _size - 1; i++) {
+		_pData[i] = _pData[i + 1];
+	}
+	_size--;
 	return iterator(this, at._pEntry);
 }
 
 TEMPL_DECL
 VECTOR_DECL::iterator VECTOR_DECL::erase(const iterator& begin, const iterator& end)
 {
+#if DUPLICATE_STD_TESTS	
 	_data.erase(begin, end);
+#endif
 	return iterator(this, begin._pEntry);
 }
 
 TEMPL_DECL
 MultiCore::vector<T>& VECTOR_DECL::operator = (const vector& rhs)
 {
-	insert(end(), rhs.begin(), rhs.end());
+	_size = rhs._size;
+	_capacity = _size;
+	free(_pData);
+	
+	_pData = alloc<T>(_capacity);
+	for (size_t i = 0; i < _size; i++)
+		_pData[i] = rhs._pData[i];
+
 	return *this;
 }
 
@@ -243,7 +300,9 @@ T& VECTOR_DECL::front()
 	assert(!empty());
 	size_t idx = 0;
 	T* pTData = (T*)_pData;
+#if DUPLICATE_STD_TESTS	
 	assert(_data[idx] == pTData[idx]);
+#endif
 	return pTData[idx];
 }
 
@@ -256,7 +315,9 @@ const T& VECTOR_DECL::back() const
 		assert(!"Out of bounds");
 	}
 	const T* pTData = (const T*)_pData;
+#if DUPLICATE_STD_TESTS	
 	assert(_data[idx] == pTData[idx]);
+#endif
 	return pTData[idx];
 }
 
@@ -268,8 +329,11 @@ T& VECTOR_DECL::back()
 	if (idx >= _size) {
 		assert(!"Out of bounds");
 	}
+
 	T* pTData = (T*)_pData;
+#if DUPLICATE_STD_TESTS	
 	assert(_data[idx] == pTData[idx]);
+#endif
 	return pTData[idx];
 }
 
@@ -279,7 +343,6 @@ const T& VECTOR_DECL::operator[](size_t idx) const
 	if (idx >= _size) {
 		assert(!"Out of bounds");
 	}
-	assert(_data[idx] == _pData[idx]);
 	return _pData[idx];
 }
 
@@ -289,15 +352,15 @@ T& VECTOR_DECL::operator[](size_t idx)
 	if (idx >= _size) {
 		assert(!"Out of bounds");
 	}
-	assert(_data[idx] == _pData[idx]);
 	return _pData[idx];
 }
 
 TEMPL_DECL
 size_t VECTOR_DECL::push_back(const T& val)
 {
-	size_t result = size();
+#if DUPLICATE_STD_TESTS	
 	_data.push_back(val);
+#endif
 
 	if (_size + 1 > _capacity) {
 		size_t newCapacity = _capacity;
@@ -318,7 +381,9 @@ size_t VECTOR_DECL::push_back(const T& val)
 TEMPL_DECL
 void VECTOR_DECL::pop_back()
 {
+#if DUPLICATE_STD_TESTS	
 	_data.pop_back();
+#endif
 
 	assert(_size > 0);
 	_size--;

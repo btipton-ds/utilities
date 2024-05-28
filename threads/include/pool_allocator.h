@@ -66,13 +66,17 @@ public:
 
 	local_heap(size_t blockSizeChunks, size_t chunkSizeBytes = 32);
 	
-	void* alloc(size_t bytes);
-	void free(void* ptr);
+	template<class T>
+	T* alloc(size_t num);
+
+	template<class T>
+	void free(T* ptr);
 
 private:	
 	struct BlockHeader {
 		uint32_t _blockIdx;
 		uint32_t _chunkIdx;
+		uint32_t _size = 0;
 		uint32_t _numChunks;
 	};
 
@@ -83,8 +87,21 @@ private:
 		BlockHeader _header;
 	};
 
-	BlockHeader* getAvailChunk(size_t numChunksNeeded);
-	void addAvailChunk(const BlockHeader& header);
+	void* allocMem(size_t bytes);
+
+	void freeMem(void* ptr);
+
+	BlockHeader* getAvailBlock(size_t numChunksNeeded);
+	void makeBlockAvail(const BlockHeader& header);
+
+	bool isHeaderValid(const void* p, bool pointsToHeader) const;
+
+	inline AvailChunk* availChunkPtr(size_t idx)
+	{
+		if (idx < _availChunks.size())
+			return &_availChunks[idx];
+		return nullptr;
+	}
 
 	const size_t _blockSizeChunks;
 	const size_t _chunkSizeBytes;
@@ -96,18 +113,58 @@ private:
 	_STD vector<BlockPtr> _data;
 
 	_STD vector<AvailChunk> _availChunks;
-	_STD vector<size_t> _freeAvailChunks;
+	_STD vector<size_t> _availChunkIndexStack;
 
-	size_t _availChunkInfoIdx = -1; // Sorted indices into _availChunks
+	size_t _availChunkIdx = -1; // Sorted indices into _availChunks
 
 	local_heap* _priorHeap = nullptr;
 };
 
+template<class T>
+T* local_heap::alloc(size_t num)
+{
+	auto p = allocMem(num * sizeof(T));
+	auto pT = (T*)p;
+	assert(isHeaderValid(pT, false));
+
+	for (size_t i = 0; i < num; i++) {
+		T* px = new(&pT[i]) T(); // default in place constructor
+		assert(px == &pT[i]);
+	}
+
+	assert(isHeaderValid(pT, false));
+
+	return pT;
+}
+
+template<class T>
+void local_heap::free(T* ptr)
+{
+	assert(isHeaderValid(ptr, false));
+	char* pc = (char*)ptr;
+	BlockHeader* pHeader = (BlockHeader*)(pc - sizeof(BlockHeader));
+	size_t num = pHeader->_size / sizeof(T);
+	for (size_t i = 0; i < num; i++)
+		ptr[i].~T();
+
+	assert(isHeaderValid(ptr, false));
+	freeMem(ptr);
+}
+
 class local_heap_user
 {
 protected:
-	void* alloc(size_t bytes) const;
-	void free(void* ptr) const;
+	template<class T>
+	T* alloc(size_t num) const
+	{
+		return getHeap()->alloc<T>(num);
+	}
+
+	template<class T>
+	void free(T* ptr) const
+	{
+		getHeap()->free(ptr);
+	}
 
 private:
 	local_heap* getHeap() const;
@@ -124,16 +181,6 @@ inline local_heap::scoped_set_thread_heap::scoped_set_thread_heap(local_heap* pH
 inline local_heap::scoped_set_thread_heap::~scoped_set_thread_heap()
 {
 	popThreadHeapPtr();
-}
-
-inline void* local_heap_user::alloc(size_t bytes) const
-{
-	return getHeap()->alloc(bytes);
-}
-
-inline void local_heap_user::free(void* ptr) const
-{
-	getHeap()->free(ptr);
 }
 
 inline local_heap* local_heap_user::getHeap() const

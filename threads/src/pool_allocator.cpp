@@ -58,24 +58,27 @@ void ::MultiCore::local_heap::popThreadHeapPtr()
 
 ::MultiCore::local_heap::local_heap(size_t blockSizeChunks, size_t chunkSizeBytes)
 	: _blockSizeChunks(blockSizeChunks)
-	, _chunkSizeBytes(chunkSizeBytes + sizeof(size_t))
+	, _chunkSizeBytes(chunkSizeBytes + sizeof(BlockHeader))
 {
+	_data.reserve(10);
 	_availChunks.reserve(100);
+	_availChunkIndexStack.reserve(100);
 }
 
-void* ::MultiCore::local_heap::alloc(size_t bytes)
+void* ::MultiCore::local_heap::allocMem(size_t bytes)
 {
-	assert(bytes < _blockSizeChunks * _chunkSizeBytes);
-	const auto& headerSize = sizeof(BlockHeader);
-	size_t bytesNeeded = bytes + headerSize;
+	size_t bytesNeeded = bytes + sizeof(BlockHeader);
 	size_t numChunks = bytesNeeded / _chunkSizeBytes;
 	if (bytesNeeded % _chunkSizeBytes != 0)
 		numChunks++;
 
-	BlockHeader* pHeader = getAvailChunk(numChunks);
+	BlockHeader* pHeader;
+#if 0
+	pHeader = getAvailBlock(numChunks);
 	if (pHeader != nullptr) {
-		return (char*)pHeader + headerSize;
+		return (char*)pHeader + sizeof(BlockHeader);
 	}
+#endif
 	assert(numChunks < _blockSizeChunks);
 
 	if (_topBlockIdx >= _data.size() || (_topChunkIdx + numChunks >= _blockSizeChunks)) {
@@ -87,19 +90,21 @@ void* ::MultiCore::local_heap::alloc(size_t bytes)
 			headerForRemainder._blockIdx = _topBlockIdx;
 			headerForRemainder._chunkIdx = (uint32_t) (_topChunkIdx + numChunks);
 			headerForRemainder._numChunks = (uint32_t) (_blockSizeChunks - _topChunkIdx - numChunks);
-			addAvailChunk(headerForRemainder);
+			makeBlockAvail(headerForRemainder);
 		}
 
-		_topBlockIdx = (uint32_t)_data.size();
 		_topChunkIdx = 0;
 
-		_data.push_back(_STD make_shared<_STD vector<char>>(_blockSizeChunks * _chunkSizeBytes + headerSize, 0));
+		size_t blockSize = _blockSizeChunks * _chunkSizeBytes;
+		auto pBlk = _STD make_shared<_STD vector<char>>(blockSize);
+		_data.push_back(pBlk);
 	}
 
 	AvailChunk info;
 	info._header._numChunks = (uint32_t)numChunks;
 	info._header._blockIdx = _topBlockIdx;
 	info._header._chunkIdx = _topChunkIdx;
+	info._header._size = (uint32_t)bytes;
 
 	auto& blkVec = *_data[info._header._blockIdx];
 	size_t startIdx = info._header._chunkIdx * _chunkSizeBytes;
@@ -113,92 +118,130 @@ void* ::MultiCore::local_heap::alloc(size_t bytes)
 		_topChunkIdx = 0;
 	}
 
-	return (char*)pHeader + headerSize;
+	assert(pHeader->_size == bytes);
+	return (char*)pHeader + sizeof(BlockHeader);
 }
 
-void ::MultiCore::local_heap::free(void* ptr)
+void ::MultiCore::local_heap::freeMem(void* ptr)
 {
-	const auto& headerSize = sizeof(BlockHeader);
-	char* pc = (char*)ptr - headerSize;
-	BlockHeader* pHeader = (BlockHeader*)pc;
-	addAvailChunk(*pHeader);
+	if (ptr) {
+		assert(isHeaderValid(ptr, false));
+		char* pc = (char*)ptr - sizeof(BlockHeader);
+		assert(isHeaderValid(pc, true));
+		BlockHeader* pHeader = (BlockHeader*)pc;
+		makeBlockAvail(*pHeader);
+	}
 }
 
-::MultiCore::local_heap::BlockHeader* ::MultiCore::local_heap::getAvailChunk(size_t numChunksNeeded)
+::MultiCore::local_heap::BlockHeader* ::MultiCore::local_heap::getAvailBlock(size_t numChunksNeeded)
 {
-	size_t idx = _availChunkInfoIdx;
-	while (idx != -1) {
-		auto& curChunk = _availChunks[idx];
-		if (curChunk._header._numChunks <= numChunksNeeded) {
-			size_t startIdxBytes = curChunk._header._chunkIdx * _chunkSizeBytes;
-			auto& blkVec = *_data[curChunk._header._blockIdx];
-			BlockHeader* pHeader = (BlockHeader*)&blkVec[startIdxBytes];
-			(*pHeader) = curChunk._header;
-
+	size_t curChunkIdx = _availChunkIdx;
+	while (curChunkIdx != -1) {
+		auto pCurChunk = availChunkPtr(curChunkIdx);
+		if (pCurChunk->_header._numChunks <= numChunksNeeded) {
 			// Remove this chunk from the sorted linked list of available chunks
-			if (curChunk._prevIdx != -1) {
-				_availChunks[curChunk._prevIdx]._nextIdx = curChunk._nextIdx;
+			if (curChunkIdx == _availChunkIdx) {
+				_availChunkIdx = pCurChunk->_nextIdx;
 			} else {
-				_availChunkInfoIdx = curChunk._nextIdx;
+				availChunkPtr(pCurChunk->_prevIdx)->_nextIdx = pCurChunk->_nextIdx;
+				if (availChunkPtr(pCurChunk->_nextIdx)) {
+					availChunkPtr(pCurChunk->_nextIdx)->_prevIdx = pCurChunk->_prevIdx;
+				}
 			}
 
-			if (curChunk._nextIdx != -1) {
-				_availChunks[curChunk._nextIdx]._prevIdx = curChunk._prevIdx;
-			}
+			_availChunkIndexStack.push_back(curChunkIdx); // This moves stack memory, but does not move storage memory. It's order independent.
+
+			size_t startIdxBytes = pCurChunk->_header._chunkIdx * _chunkSizeBytes;
+			auto& blkVec = *_data[pCurChunk->_header._blockIdx];
+			BlockHeader* pHeader = (BlockHeader*)&blkVec[startIdxBytes];
+			(*pHeader) = pCurChunk->_header;
 			return pHeader;
 		}
-		idx = _availChunks[idx]._nextIdx;
+		curChunkIdx = pCurChunk->_nextIdx;
 	}
 
 	return nullptr;
 }
 
-void ::MultiCore::local_heap::addAvailChunk(const BlockHeader& header)
+void ::MultiCore::local_heap::makeBlockAvail(const BlockHeader& header)
 {
-	size_t newIdx;
-	if (!_freeAvailChunks.empty()) {
-		newIdx = _freeAvailChunks.back();
-		_freeAvailChunks.pop_back();
-	} else {
-		newIdx = _availChunks.size();
+	size_t newChunkIdx = -1;
+	if (!_availChunkIndexStack.empty()) {
+		newChunkIdx = _availChunkIndexStack.back();
+		_availChunkIndexStack.pop_back();
+	}
+	else {
+		newChunkIdx = _availChunks.size();
 		_availChunks.push_back(AvailChunk());
 	}
-
-	auto& newEntry = _availChunks[newIdx];
-	newEntry._header = header;
+	AvailChunk* pNewChunk = availChunkPtr(newChunkIdx);
+	pNewChunk->_header = header;
 
 	bool found = false;
-	size_t idx = _availChunkInfoIdx, lastIdx = -1;
-	while (idx != -1) {
-		lastIdx = idx;
-		auto& curEntry = _availChunks[idx];
-		if (newEntry._header._numChunks <= _availChunks[idx]._header._numChunks) {
+	size_t curChunkIdx = _availChunkIdx, lastChunkIdx = -1;
+	while (curChunkIdx != -1) {
+		auto pCurChunk = availChunkPtr(curChunkIdx);
+		if (pNewChunk->_header._numChunks <= pCurChunk->_header._numChunks) {
 			found = true;
 			// insert here
-			if (idx == _availChunkInfoIdx) {
-				newEntry._nextIdx = _availChunkInfoIdx;
-				_availChunks[_availChunkInfoIdx]._prevIdx = newIdx;
-				_availChunkInfoIdx = newIdx;
-			} else {
-				newEntry._nextIdx = idx;
-				newEntry._prevIdx = curEntry._prevIdx;
-				if (newEntry._nextIdx != -1) {
-					_availChunks[newEntry._nextIdx]._prevIdx = newIdx;
+			if (_availChunkIdx == curChunkIdx) {
+				pCurChunk->_prevIdx = newChunkIdx;
+				pNewChunk->_nextIdx = _availChunkIdx;
+				_availChunkIdx = newChunkIdx;
+			}
+			else {
+				pNewChunk->_nextIdx = curChunkIdx;
+				pNewChunk->_prevIdx = pCurChunk->_prevIdx;
+				if (availChunkPtr(pNewChunk->_nextIdx)) {
+					availChunkPtr(pNewChunk->_nextIdx)->_prevIdx = newChunkIdx;
 				}
-				if (newEntry._prevIdx != -1) {
-					_availChunks[newEntry._prevIdx]._nextIdx = newIdx;
+				if (availChunkPtr(pNewChunk->_prevIdx)) {
+					availChunkPtr(pNewChunk->_prevIdx)->_nextIdx = newChunkIdx;
 				}
 			}
+			break;
 		}
 
-		idx = curEntry._nextIdx;
+		lastChunkIdx = curChunkIdx;
+		curChunkIdx = pCurChunk->_nextIdx;
 	}
+
 	if (!found) {
-		if (lastIdx == -1 || _availChunkInfoIdx == -1) {
-			_availChunkInfoIdx = newIdx;
-		} else if (lastIdx != -1) {
-			_availChunks[lastIdx]._nextIdx = newIdx;
-			newEntry._prevIdx = lastIdx;
+		if (_availChunkIdx == -1) {
+			_availChunkIdx = newChunkIdx;
+		} else if (curChunkIdx == _availChunkIdx) {
+			availChunkPtr(_availChunkIdx)->_prevIdx = newChunkIdx;
+			_availChunkIdx = newChunkIdx;
+		} else {
+			assert(lastChunkIdx != -1);
+			availChunkPtr(newChunkIdx)->_prevIdx = lastChunkIdx;
+			availChunkPtr(lastChunkIdx)->_nextIdx = newChunkIdx;
+
+			availChunkPtr(newChunkIdx)->_nextIdx = curChunkIdx;
+			if (availChunkPtr(curChunkIdx))
+				availChunkPtr(curChunkIdx)->_prevIdx = newChunkIdx;
 		}
 	}
+}
+
+bool ::MultiCore::local_heap::isHeaderValid(const void* p, bool pointsToHeader) const
+{
+	const char* pc = (const char*) p;
+	if (!pointsToHeader)
+		pc -= sizeof(BlockHeader);
+
+	const BlockHeader* pHeader = (const BlockHeader*)pc;
+	if (pHeader->_numChunks == 0 || pHeader->_numChunks >= _blockSizeChunks)
+		return false;
+
+	if (pHeader->_size == 0 || pHeader->_size >= _blockSizeChunks * _chunkSizeBytes)
+		return false;
+
+	if (pHeader->_blockIdx >= _data.size())
+		return false;
+
+	if (pHeader->_chunkIdx >= _blockSizeChunks)
+		return false;
+
+	return true;
 }

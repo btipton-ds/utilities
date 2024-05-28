@@ -29,7 +29,7 @@ This file is part of the DistFieldHexMesh application/library.
 #include <vector>
 #include <pool_allocator.h>
 
-
+#define DUPLICATE_STD_TESTS 0
 #define FORW_CONST 0
 #define REV_CONST 1
 #define FORW 2
@@ -96,6 +96,7 @@ public:
 	vector(const vector& src) = default;
 	vector(const std::vector<T>& src);
 	vector(const std::initializer_list<T>& src);
+	~vector();
 
 	operator std::vector<T>() const;
 
@@ -140,7 +141,9 @@ private:
 	size_t _size = 0, _capacity = 0;
 	T* _pData = nullptr;
 
+#if DUPLICATE_STD_TESTS	
 	std::vector<T> _data;
+#endif
 };
 
 }
