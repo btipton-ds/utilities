@@ -121,8 +121,8 @@ void VECTOR_DECL::reserve(size_t newCapacity)
 				_pData[i] = pTmp[i];
 
 			free(pTmp);
-			_capacity = newCapacity;
 		}
+		_capacity = newCapacity;
 	}
 }
 
@@ -275,17 +275,14 @@ _NODISCARD _CONSTEXPR20 typename VECTOR_DECL::reverse_iterator VECTOR_DECL::rend
 TEMPL_DECL
 const T& VECTOR_DECL::front() const
 {
-	assert(!empty());
 	size_t idx = 0;
 	const T* pTData = (const T*)_pData;
-	assert(data[idx] == pTData[idx]);
 	return pTData[idx];
 }
 
 TEMPL_DECL
 T& VECTOR_DECL::front()
 {
-	assert(!empty());
 	size_t idx = 0;
 	T* pTData = (T*)_pData;
 #if DUPLICATE_STD_TESTS	
@@ -297,11 +294,7 @@ T& VECTOR_DECL::front()
 TEMPL_DECL
 const T& VECTOR_DECL::back() const
 {
-	assert(!empty());
 	size_t idx = _size - 1;
-	if (idx >= _size) {
-		assert(!"Out of bounds");
-	}
 	const T* pTData = (const T*)_pData;
 #if DUPLICATE_STD_TESTS	
 	assert(_data[idx] == pTData[idx]);
@@ -312,11 +305,7 @@ const T& VECTOR_DECL::back() const
 TEMPL_DECL
 T& VECTOR_DECL::back()
 {
-	assert(!empty());
 	size_t idx = _size - 1;
-	if (idx >= _size) {
-		assert(!"Out of bounds");
-	}
 
 	T* pTData = (T*)_pData;
 #if DUPLICATE_STD_TESTS	
@@ -328,18 +317,12 @@ T& VECTOR_DECL::back()
 TEMPL_DECL
 const T& VECTOR_DECL::operator[](size_t idx) const
 {
-	if (idx >= _size) {
-		assert(!"Out of bounds");
-	}
 	return _pData[idx];
 }
 
 TEMPL_DECL
 T& VECTOR_DECL::operator[](size_t idx)
 {
-	if (idx >= _size) {
-		assert(!"Out of bounds");
-	}
 	return _pData[idx];
 }
 
@@ -373,7 +356,7 @@ void VECTOR_DECL::pop_back()
 	_data.pop_back();
 #endif
 
-	assert(_size > 0);
+//	assert(_size > 0);
 	_size--;
 }
 
@@ -389,7 +372,7 @@ TEMPL_DECL
 ITER_TEMPL_DECL
 bool ITER_DECL::operator == (const _iterator& rhs) const
 {
-	assert(_pSource == _pSource);
+//	assert(_pSource == _pSource);
 	return _pEntry == rhs._pEntry;
 }
 
@@ -397,7 +380,7 @@ TEMPL_DECL
 ITER_TEMPL_DECL
 bool ITER_DECL::operator != (const _iterator& rhs) const
 {
-	assert(_pSource == _pSource);
+//	assert(_pSource == _pSource);
 	return _pEntry != rhs._pEntry;
 }
 
@@ -405,7 +388,7 @@ TEMPL_DECL
 ITER_TEMPL_DECL
 bool ITER_DECL::operator < (const _iterator& rhs) const
 {
-	assert(_pSource == _pSource);
+//	assert(_pSource == _pSource);
 	return _pEntry < rhs._pEntry;
 }
 
@@ -413,7 +396,7 @@ TEMPL_DECL
 ITER_TEMPL_DECL
 bool ITER_DECL::operator > (const _iterator& rhs) const
 {
-	assert(_pSource == _pSource);
+//	assert(_pSource == _pSource);
 	return _pEntry > rhs._pEntry;
 }
 

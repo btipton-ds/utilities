@@ -50,6 +50,8 @@ namespace MultiCore
 
 	Net result is, all operations in a thread have their own heap as well as their own stack. Persistant data is stored in the block.
 	A bit fragile, but usable.
+
+	I tried using the std memory pool system, but it didn't come anywhere close to the required speed.
 */
 
 class local_heap {
@@ -77,9 +79,9 @@ public:
 private:	
 	struct BlockHeader {
 		uint32_t _numChunks;
-		uint32_t _size = 0;
 		uint32_t _blockIdx;
 		uint32_t _chunkIdx;
+		uint32_t _numObj = 0;
 
 		inline bool operator == (const BlockHeader& rhs) const
 		{
@@ -121,10 +123,14 @@ private:
 template<class T>
 T* local_heap::alloc(size_t num)
 {
-	auto p = allocMem(num * sizeof(T));
-	auto pT = (T*)p;
+	assert(verifyAvailList());
+	char* pc = (char*)allocMem(num * sizeof(T));
+	auto pT = (T*)pc;
 	assert(isHeaderValid(pT, false));
 
+	assert(verifyAvailList());
+	BlockHeader* pHeader = (BlockHeader*)(pc - sizeof(BlockHeader));
+	pHeader->_numObj = (uint32_t)num;
 	for (size_t i = 0; i < num; i++) {
 		T* px = new(&pT[i]) T(); // default in place constructor
 		assert(px == &pT[i]);
@@ -132,6 +138,7 @@ T* local_heap::alloc(size_t num)
 
 	assert(isHeaderValid(pT, false));
 
+	assert(verifyAvailList());
 	return pT;
 }
 
@@ -140,13 +147,16 @@ void local_heap::free(T* ptr)
 {
 	if (ptr) {
 		assert(isHeaderValid(ptr, false));
+		assert(verifyAvailList());
+
 		char* pc = (char*)ptr;
-		BlockHeader* pHeader = (BlockHeader*)(pc - sizeof(BlockHeader));
-		size_t num = pHeader->_size / sizeof(T);
+		const BlockHeader* pHeader = (BlockHeader*)(pc - sizeof(BlockHeader));
+		size_t num = pHeader->_numObj;
 		for (size_t i = 0; i < num; i++)
 			ptr[i].~T();
 
 		assert(isHeaderValid(ptr, false));
+		assert(verifyAvailList());
 		freeMem(ptr);
 	}
 }

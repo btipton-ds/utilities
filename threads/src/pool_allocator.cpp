@@ -40,7 +40,6 @@ static thread_local ::MultiCore::local_heap* s_pHeap = &s_mainThreadHeap;
 
 void ::MultiCore::local_heap::setThreadHeapPtr(::MultiCore::local_heap* pHeap)
 {
-	assert(pHeap);
 	s_pHeap = pHeap;
 }
 
@@ -56,23 +55,29 @@ void ::MultiCore::local_heap::setThreadHeapPtr(::MultiCore::local_heap* pHeap)
 	_data.reserve(10);
 }
 
-void* ::MultiCore::local_heap::allocMem(size_t bytes)
+void* ::MultiCore::local_heap::allocMem(size_t numBytes)
 {
-	size_t bytesNeeded = bytes + sizeof(BlockHeader);
+	size_t bytesNeeded = numBytes + sizeof(BlockHeader);
 	size_t numChunks = bytesNeeded / _chunkSizeBytes;
 	if (bytesNeeded % _chunkSizeBytes != 0)
 		numChunks++;
 
 	BlockHeader* pHeader = getAvailBlock(numChunks);
 	if (pHeader != nullptr) {
-		pHeader->_size = (uint32_t)bytes;
 		return (char*)pHeader + sizeof(BlockHeader);
 	}
 
-	assert(numChunks < _blockSizeChunks);
-
 	bool createdNewBlock = false;
-	if (_topBlockIdx >= _data.size() || (_topChunkIdx + numChunks >= _blockSizeChunks)) {
+	size_t blockChunks = _blockSizeChunks;
+	if (!_data.empty()) {
+		size_t customChunks = _data.back()->size() / _chunkSizeBytes;
+		if (_data.back()->size() % _chunkSizeBytes != 0)
+			customChunks += 1;
+		if (customChunks > _blockSizeChunks)
+			blockChunks = customChunks;
+	}
+
+	if (_topBlockIdx >= _data.size() || (_topChunkIdx + numChunks >= blockChunks)) {
 		// Not enough room in the block, so make an empty one.
 
 		if (_topChunkIdx + numChunks >= _blockSizeChunks) {
@@ -81,17 +86,25 @@ void* ::MultiCore::local_heap::allocMem(size_t bytes)
 			headerForRemainder._blockIdx = _topBlockIdx;
 			headerForRemainder._chunkIdx = (uint32_t) _topChunkIdx;
 			headerForRemainder._numChunks = (uint32_t) (_blockSizeChunks - _topChunkIdx);
-			addBlockToAvailList(headerForRemainder);
+			if (headerForRemainder._numChunks > 0)
+				addBlockToAvailList(headerForRemainder);
 			createdNewBlock = true;
 		}
 
-		_topChunkIdx = 0;
-
 		size_t blockSize = _blockSizeChunks * _chunkSizeBytes;
+		if (bytesNeeded > blockSize) {
+			size_t chk = bytesNeeded / _chunkSizeBytes;
+			if (bytesNeeded % _chunkSizeBytes != 0)
+				chk += 1;
+			bytesNeeded = chk * _chunkSizeBytes;
+			blockSize = bytesNeeded;
+		}
 		auto pBlk = _STD make_shared<_STD vector<char>>(blockSize);
 
 		_topBlockIdx = (uint32_t) _data.size();
+		_topChunkIdx = 0;
 		_data.push_back(pBlk);
+		assert(_topBlockIdx < _data.size());
 	}
 
 	size_t startIdx = _topChunkIdx * _chunkSizeBytes;
@@ -101,24 +114,16 @@ void* ::MultiCore::local_heap::allocMem(size_t bytes)
 	pHeader->_numChunks = (uint32_t)numChunks;
 	pHeader->_blockIdx = _topBlockIdx;
 	pHeader->_chunkIdx = _topChunkIdx;
-	pHeader->_size = (uint32_t)bytes;
 
 	_topChunkIdx += (uint32_t) numChunks;
-	if (_topChunkIdx >= _blockSizeChunks) {
-		_topBlockIdx++;
-		_topChunkIdx = 0;
-	}
 
-	assert(pHeader->_size == bytes);
 	return (char*)pHeader + sizeof(BlockHeader);
 }
 
 void ::MultiCore::local_heap::freeMem(void* ptr)
 {
 	if (ptr) {
-		assert(isHeaderValid(ptr, false));
 		char* pc = (char*)ptr - sizeof(BlockHeader);
-		assert(isHeaderValid(pc, true));
 		BlockHeader* pHeader = (BlockHeader*)pc;
 		addBlockToAvailList(*pHeader);
 	}
@@ -157,7 +162,6 @@ void ::MultiCore::local_heap::addBlockToAvailList(const BlockHeader& header)
 	auto& blkVec = *_data[header._blockIdx];
 	AvailBlockHeader* pNewBlock = (AvailBlockHeader*)&blkVec[startIdxBytes];
 	pNewBlock->_header = header;
-	pNewBlock->_header._size = -1; // mark as a free block
 	pNewBlock->_pNext = nullptr;
 
 	while (pCurBlock) {
@@ -174,11 +178,6 @@ void ::MultiCore::local_heap::addBlockToAvailList(const BlockHeader& header)
 
 void MultiCore::local_heap::insertAvailBlock(AvailBlockHeader* pPriorBlock, AvailBlockHeader* pCurBlock, AvailBlockHeader* pNewBlock)
 {
-	assert(pNewBlock);
-	assert(isBlockValid(pPriorBlock));
-	assert(isBlockValid(pCurBlock));
-	assert(isBlockValid(pNewBlock));
-
 	if (!_pFirstAvailBlock) {
 		// create list of one entry
 		_pFirstAvailBlock = pNewBlock;
@@ -212,30 +211,19 @@ void MultiCore::local_heap::insertAvailBlock(AvailBlockHeader* pPriorBlock, Avai
 		assert(pPriorBlock != pPriorBlock->_pNext);
 		assert(pPriorBlock->_header._numChunks <= pNewBlock->_header._numChunks);
 	}
-	assert(isBlockValid(pPriorBlock));
-	assert(isBlockValid(pCurBlock));
-	assert(isBlockValid(pNewBlock));
 }
 
 void ::MultiCore::local_heap::removeAvailBlock(AvailBlockHeader* pPriorBlock, AvailBlockHeader* pDeadBlock)
 {
-	assert(isBlockValid(pPriorBlock));
-	assert(isBlockValid(pDeadBlock));
-	assert(_pFirstAvailBlock);
 
 	if (pDeadBlock == _pFirstAvailBlock) {
 		_pFirstAvailBlock = pDeadBlock->_pNext;
 	} else if (pPriorBlock && pDeadBlock) {
 		pPriorBlock->_pNext = pDeadBlock->_pNext;
-		assert(pPriorBlock != pPriorBlock->_pNext);
-		assert((pPriorBlock->_pNext == nullptr) || pPriorBlock->_header._numChunks <= pPriorBlock->_pNext->_header._numChunks);
 	} else if (!pDeadBlock) {
 		// add at the end
-		assert(pPriorBlock);
 		pPriorBlock->_pNext = nullptr;
 	}
-
-	assert(isBlockValid(pPriorBlock));
 }
 
 bool ::MultiCore::local_heap::isHeaderValid(const void* p, bool pointsToHeader) const
@@ -245,17 +233,19 @@ bool ::MultiCore::local_heap::isHeaderValid(const void* p, bool pointsToHeader) 
 		pc -= sizeof(BlockHeader);
 
 	const BlockHeader* pHeader = (const BlockHeader*)pc;
-	if (pHeader->_numChunks == 0 || pHeader->_numChunks >= _blockSizeChunks)
-		return false;
+	size_t startIdx = pHeader->_chunkIdx * _chunkSizeBytes;
+	size_t chunkSize = pHeader->_numChunks * _chunkSizeBytes;
+	size_t sizeNeeded = startIdx + chunkSize;
 
-	if (pHeader->_size != -1 /* -1 marks an empty block*/ &&
-		(pHeader->_size == 0 || pHeader->_size >= _blockSizeChunks * _chunkSizeBytes))
+	const auto& pBlk = _data[pHeader->_blockIdx];
+	if (pHeader->_numChunks == 0 || sizeNeeded > pBlk->size())
 		return false;
 
 	if (pHeader->_blockIdx >= _data.size())
 		return false;
 
-	if (pHeader->_chunkIdx >= _blockSizeChunks)
+	size_t blockSizeChunks = (size_t)(pBlk->size() / _chunkSizeBytes);
+	if (pHeader->_chunkIdx >= blockSizeChunks)
 		return false;
 
 	return true;
@@ -264,10 +254,15 @@ bool ::MultiCore::local_heap::isHeaderValid(const void* p, bool pointsToHeader) 
 bool MultiCore::local_heap::verifyAvailList() const
 {
 	auto pCurBlock = _pFirstAvailBlock;
+	if (!isPointerInBounds(pCurBlock))
+		return false;
+
 	while (pCurBlock) {
 		if (!isBlockValid(pCurBlock))
 			return false;
 
+		if (!isPointerInBounds(pCurBlock->_pNext))
+			return false;
 		if (pCurBlock->_pNext) {
 			if (pCurBlock == pCurBlock->_pNext)
 				return false;
@@ -284,6 +279,9 @@ bool ::MultiCore::local_heap::isBlockValid(const AvailBlockHeader* pBlock) const
 {
 	if (!pBlock)
 		return true;
+
+	if (pBlock->_header._numChunks == 0)
+		return false;
 
 	if (!isPointerInBounds(pBlock))
 		return false;
@@ -305,6 +303,9 @@ bool ::MultiCore::local_heap::isBlockValid(const AvailBlockHeader* pBlock) const
 
 bool ::MultiCore::local_heap::isPointerInBounds(const void* ptr) const
 {
+	if (!ptr)
+		return true;
+
 	for (const auto& blkPtr : _data) {
 		const auto& blks = *blkPtr;
 		size_t idx = ((size_t)ptr) - ((size_t)blks.data());
