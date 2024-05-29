@@ -28,7 +28,7 @@ This file is part of the DistFieldHexMesh application/library.
 #include <defines.h>
 #include <assert.h>
 #include <algorithm>
-#include <pool_allocator.h>
+#include <local_heap.h>
 
 namespace
 {

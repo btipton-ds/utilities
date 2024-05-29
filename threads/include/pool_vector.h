@@ -27,7 +27,7 @@ This file is part of the DistFieldHexMesh application/library.
 */
 
 #include <vector>
-#include <pool_allocator.h>
+#include <local_heap.h>
 
 #define DUPLICATE_STD_TESTS 0
 #define FORW_CONST 0

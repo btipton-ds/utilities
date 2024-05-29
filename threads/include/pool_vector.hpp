@@ -26,7 +26,7 @@ This file is part of the DistFieldHexMesh application/library.
 	Dark Sky Innovative Solutions http://darkskyinnovation.com/
 */
 
-#include <pool_allocator.h>
+#include <local_heap.h>
 #include <pool_vector.h>
 
 #define TEMPL_DECL template<class T> 
