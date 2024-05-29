@@ -38,17 +38,10 @@ static thread_local ::MultiCore::local_heap* s_pHeap = &s_mainThreadHeap;
 
 }
 
-void ::MultiCore::local_heap::pushThreadHeapPtr(::MultiCore::local_heap* pHeap)
+void ::MultiCore::local_heap::setThreadHeapPtr(::MultiCore::local_heap* pHeap)
 {
 	assert(pHeap);
-	pHeap->_priorHeap = s_pHeap;
 	s_pHeap = pHeap;
-}
-
-void ::MultiCore::local_heap::popThreadHeapPtr()
-{
-	assert(s_pHeap);
-	s_pHeap = s_pHeap->_priorHeap;
 }
 
 ::MultiCore::local_heap* ::MultiCore::local_heap::getThreadHeapPtr()
@@ -78,6 +71,7 @@ void* ::MultiCore::local_heap::allocMem(size_t bytes)
 
 	assert(numChunks < _blockSizeChunks);
 
+	bool createdNewBlock = false;
 	if (_topBlockIdx >= _data.size() || (_topChunkIdx + numChunks >= _blockSizeChunks)) {
 		// Not enough room in the block, so make an empty one.
 
@@ -88,12 +82,15 @@ void* ::MultiCore::local_heap::allocMem(size_t bytes)
 			headerForRemainder._chunkIdx = (uint32_t) _topChunkIdx;
 			headerForRemainder._numChunks = (uint32_t) (_blockSizeChunks - _topChunkIdx);
 			addBlockToAvailList(headerForRemainder);
+			createdNewBlock = true;
 		}
 
 		_topChunkIdx = 0;
 
 		size_t blockSize = _blockSizeChunks * _chunkSizeBytes;
 		auto pBlk = _STD make_shared<_STD vector<char>>(blockSize);
+
+		_topBlockIdx = (uint32_t) _data.size();
 		_data.push_back(pBlk);
 	}
 
@@ -148,8 +145,6 @@ void ::MultiCore::local_heap::freeMem(void* ptr)
 		pCurBlock = pCurBlock->_pNext;
 	}
 
-	assert(verifyAvailList());
-
 	return pResult;
 }
 
@@ -175,13 +170,15 @@ void ::MultiCore::local_heap::addBlockToAvailList(const BlockHeader& header)
 	}
 
 	insertAvailBlock(pPriorBlock, nullptr, pNewBlock);
-
-	assert(verifyAvailList());
 }
 
 void MultiCore::local_heap::insertAvailBlock(AvailBlockHeader* pPriorBlock, AvailBlockHeader* pCurBlock, AvailBlockHeader* pNewBlock)
 {
 	assert(pNewBlock);
+	assert(isBlockValid(pPriorBlock));
+	assert(isBlockValid(pCurBlock));
+	assert(isBlockValid(pNewBlock));
+
 	if (!_pFirstAvailBlock) {
 		// create list of one entry
 		_pFirstAvailBlock = pNewBlock;
@@ -215,12 +212,15 @@ void MultiCore::local_heap::insertAvailBlock(AvailBlockHeader* pPriorBlock, Avai
 		assert(pPriorBlock != pPriorBlock->_pNext);
 		assert(pPriorBlock->_header._numChunks <= pNewBlock->_header._numChunks);
 	}
-
-	assert(verifyAvailList());
+	assert(isBlockValid(pPriorBlock));
+	assert(isBlockValid(pCurBlock));
+	assert(isBlockValid(pNewBlock));
 }
 
 void ::MultiCore::local_heap::removeAvailBlock(AvailBlockHeader* pPriorBlock, AvailBlockHeader* pDeadBlock)
 {
+	assert(isBlockValid(pPriorBlock));
+	assert(isBlockValid(pDeadBlock));
 	assert(_pFirstAvailBlock);
 
 	if (pDeadBlock == _pFirstAvailBlock) {
@@ -235,7 +235,7 @@ void ::MultiCore::local_heap::removeAvailBlock(AvailBlockHeader* pPriorBlock, Av
 		pPriorBlock->_pNext = nullptr;
 	}
 
-	assert(verifyAvailList());
+	assert(isBlockValid(pPriorBlock));
 }
 
 bool ::MultiCore::local_heap::isHeaderValid(const void* p, bool pointsToHeader) const
@@ -265,6 +265,9 @@ bool MultiCore::local_heap::verifyAvailList() const
 {
 	auto pCurBlock = _pFirstAvailBlock;
 	while (pCurBlock) {
+		if (!isBlockValid(pCurBlock))
+			return false;
+
 		if (pCurBlock->_pNext) {
 			if (pCurBlock == pCurBlock->_pNext)
 				return false;
@@ -275,4 +278,39 @@ bool MultiCore::local_heap::verifyAvailList() const
 	}
 
 	return true;
+}
+
+bool ::MultiCore::local_heap::isBlockValid(const AvailBlockHeader* pBlock) const
+{
+	if (!pBlock)
+		return true;
+
+	if (!isPointerInBounds(pBlock))
+		return false;
+	if ((pBlock->_pNext != nullptr) && !isPointerInBounds(pBlock->_pNext))
+		return false;
+
+	for (const auto& blkPtr : _data) {
+		const auto& blks = *blkPtr;
+		size_t idx = ((size_t)pBlock) - ((size_t)blks.data());
+		if (idx < blks.size()) {
+			size_t chunkIdx = idx / _chunkSizeBytes;
+			if (chunkIdx != pBlock->_header._chunkIdx)
+				return false;
+			return true;
+		}
+	}
+	return false;
+}
+
+bool ::MultiCore::local_heap::isPointerInBounds(const void* ptr) const
+{
+	for (const auto& blkPtr : _data) {
+		const auto& blks = *blkPtr;
+		size_t idx = ((size_t)ptr) - ((size_t)blks.data());
+		if (idx < blks.size()) {
+			return true;
+		}
+	}
+	return false;
 }

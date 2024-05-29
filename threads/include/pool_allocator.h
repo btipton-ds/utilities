@@ -54,14 +54,16 @@ namespace MultiCore
 
 class local_heap {
 public:
-	static void pushThreadHeapPtr(local_heap* pHeap);
-	static void popThreadHeapPtr();
+	static void setThreadHeapPtr(local_heap* pHeap);
 	static local_heap* getThreadHeapPtr();
 
 	class scoped_set_thread_heap {
 	public:
 		scoped_set_thread_heap(local_heap* pHeap);
 		~scoped_set_thread_heap();
+
+	private:
+		local_heap* _priorHeap = nullptr;
 	};
 
 	local_heap(size_t blockSizeChunks, size_t chunkSizeBytes = 32);
@@ -101,6 +103,8 @@ private:
 
 	bool isHeaderValid(const void* p, bool pointsToHeader) const;
 	bool verifyAvailList() const;
+	bool isBlockValid(const AvailBlockHeader* pBlock) const;
+	bool isPointerInBounds(const void* ptr) const;
 
 	const size_t _blockSizeChunks;
 	const size_t _chunkSizeBytes;
@@ -112,8 +116,6 @@ private:
 	_STD vector<BlockPtr> _data;
 
 	AvailBlockHeader* _pFirstAvailBlock = nullptr; // Sorted indices into _availChunks
-
-	local_heap* _priorHeap = nullptr;
 };
 
 template<class T>
@@ -173,12 +175,14 @@ private:
 
 inline local_heap::scoped_set_thread_heap::scoped_set_thread_heap(local_heap* pHeap)
 {
-	pushThreadHeapPtr(pHeap);
+
+	_priorHeap = local_heap::getThreadHeapPtr();
+	local_heap::setThreadHeapPtr(pHeap);
 }
 
 inline local_heap::scoped_set_thread_heap::~scoped_set_thread_heap()
 {
-	popThreadHeapPtr();
+	setThreadHeapPtr(_priorHeap);
 }
 
 inline local_heap* local_heap_user::getHeap() const

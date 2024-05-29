@@ -353,9 +353,9 @@ size_t VECTOR_DECL::push_back(const T& val)
 	if (_size + 1 > _capacity) {
 		size_t newCapacity = _capacity;
 		if (newCapacity == 0)
-			newCapacity = 10;
+			newCapacity = 8;
 		else
-			newCapacity += newCapacity; // Double each time
+			newCapacity += newCapacity / 2; // Increase by 25% each time
 
 		reserve(newCapacity);
 	}
