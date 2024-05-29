@@ -96,9 +96,11 @@ private:
 
 	BlockHeader* getAvailBlock(size_t numChunksNeeded);
 	void addBlockToAvailList(const BlockHeader& header);
-	void insertBlockAt(AvailBlockHeader* pPriorBlock, AvailBlockHeader* pCurBlock, AvailBlockHeader* pNewBlock);
+	void insertAvailBlock(AvailBlockHeader* pPriorBlock, AvailBlockHeader* pCurBlock, AvailBlockHeader* pNewBlock);
+	void removeAvailBlock(AvailBlockHeader* pPriorBlock, AvailBlockHeader* pDeadBlock);
 
 	bool isHeaderValid(const void* p, bool pointsToHeader) const;
+	bool verifyAvailList() const;
 
 	const size_t _blockSizeChunks;
 	const size_t _chunkSizeBytes;

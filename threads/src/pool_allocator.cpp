@@ -70,14 +70,12 @@ void* ::MultiCore::local_heap::allocMem(size_t bytes)
 	if (bytesNeeded % _chunkSizeBytes != 0)
 		numChunks++;
 
-	BlockHeader* pHeader;
-#if 1
-	pHeader = getAvailBlock(numChunks);
+	BlockHeader* pHeader = getAvailBlock(numChunks);
 	if (pHeader != nullptr) {
 		pHeader->_size = (uint32_t)bytes;
 		return (char*)pHeader + sizeof(BlockHeader);
 	}
-#endif
+
 	assert(numChunks < _blockSizeChunks);
 
 	if (_topBlockIdx >= _data.size() || (_topChunkIdx + numChunks >= _blockSizeChunks)) {
@@ -136,32 +134,21 @@ void ::MultiCore::local_heap::freeMem(void* ptr)
 	AvailBlockHeader* pPriorBlock = _pFirstAvailBlock;
 	while (pCurBlock) {
 		if (numChunksNeeded <= pCurBlock->_header._numChunks) {
-			// Remove this chunk from the sorted linked list of available chunks
-			if (pCurBlock == _pFirstAvailBlock) {
-				_pFirstAvailBlock = pCurBlock->_pNext;
-			} else {
-				assert(pPriorBlock);
-				pPriorBlock->_pNext = pCurBlock->_pNext;
-			}
+			removeAvailBlock(pPriorBlock, pCurBlock);
 
 			size_t startIdxBytes = pCurBlock->_header._chunkIdx * _chunkSizeBytes;
 			auto& blkVec = *_data[pCurBlock->_header._blockIdx];
 			BlockHeader* pHeader = (BlockHeader*)&blkVec[startIdxBytes];
 			(*pHeader) = pCurBlock->_header;
 			pResult = pHeader;
+
 			break;
 		}
 		pPriorBlock = pCurBlock;
 		pCurBlock = pCurBlock->_pNext;
 	}
 
-	pCurBlock = _pFirstAvailBlock;
-	while (pCurBlock) {
-		if (pCurBlock->_pNext) {
-			assert(pCurBlock->_header._chunkIdx <= pCurBlock->_pNext->_header._chunkIdx);
-		}
-		pCurBlock = pCurBlock->_pNext;
-	}
+	assert(verifyAvailList());
 
 	return pResult;
 }
@@ -178,11 +165,8 @@ void ::MultiCore::local_heap::addBlockToAvailList(const BlockHeader& header)
 	pNewBlock->_header._size = -1; // mark as a free block
 	pNewBlock->_pNext = nullptr;
 
-	bool found = false;
 	while (pCurBlock) {
 		if (header._numChunks <= pCurBlock->_header._numChunks) {
-			found = true;
-			insertBlockAt(pPriorBlock, pCurBlock, pNewBlock);
 			break;
 		}
 
@@ -190,38 +174,35 @@ void ::MultiCore::local_heap::addBlockToAvailList(const BlockHeader& header)
 		pCurBlock = pCurBlock->_pNext;
 	}
 
-	if (!found) {
-		insertBlockAt(pPriorBlock, nullptr, pNewBlock);
-	}
+	insertAvailBlock(pPriorBlock, nullptr, pNewBlock);
 
-	pCurBlock = _pFirstAvailBlock;
-	while (pCurBlock) {
-		if (pCurBlock->_pNext) {
-			assert(pCurBlock->_header._numChunks <= pCurBlock->_pNext->_header._numChunks);
-		}
-		pCurBlock = pCurBlock->_pNext;
-	}
+	assert(verifyAvailList());
 }
 
-void MultiCore::local_heap::insertBlockAt(AvailBlockHeader* pPriorBlock, AvailBlockHeader* pCurBlock, AvailBlockHeader* pNewBlock)
+void MultiCore::local_heap::insertAvailBlock(AvailBlockHeader* pPriorBlock, AvailBlockHeader* pCurBlock, AvailBlockHeader* pNewBlock)
 {
+	assert(pNewBlock);
 	if (!_pFirstAvailBlock) {
 		// create list of one entry
 		_pFirstAvailBlock = pNewBlock;
+		return;
 	} else if (pPriorBlock == _pFirstAvailBlock) {
-		if (pNewBlock->_header._numChunks < _pFirstAvailBlock->_header._numChunks) {
+		if (pNewBlock->_header._numChunks <= _pFirstAvailBlock->_header._numChunks) {
+			// Put new at the head
 			pNewBlock->_pNext = _pFirstAvailBlock;
 			_pFirstAvailBlock = pNewBlock;
-		}
-		else {
+		} else {
 			pNewBlock->_pNext = _pFirstAvailBlock->_pNext;
 			_pFirstAvailBlock->_pNext = pNewBlock;
 		}
+		assert(_pFirstAvailBlock != _pFirstAvailBlock->_pNext);
 		assert(_pFirstAvailBlock->_header._numChunks <= pNewBlock->_header._numChunks);
 	} else if (pPriorBlock && pCurBlock) {
 		pNewBlock->_pNext = pCurBlock;
 		pPriorBlock->_pNext = pNewBlock;
 
+		assert(pNewBlock != pNewBlock->_pNext);
+		assert(pPriorBlock != pPriorBlock->_pNext);
 		assert(pPriorBlock->_header._numChunks <= pNewBlock->_header._numChunks);
 		assert(pNewBlock->_header._numChunks <= pCurBlock->_header._numChunks);
 	} else if (!pCurBlock) {
@@ -229,8 +210,32 @@ void MultiCore::local_heap::insertBlockAt(AvailBlockHeader* pPriorBlock, AvailBl
 		assert(pPriorBlock);
 		pNewBlock->_pNext = pPriorBlock->_pNext;
 		pPriorBlock->_pNext = pNewBlock;
+
+		assert(pNewBlock != pNewBlock->_pNext);
+		assert(pPriorBlock != pPriorBlock->_pNext);
 		assert(pPriorBlock->_header._numChunks <= pNewBlock->_header._numChunks);
 	}
+
+	assert(verifyAvailList());
+}
+
+void ::MultiCore::local_heap::removeAvailBlock(AvailBlockHeader* pPriorBlock, AvailBlockHeader* pDeadBlock)
+{
+	assert(_pFirstAvailBlock);
+
+	if (pDeadBlock == _pFirstAvailBlock) {
+		_pFirstAvailBlock = pDeadBlock->_pNext;
+	} else if (pPriorBlock && pDeadBlock) {
+		pPriorBlock->_pNext = pDeadBlock->_pNext;
+		assert(pPriorBlock != pPriorBlock->_pNext);
+		assert((pPriorBlock->_pNext == nullptr) || pPriorBlock->_header._numChunks <= pPriorBlock->_pNext->_header._numChunks);
+	} else if (!pDeadBlock) {
+		// add at the end
+		assert(pPriorBlock);
+		pPriorBlock->_pNext = nullptr;
+	}
+
+	assert(verifyAvailList());
 }
 
 bool ::MultiCore::local_heap::isHeaderValid(const void* p, bool pointsToHeader) const
@@ -252,6 +257,22 @@ bool ::MultiCore::local_heap::isHeaderValid(const void* p, bool pointsToHeader) 
 
 	if (pHeader->_chunkIdx >= _blockSizeChunks)
 		return false;
+
+	return true;
+}
+
+bool MultiCore::local_heap::verifyAvailList() const
+{
+	auto pCurBlock = _pFirstAvailBlock;
+	while (pCurBlock) {
+		if (pCurBlock->_pNext) {
+			if (pCurBlock == pCurBlock->_pNext)
+				return false;
+			if (pCurBlock->_header._numChunks > pCurBlock->_pNext->_header._numChunks)
+				return false;
+		}
+		pCurBlock = pCurBlock->_pNext;
+	}
 
 	return true;
 }

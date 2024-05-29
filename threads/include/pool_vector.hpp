@@ -51,9 +51,7 @@ VECTOR_DECL::vector(const std::initializer_list<T>& src)
 TEMPL_DECL
 VECTOR_DECL::~vector()
 {
-	clear();
-	free(_pData);
-	_pData = nullptr;
+	free(_pData); // free<T> will handle destruction for each object in local_heap
 }
 
 TEMPL_DECL
@@ -67,8 +65,8 @@ VECTOR_DECL::operator std::vector<T>() const
 TEMPL_DECL
 void VECTOR_DECL::clear()
 {
-	for (size_t i = 0; i < _capacity; i++) {
-		_pData[i].~T();
+	for (size_t i = 0; i < _size; i++) {
+		_pData[i] = T(); // Replace with empty objects, but DO NOT destroy them YET.
 	}
 	_size = 0;
 
@@ -119,28 +117,12 @@ void VECTOR_DECL::reserve(size_t newCapacity)
 		_pData = alloc<T>(newCapacity);
 
 		if (pTmp) {
-#ifdef _DEBUG
-			{
-				auto pTmp0 = (char*)pTmp;
-				auto pTmp1 = pTmp0 + _capacity * sizeof(T);
-				auto pDat0 = (char*)_pData;
-				auto pDat1 = pDat0 + newCapacity * sizeof(T);
-				if (pTmp0 < pDat0)
-					assert(pTmp1 < pDat0);
-				else if (pDat0 < pTmp0)
-					assert(pDat1 < pTmp0);
-				else
-					assert(!"new data at same address as old data!");
-			}
-#endif // _DEBUG
-
 			for (size_t i = 0; i < _size; i++)
 				_pData[i] = pTmp[i];
 
 			free(pTmp);
+			_capacity = newCapacity;
 		}
-
-		_capacity = newCapacity;
 	}
 }
 
@@ -226,13 +208,13 @@ VECTOR_DECL::iterator VECTOR_DECL::erase(const iterator& begin, const iterator& 
 TEMPL_DECL
 MultiCore::vector<T>& VECTOR_DECL::operator = (const vector& rhs)
 {
-	_size = rhs._size;
-	_capacity = _size;
 	if (_pData) {
 		free(_pData);
 		_pData = nullptr;
 	}
-	
+	_size = rhs._size;
+	_capacity = _size;
+
 	if (_capacity > 0) {
 		_pData = alloc<T>(_capacity);
 		for (size_t i = 0; i < _size; i++)
