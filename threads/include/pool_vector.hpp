@@ -98,12 +98,12 @@ void VECTOR_DECL::resize(size_t val)
 	_data.resize(val);
 #endif
 
-	reserve(val);
-	_size = val;
 	size_t oldSize = _size;
-	for (size_t i = oldSize; i <= _size; i++) {
-		_pData[i] = {};
-	}
+	size_t needed = val;
+	if (needed < 8)
+		needed = 8;
+	reserve(needed);
+	_size = val;
 }
 
 TEMPL_DECL
@@ -130,7 +130,7 @@ TEMPL_DECL
 template<class ITER_TYPE>
 void VECTOR_DECL::insert(const iterator& at, const ITER_TYPE& begin, const ITER_TYPE& end)
 {
-	size_t idx = (size_t)(at._pEntry - _pData);
+	size_t idx = (size_t)(at.get() - _pData);
 #if DUPLICATE_STD_TESTS	
 	_data.insert(_data.begin() + idx, begin, end);
 #endif
@@ -148,7 +148,7 @@ void VECTOR_DECL::insert(const iterator& at, const ITER_TYPE& begin, const ITER_
 TEMPL_DECL
 void VECTOR_DECL::insert(const iterator& at, const T& val)
 {
-	size_t idx = (size_t)(at._pEntry - _pData);
+	size_t idx = (size_t)(at.get() - _pData);
 #if DUPLICATE_STD_TESTS	
 	_data.insert(_data.begin() + idx, val);
 #endif
@@ -163,7 +163,7 @@ void VECTOR_DECL::insert(const iterator& at, const T& val)
 TEMPL_DECL
 void VECTOR_DECL::insert(const iterator& at, const std::initializer_list<T>& vals)
 {
-	size_t idx = (size_t) (at._pEntry - _pData);
+	size_t idx = (size_t) (at.get() - _pData);
 #if DUPLICATE_STD_TESTS	
 	_data.insert(_data.begin() + idx, vals.begin(), vals.end());
 #endif
@@ -184,7 +184,7 @@ void VECTOR_DECL::insert(const iterator& at, const std::initializer_list<T>& val
 TEMPL_DECL
 VECTOR_DECL::iterator VECTOR_DECL::erase(const iterator& at)
 {
-	size_t idx = (size_t)(at._pEntry - _pData);
+	size_t idx = (size_t)(at.get() - _pData);
 #if DUPLICATE_STD_TESTS	
 	_data.erase(_data.begin() + idx);
 #endif
@@ -193,7 +193,7 @@ VECTOR_DECL::iterator VECTOR_DECL::erase(const iterator& at)
 		_pData[i] = _pData[i + 1];
 	}
 	_size--;
-	return iterator(this, at._pEntry);
+	return iterator(this, at.get());
 }
 
 TEMPL_DECL
@@ -273,55 +273,61 @@ _NODISCARD _CONSTEXPR20 typename VECTOR_DECL::reverse_iterator VECTOR_DECL::rend
 }
 
 TEMPL_DECL
-const T& VECTOR_DECL::front() const
+inline const T* VECTOR_DECL::data() const
 {
-	size_t idx = 0;
-	const T* pTData = (const T*)_pData;
-	return pTData[idx];
+	return _pData;
 }
 
 TEMPL_DECL
-T& VECTOR_DECL::front()
+inline T* VECTOR_DECL::data()
 {
-	size_t idx = 0;
-	T* pTData = (T*)_pData;
+	return _pData;
+}
+
+TEMPL_DECL
+inline const T& VECTOR_DECL::front() const
+{
+#if DUPLICATE_STD_TESTS	
+	assert(_data.front() == *_pData);
+#endif
+	return *_pData;
+}
+
+TEMPL_DECL
+inline T& VECTOR_DECL::front()
+{
+#if DUPLICATE_STD_TESTS	
+	assert(_data.front() == *_pData);
+#endif
+	return *_pData;
+}
+
+TEMPL_DECL
+inline const T& VECTOR_DECL::back() const
+{
 #if DUPLICATE_STD_TESTS	
 	assert(_data[idx] == pTData[idx]);
 #endif
-	return pTData[idx];
+	return _pData[_size - 1];
 }
 
 TEMPL_DECL
-const T& VECTOR_DECL::back() const
+inline T& VECTOR_DECL::back()
 {
-	size_t idx = _size - 1;
-	const T* pTData = (const T*)_pData;
 #if DUPLICATE_STD_TESTS	
 	assert(_data[idx] == pTData[idx]);
 #endif
-	return pTData[idx];
+	return _pData[_size - 1];
 }
 
 TEMPL_DECL
-T& VECTOR_DECL::back()
-{
-	size_t idx = _size - 1;
-
-	T* pTData = (T*)_pData;
-#if DUPLICATE_STD_TESTS	
-	assert(_data[idx] == pTData[idx]);
-#endif
-	return pTData[idx];
-}
-
-TEMPL_DECL
-const T& VECTOR_DECL::operator[](size_t idx) const
+inline const T& VECTOR_DECL::operator[](size_t idx) const
 {
 	return _pData[idx];
 }
 
 TEMPL_DECL
-T& VECTOR_DECL::operator[](size_t idx)
+inline T& VECTOR_DECL::operator[](size_t idx)
 {
 	return _pData[idx];
 }
@@ -482,16 +488,28 @@ size_t ITER_DECL::operator - (const _iterator& rhs) const
 
 TEMPL_DECL
 ITER_TEMPL_DECL
-T& ITER_DECL::operator *() const
+inline T& ITER_DECL::operator *() const
 {
-	return *_pEntry;
+	return *get();
 }
 
 TEMPL_DECL
 ITER_TEMPL_DECL
-T* ITER_DECL::operator->() const
+inline T* ITER_DECL::operator->() const
 {
-	return _pEntry;
+	return get();
+}
+
+TEMPL_DECL
+ITER_TEMPL_DECL
+inline T* ITER_DECL::get() const
+{
+	return _pEntry ? _pEntry : _pSource ? _pSource->data() : nullptr;
 }
 
 }
+
+#undef TEMPL_DECL
+#undef ITER_TEMPL_DECL
+#undef VECTOR_DECL
+#undef ITER_DECL

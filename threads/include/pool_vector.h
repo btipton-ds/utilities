@@ -29,7 +29,6 @@ This file is part of the DistFieldHexMesh application/library.
 #include <vector>
 #include <local_heap.h>
 
-#define DUPLICATE_STD_TESTS 0
 #define FORW_CONST 0
 #define REV_CONST 1
 #define FORW 2
@@ -40,7 +39,7 @@ namespace MultiCore
 
 template<class T>
 class vector : private local_heap_user {
-private:
+protected:
 	template <int IterType>
 	class _iterator
 	{
@@ -59,7 +58,7 @@ private:
 		using pointer = T*;
 		using reference = T&;
 #endif
-
+		_iterator() = default;
 		_iterator(const MultiCore::vector<T>* pSource, T* pEntry);
 		_iterator(const _iterator& src) = default;
 
@@ -80,6 +79,7 @@ private:
 
 		T& operator *() const;
 		T* operator->() const;
+		T* get() const;
 
 	private:
 		T* _pEntry;
@@ -125,6 +125,9 @@ public:
 	_NODISCARD _CONSTEXPR20 reverse_iterator rbegin() noexcept;
 	_NODISCARD _CONSTEXPR20 const_reverse_iterator rend() const noexcept;
 	_NODISCARD _CONSTEXPR20 reverse_iterator rend() noexcept;
+
+	const T* data() const;
+	T* data();
 
 	const T& front() const;
 	T& front();

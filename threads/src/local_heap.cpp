@@ -129,6 +129,11 @@ void ::MultiCore::local_heap::freeMem(void* ptr)
 	}
 }
 
+bool ::MultiCore::local_heap::verify() const
+{
+	return verifyAvailList();
+}
+
 ::MultiCore::local_heap::BlockHeader* ::MultiCore::local_heap::getAvailBlock(size_t numChunksNeeded)
 {
 	BlockHeader* pResult = nullptr;

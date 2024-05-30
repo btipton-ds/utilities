@@ -30,6 +30,8 @@ This file is part of the DistFieldHexMesh application/library.
 #include <vector>
 #include <list>
 
+#define DUPLICATE_STD_TESTS 0
+
 namespace MultiCore
 {
 
@@ -76,6 +78,7 @@ public:
 	template<class T>
 	void free(T* ptr);
 
+	bool verify() const;
 private:	
 	struct BlockHeader {
 		uint32_t _numChunks;
@@ -123,12 +126,10 @@ private:
 template<class T>
 T* local_heap::alloc(size_t num)
 {
-	assert(verifyAvailList());
 	char* pc = (char*)allocMem(num * sizeof(T));
 	auto pT = (T*)pc;
 	assert(isHeaderValid(pT, false));
 
-	assert(verifyAvailList());
 	BlockHeader* pHeader = (BlockHeader*)(pc - sizeof(BlockHeader));
 	pHeader->_numObj = (uint32_t)num;
 	for (size_t i = 0; i < num; i++) {
@@ -137,8 +138,6 @@ T* local_heap::alloc(size_t num)
 	}
 
 	assert(isHeaderValid(pT, false));
-
-	assert(verifyAvailList());
 	return pT;
 }
 
@@ -147,7 +146,6 @@ void local_heap::free(T* ptr)
 {
 	if (ptr) {
 		assert(isHeaderValid(ptr, false));
-		assert(verifyAvailList());
 
 		char* pc = (char*)ptr;
 		const BlockHeader* pHeader = (BlockHeader*)(pc - sizeof(BlockHeader));
@@ -156,7 +154,6 @@ void local_heap::free(T* ptr)
 			ptr[i].~T();
 
 		assert(isHeaderValid(ptr, false));
-		assert(verifyAvailList());
 		freeMem(ptr);
 	}
 }
