@@ -35,34 +35,35 @@ This file is part of the DistFieldHexMesh application/library.
 #define ITER_DECL MultiCore::map<KEY, T>::_iterator<IterType>
 
 TEMPL_DECL
-std::pair<typename MAP_DECL::iterator, bool> MAP_DECL::insert(const std::pair<KEY, T>& pair)
+std::pair<typename MAP_DECL::iterator, bool> MAP_DECL::insert(const pairRec& pair)
 {
 	auto keyIter = _keySet.find(KeyRec(pair.first));
 	if (keyIter == _keySet.end()) {
-		T* pData = allocEntry();
-		size_t idx = (size_t)(pData - _data.data());
+		auto* pPair = allocEntry();
+		size_t idx = (size_t)(pPair - _data.data());
 
 		KeyRec rec(pair.first, idx);
 
 		keyIter = _keySet.insert(rec);
-		*pData = pair.second;
+		*pPair = pair;
 
-		return std::pair(iterator(this, keyIter, pData), true);
+		return std::pair(iterator(this, keyIter, pPair), true);
 	}
 
-	const auto& keyRec = *keyIter;
-	auto* pData = &_data[keyRec._dataIdx];
-	return std::pair(iterator(this, keyIter, pData), false);
+	const KeyRec& keyRec = *keyIter;
+	size_t idx = keyRec._dataIdx;
+	auto pPair = &_data[idx];
+	return std::pair(iterator(this, keyIter, pPair), false);
 }
 
 TEMPL_DECL
 void MAP_DECL::erase(const const_iterator& at)
 {
-	const KeyRec* pKey = at._pKeyRec;
-	_data[pKey->_dataIdx] = T(); // clear the current entry
-	_availEntries.push_back(pKey->_dataIdx);
-	size_t idx = (size_t)(pKey - _keySet.data());
-	_keySet.erase(_keySet.begin() + idx);
+	pairRec* p = at.get();
+	size_t idx = (size_t)(p - _data.data());
+	*p = pairRec();
+	_keySet.erase(at._keyIter);
+	_availEntries.push_back(idx);
 }
 
 TEMPL_DECL
@@ -97,10 +98,10 @@ _NODISCARD _CONSTEXPR20 inline typename MAP_DECL::const_iterator MAP_DECL::find(
 }
 
 TEMPL_DECL
-T* MAP_DECL::allocEntry()
+typename MAP_DECL::pairRec* MAP_DECL::allocEntry()
 {
 	if (_availEntries.empty()) {
-		_data.push_back(T());
+		_data.push_back(pairRec());
 		return &_data.back();
 	} else {
 		size_t idx = _availEntries.back();
@@ -110,13 +111,13 @@ T* MAP_DECL::allocEntry()
 }
 
 TEMPL_DECL
-void MAP_DECL::releaseEntry(const T* pData)
+void MAP_DECL::releaseEntry(const pairRec* pPair)
 {
-	if (!pData)
+	if (!pPair)
 		return;
 
-	*pData = T();
-	size_t idx = (size_t)(pData - _data.data());
+	*pPair = pairRec();
+	size_t idx = (size_t)(pPair - _data.data());
 	_availEntries.push_back(idx);
 }
 
@@ -168,6 +169,17 @@ _NODISCARD _CONSTEXPR20 inline typename MAP_DECL::const_reverse_iterator MAP_DEC
 	return reverse_iterator(this, _keySet.rend(), nullptr);
 }
 
+TEMPL_DECL
+inline const typename MAP_DECL::pairRec* MAP_DECL::data() const
+{
+	return _data.data();
+}
+
+TEMPL_DECL
+inline typename MAP_DECL::pairRec* MAP_DECL::data()
+{
+	return _data.data();
+}
 
 /*************************************************************************************************************/
 /*************************************************************************************************************/
@@ -213,10 +225,11 @@ TEMPL_DECL
 ITER_TEMPL_DECL
 inline void ITER_DECL::refreshDataPointer()
 {
-	const KeyRec& key = *_keyIter;
-	if (key._dataIdx < _pSource->size())
-		_pEntry = (*_pSource)[key._dataIdx];
-	else
+	const KeyRec* pKey = _keyIter.get();
+	if (pKey && pKey->_dataIdx < _pSource->size()) {
+		auto& dataArray = _pSource->_data;
+		_pEntry = &dataArray[pKey->_dataIdx];
+	} else
 		_pEntry = nullptr;
 }
 
@@ -242,7 +255,7 @@ TEMPL_DECL
 ITER_TEMPL_DECL
 inline typename ITER_DECL::_iterator& ITER_DECL::operator ++ (int)
 {
-	_keyIter.operator--(1);
+	_keyIter.operator++(1);
 	refreshDataPointer();
 	return *this;
 }

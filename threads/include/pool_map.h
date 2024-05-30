@@ -42,6 +42,8 @@ namespace MultiCore
 template<class KEY, class T>
 class map {
 public:
+	using pairRec = std::pair<KEY, T>;
+
 	struct KeyRec
 	{
 		KEY _key;
@@ -60,7 +62,7 @@ public:
 	};
 
 	using DataMap = MultiCore::map<KEY, T>;
-	using DataVec = ::MultiCore::vector<T>;
+	using DataVec = ::MultiCore::vector<pairRec>;
 	using KeySet = ::MultiCore::set<KeyRec>;
 	using KeyIndexVec = ::MultiCore::vector<size_t>;
 
@@ -75,16 +77,11 @@ private:
 		using iterator_category = std::random_access_iterator_tag;
 		using difference_type = std::ptrdiff_t;
 
-#if 1
 		using value_type = std::remove_cv_t<T>;
 		using KeyIter = std::conditional_t<IterType == FORW || IterType == FORW_CONST, typename KeySet::const_iterator, typename KeySet::const_reverse_iterator>;
-		using pointer = std::conditional_t<CONST, T const*, T*>;
-		using reference = std::conditional_t<CONST, T const&, T&>;
-#else
-		using value_type = T;
-		using pointer = T*;
-		using reference = T&;
-#endif
+		using pointer = std::conditional_t<CONST, pairRec const*, pairRec*>;
+		using reference = std::conditional_t<CONST, pairRec const&, pairRec&>;
+
 		_iterator() = default;
 		_iterator(DataMap* pSource, const KeyIter& keyIter, pointer pEntry);
 		_iterator(const _iterator& src) = default;
@@ -128,8 +125,10 @@ public:
 	bool empty() const;
 	size_t size() const;
 	void clear();
+	const pairRec* data() const;
+	pairRec* data() ;
 
-	std::pair<iterator, bool> insert(const std::pair<KEY, T>& pair);
+	std::pair<iterator, bool> insert(const pairRec& pair);
 
 	void erase(const const_iterator& at);
 
@@ -154,10 +153,10 @@ protected:
 	_NODISCARD _CONSTEXPR20 const_iterator find(const KEY& val, const_iterator& next) const noexcept;
 
 private:
-	T* allocEntry();
-	void releaseEntry(const T* pData);
+	pairRec* allocEntry();
+	void releaseEntry(const pairRec* pData);
 
-	::MultiCore::vector<T> _data;
+	::MultiCore::vector<pairRec> _data;
 	::MultiCore::set<KeyRec> _keySet;
 	::MultiCore::vector<size_t> _availEntries;
 
