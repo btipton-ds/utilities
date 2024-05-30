@@ -85,7 +85,7 @@ void SET_DECL::insert(const T& val)
 #if DUPLICATE_STD_TESTS	
 	_set.insert(val);
 #endif
-	iterator iter, nextIter;
+	const_iterator iter, nextIter;
 	iter = find(val, nextIter);
 	if (iter == end()) {
 		vector<T>::insert(nextIter, val);
@@ -105,7 +105,7 @@ void SET_DECL::insert(const std::initializer_list<T>& vals)
 }
 
 TEMPL_DECL
-inline void SET_DECL::erase(const iterator& at)
+inline void SET_DECL::erase(const const_iterator& at)
 {
 #if DUPLICATE_STD_TESTS	
 	//	_set.erase(_set.begin() + idx);
@@ -115,7 +115,7 @@ inline void SET_DECL::erase(const iterator& at)
 }
 
 TEMPL_DECL
-inline void SET_DECL::erase(const iterator& begin, const iterator& end)
+inline void SET_DECL::erase(const const_iterator& begin, const const_iterator& end)
 {
 #if DUPLICATE_STD_TESTS	
 	//	_set.erase(begin, end);
@@ -141,19 +141,7 @@ _NODISCARD _CONSTEXPR20 inline typename SET_DECL::const_iterator SET_DECL::begin
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 inline typename SET_DECL::iterator SET_DECL::begin() noexcept
-{
-	return vector<T>::begin();
-}
-
-TEMPL_DECL
 _NODISCARD _CONSTEXPR20 inline typename SET_DECL::const_iterator SET_DECL::end() const noexcept
-{
-	return vector<T>::end();
-}
-
-TEMPL_DECL
-_NODISCARD _CONSTEXPR20 inline typename SET_DECL::iterator SET_DECL::end() noexcept
 {
 	return vector<T>::end();
 }
@@ -165,48 +153,15 @@ _NODISCARD _CONSTEXPR20 inline typename SET_DECL::const_reverse_iterator SET_DEC
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 inline typename SET_DECL::reverse_iterator SET_DECL::rbegin() noexcept
-{
-	return vector<T>::rbegin();
-}
-
-TEMPL_DECL
 _NODISCARD _CONSTEXPR20 inline typename SET_DECL::const_reverse_iterator SET_DECL::rend() const noexcept
 {
 	return vector<T>::rend();
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 inline typename SET_DECL::reverse_iterator SET_DECL::rend() noexcept
+_NODISCARD _CONSTEXPR20 inline typename SET_DECL::const_iterator SET_DECL::find(const T& val) const noexcept
 {
-	return vector<T>::rend();
-}
-
-TEMPL_DECL
-_NODISCARD _CONSTEXPR20 typename SET_DECL::const_iterator SET_DECL::find(const T& val) const noexcept
-{
-	size_t min = 0;
-	size_t max = size() - 1;
-	size_t idx = (min + max) / 2;
-	while (min != max) {
-		const auto& curVal = vector<T>::operator[](idx);
-		if (val < curVal)
-			max = idx;
-		else if (curVal < val)
-			min = idx;
-		else {
-			return const_iterator(this, vector<T>::data() + idx);
-		}
-
-		idx = (min + max) / 2;
-	}
-	return end();
-}
-
-TEMPL_DECL
-_NODISCARD _CONSTEXPR20 inline typename SET_DECL::iterator SET_DECL::find(const T& val) noexcept
-{
-	iterator next;
+	const_iterator next;
 	return find(val, next);
 }
 
@@ -217,7 +172,7 @@ inline bool SET_DECL::contains(const T& val) const
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 typename SET_DECL::iterator SET_DECL::find(const T& val, iterator& next) noexcept
+_NODISCARD _CONSTEXPR20 typename SET_DECL::const_iterator SET_DECL::find(const T& val, const_iterator& next) const noexcept
 {
 	next = end();
 	size_t min = 0;
@@ -233,7 +188,7 @@ _NODISCARD _CONSTEXPR20 typename SET_DECL::iterator SET_DECL::find(const T& val,
 		} else if (curVal < val) {
 			if (min == idx) {
 				if (idx < size() - 1)
-					next = iterator(this, vector<T>::data() + idx + 1);
+					next = const_iterator(this, vector<T>::data() + idx + 1);
 				else
 					next = end();
 				return end();
@@ -242,17 +197,17 @@ _NODISCARD _CONSTEXPR20 typename SET_DECL::iterator SET_DECL::find(const T& val,
 			min = idx;
 		} else {
 			if (idx < size() - 1)
-				next = iterator(this, vector<T>::data() + idx + 1);
+				next = const_iterator(this, vector<T>::data() + idx + 1);
 			else
 				next = end();
-			return iterator(this, vector<T>::data() + idx);
+			return const_iterator(this, vector<T>::data() + idx);
 		}
 
 		idx = (min + max) / 2;
 	}
 
 	if (idx < size()) {
-		next = iterator(this, vector<T>::data() + idx);
+		next = const_iterator(this, vector<T>::data() + idx);
 	}
 
 	return end();

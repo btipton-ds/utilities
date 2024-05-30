@@ -110,9 +110,11 @@ public:
 	template<class ITER_TYPE>
 	void insert(const iterator& at, const ITER_TYPE& begin, const ITER_TYPE& end);
 	void insert(const iterator& at, const T& val);
+	void insert(const const_iterator& at, const T& val);
 	void insert(const iterator& at, const std::initializer_list<T>& vals);
 
 	iterator erase(const iterator& at);
+	const_iterator erase(const const_iterator& at);
 	iterator erase(const iterator& begin, const iterator& end);
 
 	vector& operator = (const vector& rhs);

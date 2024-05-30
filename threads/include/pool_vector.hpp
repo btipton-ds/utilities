@@ -161,6 +161,21 @@ void VECTOR_DECL::insert(const iterator& at, const T& val)
 }
 
 TEMPL_DECL
+void VECTOR_DECL::insert(const const_iterator& at, const T& val)
+{
+	size_t idx = (size_t)(at.get() - _pData);
+#if DUPLICATE_STD_TESTS	
+	_data.insert(_data.begin() + idx, val);
+#endif
+
+	resize(_size + 1);
+	for (size_t i = _size - 1; i > idx; i--)
+		_pData[i] = _pData[i - 1];
+
+	_pData[idx] = val;
+}
+
+TEMPL_DECL
 void VECTOR_DECL::insert(const iterator& at, const std::initializer_list<T>& vals)
 {
 	size_t idx = (size_t) (at.get() - _pData);
@@ -195,6 +210,22 @@ VECTOR_DECL::iterator VECTOR_DECL::erase(const iterator& at)
 		_size--;
 	}
 	return iterator(this, at.get());
+}
+
+TEMPL_DECL
+VECTOR_DECL::const_iterator VECTOR_DECL::erase(const const_iterator& at)
+{
+	size_t idx = (size_t)(at.get() - _pData);
+#if DUPLICATE_STD_TESTS	
+	_data.erase(_data.begin() + idx);
+#endif
+	if (idx < _size) {
+		for (size_t i = idx; i < _size - 1; i++) {
+			_pData[i] = _pData[i + 1];
+		}
+		_size--;
+	}
+	return const_iterator(this, at.get());
 }
 
 TEMPL_DECL

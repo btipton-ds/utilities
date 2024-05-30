@@ -37,9 +37,7 @@ class set : private vector<T> {
 private:
 
 public:
-	using iterator = vector<T>::iterator;
 	using const_iterator = vector<T>::const_iterator;
-	using reverse_iterator = vector<T>::reverse_iterator;
 	using const_reverse_iterator = vector<T>::const_reverse_iterator;
 
 	set() = default;
@@ -59,26 +57,22 @@ public:
 	template<class ITER_TYPE>
 	void insert(const ITER_TYPE& begin, const ITER_TYPE& end);
 
-	void erase(const iterator& at);
-	void erase(const iterator& begin, const iterator& end);
+	void erase(const const_iterator& at);
+	void erase(const const_iterator& begin, const const_iterator& end);
 
 	set& operator = (const set& rhs);
 
 	_NODISCARD _CONSTEXPR20 const_iterator begin() const noexcept;
-	_NODISCARD _CONSTEXPR20 iterator begin() noexcept;
 	_NODISCARD _CONSTEXPR20 const_iterator end() const noexcept;
-	_NODISCARD _CONSTEXPR20 iterator end() noexcept;
 
 	_NODISCARD _CONSTEXPR20 const_reverse_iterator rbegin() const noexcept;
-	_NODISCARD _CONSTEXPR20 reverse_iterator rbegin() noexcept;
 	_NODISCARD _CONSTEXPR20 const_reverse_iterator rend() const noexcept;
-	_NODISCARD _CONSTEXPR20 reverse_iterator rend() noexcept;
+
 	_NODISCARD _CONSTEXPR20 const_iterator find(const T& val) const noexcept;
-	_NODISCARD _CONSTEXPR20 iterator find(const T& val) noexcept;
 	bool contains(const T& val) const;
 
 protected:
-	_NODISCARD _CONSTEXPR20 iterator find(const T& val, iterator& next) noexcept;
+	_NODISCARD _CONSTEXPR20 const_iterator find(const T& val, const_iterator& next) const noexcept;
 
 private:
 
