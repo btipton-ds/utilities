@@ -31,10 +31,14 @@ This file is part of the DistFieldHexMesh application/library.
 
 namespace MultiCore
 {
+template<class KEY, class T>
+class map;
 
 template<class T>
 class set : private vector<T> {
 private:
+	template<class KEY, class T>
+	friend class map;
 
 public:
 	using const_iterator = vector<T>::const_iterator;
@@ -49,10 +53,11 @@ public:
 
 	operator std::set<T>() const;
 
+	bool empty() const;
 	size_t size() const;
 	void clear();
 
-	void insert(const T& val);
+	const_iterator insert(const T& val);
 	void insert(const std::initializer_list<T>& vals);
 	template<class ITER_TYPE>
 	void insert(const ITER_TYPE& begin, const ITER_TYPE& end);

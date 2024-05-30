@@ -53,7 +53,6 @@ SET_DECL::operator std::set<T>() const
 	return result;
 }
 
-
 TEMPL_DECL
 template<class ITER_TYPE>
 void SET_DECL::insert(const ITER_TYPE& begin, const ITER_TYPE& end)
@@ -65,6 +64,12 @@ void SET_DECL::insert(const ITER_TYPE& begin, const ITER_TYPE& end)
 	for (auto iter = begin; iter != end; iter++) {
 		insert(*iter);
 	}
+}
+
+TEMPL_DECL
+inline bool SET_DECL::empty() const
+{
+	return vector<T>::empty();
 }
 
 TEMPL_DECL
@@ -80,7 +85,7 @@ inline void SET_DECL::clear()
 }
 
 TEMPL_DECL
-void SET_DECL::insert(const T& val)
+typename SET_DECL::const_iterator SET_DECL::insert(const T& val)
 {
 #if DUPLICATE_STD_TESTS	
 	_set.insert(val);
@@ -88,8 +93,9 @@ void SET_DECL::insert(const T& val)
 	const_iterator iter, nextIter;
 	iter = find(val, nextIter);
 	if (iter == end()) {
-		vector<T>::insert(nextIter, val);
+		return vector<T>::insert(nextIter, val);
 	}
+	return iter;
 }
 
 TEMPL_DECL

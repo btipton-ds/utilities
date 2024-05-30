@@ -26,8 +26,9 @@ This file is part of the DistFieldHexMesh application/library.
 	Dark Sky Innovative Solutions http://darkskyinnovation.com/
 */
 
-#include <vector>
-#include <local_heap.h>
+#include <map>
+#include <pool_vector.h>
+#include <pool_set.h>
 
 #define FORW_CONST 0
 #define REV_CONST 1
@@ -38,20 +39,45 @@ This file is part of the DistFieldHexMesh application/library.
 namespace MultiCore
 {
 
-template<class T>
-class vector : private local_heap_user {
-protected:
+template<class KEY, class T>
+class map {
+public:
+	struct KeyRec
+	{
+		KEY _key;
+		size_t _dataIdx = -1;
+
+		KeyRec(KEY key = {}, size_t idx = -1)
+			: _key(key)
+			, _dataIdx(idx)
+		{
+		}
+
+		bool operator < (const KeyRec& rhs) const
+		{
+			return _key < rhs._key;
+		}
+	};
+
+	using DataMap = MultiCore::map<KEY, T>;
+	using DataVec = ::MultiCore::vector<T>;
+	using KeySet = ::MultiCore::set<KeyRec>;
+	using KeyIndexVec = ::MultiCore::vector<size_t>;
+
+private:
+
 	template <int IterType>
 	class _iterator
 	{
 	public:
-		friend class MultiCore::vector;
+		friend class MultiCore::map;
 
 		using iterator_category = std::random_access_iterator_tag;
 		using difference_type = std::ptrdiff_t;
 
 #if 1
 		using value_type = std::remove_cv_t<T>;
+		using KeyIter = std::conditional_t<IterType == FORW || IterType == FORW_CONST, typename KeySet::const_iterator, typename KeySet::const_reverse_iterator>;
 		using pointer = std::conditional_t<CONST, T const*, T*>;
 		using reference = std::conditional_t<CONST, T const&, T&>;
 #else
@@ -60,7 +86,7 @@ protected:
 		using reference = T&;
 #endif
 		_iterator() = default;
-		_iterator(const MultiCore::vector<T>* pSource, pointer pEntry);
+		_iterator(DataMap* pSource, const KeyIter& keyIter, pointer pEntry);
 		_iterator(const _iterator& src) = default;
 
 		bool operator == (const _iterator& rhs) const;
@@ -83,8 +109,10 @@ protected:
 		pointer get() const;
 
 	private:
-		pointer _pEntry; // Resizing/reserving invalidates the iterator. Don't keep them across these calls
-		MultiCore::vector<T>* _pSource;
+		void refreshDataPointer();
+		pointer _pEntry = nullptr;
+		DataMap* _pSource;
+		KeyIter _keyIter;
 	};
 
 public:
@@ -93,69 +121,53 @@ public:
 	using reverse_iterator = _iterator<REV>;
 	using const_reverse_iterator = _iterator<REV_CONST>;
 
-	vector() = default;
-	vector(const vector& src) = default;
-	vector(const std::vector<T>& src);
-	vector(const std::initializer_list<T>& src);
-	~vector();
+	map() = default;
+	map(const map& src) = default;
+	~map() = default;
 
-	operator std::vector<T>() const;
-
-	void clear();
 	bool empty() const;
 	size_t size() const;
-	void resize(size_t val);
-	void reserve(size_t val);
+	void clear();
 
-	iterator insert(const iterator& at, const T& val);
-	const_iterator insert(const const_iterator& at, const T& val);
+	std::pair<iterator, bool> insert(const std::pair<KEY, T>& pair);
 
-	template<class ITER_TYPE>
-	void insert(const iterator& at, const ITER_TYPE& begin, const ITER_TYPE& end);
-	void insert(const iterator& at, const std::initializer_list<T>& vals);
+	void erase(const const_iterator& at);
 
-	iterator erase(const iterator& at);
-	const_iterator erase(const const_iterator& at);
-	iterator erase(const iterator& begin, const iterator& end);
+	map& operator = (const map& rhs);
 
-	vector& operator = (const vector& rhs);
-
-	_NODISCARD _CONSTEXPR20 const_iterator begin() const noexcept;
 	_NODISCARD _CONSTEXPR20 iterator begin() noexcept;
-	_NODISCARD _CONSTEXPR20 const_iterator end() const noexcept;
 	_NODISCARD _CONSTEXPR20 iterator end() noexcept;
+	_NODISCARD _CONSTEXPR20 const_iterator begin() const noexcept;
+	_NODISCARD _CONSTEXPR20 const_iterator end() const noexcept;
 
-	_NODISCARD _CONSTEXPR20 const_reverse_iterator rbegin() const noexcept;
 	_NODISCARD _CONSTEXPR20 reverse_iterator rbegin() noexcept;
-	_NODISCARD _CONSTEXPR20 const_reverse_iterator rend() const noexcept;
 	_NODISCARD _CONSTEXPR20 reverse_iterator rend() noexcept;
+	_NODISCARD _CONSTEXPR20 const_reverse_iterator rbegin() const noexcept;
+	_NODISCARD _CONSTEXPR20 const_reverse_iterator rend() const noexcept;
 
-	const T* data() const;
-	T* data();
+	_NODISCARD _CONSTEXPR20 iterator find(const KEY& val) noexcept;
+	_NODISCARD _CONSTEXPR20 const_iterator find(const KEY& val) const noexcept;
+	bool contains(const KEY& val) const;
 
-	const T& front() const;
-	T& front();
-	const T& back() const;
-	T& back();
-
-	const T& operator[](size_t idx) const;
-	T& operator[](size_t idx);
-
-	size_t push_back(const T& val);
-	void pop_back();
+protected:
+	_NODISCARD _CONSTEXPR20 iterator find(const KEY& val, const_iterator& next) noexcept;
+	_NODISCARD _CONSTEXPR20 const_iterator find(const KEY& val, const_iterator& next) const noexcept;
 
 private:
-	size_t _size = 0, _capacity = 0;
-	T* _pData = nullptr;
+	T* allocEntry();
+	void releaseEntry(const T* pData);
+
+	::MultiCore::vector<T> _data;
+	::MultiCore::set<KeyRec> _keySet;
+	::MultiCore::vector<size_t> _availEntries;
 
 #if DUPLICATE_STD_TESTS	
-	std::vector<T> _data;
+	std::map<KEY, DATA> _map;
 #endif
 };
 
 }
-
-#include <pool_vector.hpp>
+#include <pool_map.hpp>
 
 #undef FORW_CONST
 #undef REV_CONST
