@@ -33,6 +33,7 @@ This file is part of the DistFieldHexMesh application/library.
 #define REV_CONST 1
 #define FORW 2
 #define REV 3
+#define CONST (IterType < FORW)
 
 namespace MultiCore
 {
@@ -51,15 +52,15 @@ protected:
 
 #if 1
 		using value_type = std::remove_cv_t<T>;
-		using pointer = std::conditional_t<IterType < FORW, T const*, T*>;
-		using reference = std::conditional_t<IterType < FORW, T const&, T&>;
+		using pointer = std::conditional_t<CONST, T const*, T*>;
+		using reference = std::conditional_t<CONST, T const&, T&>;
 #else
 		using value_type = T;
 		using pointer = T*;
 		using reference = T&;
 #endif
 		_iterator() = default;
-		_iterator(const MultiCore::vector<T>* pSource, T* pEntry);
+		_iterator(const MultiCore::vector<T>* pSource, pointer pEntry);
 		_iterator(const _iterator& src) = default;
 
 		bool operator == (const _iterator& rhs) const;
@@ -77,12 +78,12 @@ protected:
 		_iterator operator - (size_t val) const;
 		size_t operator - (const _iterator& rhs) const;
 
-		T& operator *() const;
-		T* operator->() const;
-		T* get() const;
+		reference operator *() const;
+		pointer operator->() const;
+		pointer get() const;
 
 	private:
-		T* _pEntry;
+		pointer _pEntry;
 		MultiCore::vector<T>* _pSource;
 	};
 
@@ -153,3 +154,8 @@ private:
 
 #include <pool_vector.hpp>
 
+#undef FORW_CONST
+#undef REV_CONST
+#undef FORW
+#undef REV
+#undef CONST

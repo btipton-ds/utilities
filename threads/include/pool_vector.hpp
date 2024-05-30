@@ -383,7 +383,7 @@ void VECTOR_DECL::pop_back()
 
 TEMPL_DECL
 ITER_TEMPL_DECL
-ITER_DECL::_iterator(const MultiCore::vector<T>* pSource, T* pEntry)
+ITER_DECL::_iterator(const MultiCore::vector<T>* pSource, pointer pEntry)
 	: _pSource(const_cast<MultiCore::vector<T>*>(pSource))
 	, _pEntry(pEntry)
 {
@@ -503,21 +503,21 @@ size_t ITER_DECL::operator - (const _iterator& rhs) const
 
 TEMPL_DECL
 ITER_TEMPL_DECL
-inline T& ITER_DECL::operator *() const
+inline typename ITER_DECL::reference ITER_DECL::operator *() const
 {
 	return *get();
 }
 
 TEMPL_DECL
 ITER_TEMPL_DECL
-inline T* ITER_DECL::operator->() const
+inline typename ITER_DECL::pointer ITER_DECL::operator->() const
 {
 	return get();
 }
 
 TEMPL_DECL
 ITER_TEMPL_DECL
-inline T* ITER_DECL::get() const
+inline typename ITER_DECL::pointer ITER_DECL::get() const
 {
 	return _pEntry ? _pEntry : _pSource ? _pSource->data() : nullptr;
 }
