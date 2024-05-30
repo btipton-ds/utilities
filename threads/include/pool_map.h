@@ -43,26 +43,36 @@ template<class KEY, class T>
 class map {
 public:
 	using pairRec = std::pair<KEY, T>;
+	using DataMap = MultiCore::map<KEY, T>;
+	using DataVec = ::MultiCore::vector<pairRec>;
 
 	struct KeyRec
 	{
-		KEY _key;
-		size_t _dataIdx = -1;
+		size_t _idx = -1;
+		DataVec* _pVec;
 
-		KeyRec(KEY key = {}, size_t idx = -1)
-			: _key(key)
-			, _dataIdx(idx)
+		KeyRec(const KeyRec& src) = default;
+		inline KeyRec(DataVec* pVec = nullptr, size_t idx = -1)
+			: _pVec(pVec)
+			, _idx(idx)
 		{
 		}
 
-		bool operator < (const KeyRec& rhs) const
+		inline bool operator < (const KeyRec& rhs) const
 		{
-			return _key < rhs._key;
+			assert(_pVec == rhs._pVec);
+
+			if (_idx < _pVec->size() && rhs._idx < _pVec->size())
+				return (*_pVec)[_idx].first < (*rhs._pVec)[rhs._idx]valRhs.first;
+			else if (_idx < _pVec->size())
+				return true; // rhs is out of bounds
+
+
+
 		}
+
 	};
 
-	using DataMap = MultiCore::map<KEY, T>;
-	using DataVec = ::MultiCore::vector<pairRec>;
 	using KeySet = ::MultiCore::set<KeyRec>;
 	using KeyIndexVec = ::MultiCore::vector<size_t>;
 
@@ -153,7 +163,7 @@ protected:
 	_NODISCARD _CONSTEXPR20 const_iterator find(const KEY& val, const_iterator& next) const noexcept;
 
 private:
-	pairRec* allocEntry();
+	pairRec* allocEntry(const pairRec& pair);
 	void releaseEntry(const pairRec* pData);
 
 	::MultiCore::vector<pairRec> _data;

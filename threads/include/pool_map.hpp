@@ -37,22 +37,20 @@ This file is part of the DistFieldHexMesh application/library.
 TEMPL_DECL
 std::pair<typename MAP_DECL::iterator, bool> MAP_DECL::insert(const pairRec& pair)
 {
-	auto keyIter = _keySet.find(KeyRec(pair.first));
+	auto keyIter = _keySet.find(KeyRec(&_data, pair.first)); // Confused about value vs index. Must be able to compare and index for a pair that isn't in the array yet.
 	if (keyIter == _keySet.end()) {
-		auto* pPair = allocEntry();
+		auto* pPair = allocEntry(pair);
 		size_t idx = (size_t)(pPair - _data.data());
 
-		KeyRec rec(pair.first, idx);
+		KeyRec rec(&_data, idx);
 
 		keyIter = _keySet.insert(rec);
-		*pPair = pair;
 
 		return std::pair(iterator(this, keyIter, pPair), true);
 	}
 
 	const KeyRec& keyRec = *keyIter;
-	size_t idx = keyRec._dataIdx;
-	auto pPair = &_data[idx];
+	auto pPair = &_data[keyRec._idx];
 	return std::pair(iterator(this, keyIter, pPair), false);
 }
 
@@ -98,14 +96,15 @@ _NODISCARD _CONSTEXPR20 inline typename MAP_DECL::const_iterator MAP_DECL::find(
 }
 
 TEMPL_DECL
-typename MAP_DECL::pairRec* MAP_DECL::allocEntry()
+typename MAP_DECL::pairRec* MAP_DECL::allocEntry(const pairRec& pair)
 {
 	if (_availEntries.empty()) {
-		_data.push_back(pairRec());
+		_data.push_back(pair);
 		return &_data.back();
 	} else {
 		size_t idx = _availEntries.back();
 		_availEntries.pop_back();
+		_data[idx] = pair;
 		return &_data[idx];
 	}
 }
@@ -226,9 +225,9 @@ ITER_TEMPL_DECL
 inline void ITER_DECL::refreshDataPointer()
 {
 	const KeyRec* pKey = _keyIter.get();
-	if (pKey && pKey->_dataIdx < _pSource->size()) {
+	if (pKey && pKey->_idx < _pSource->size()) {
 		auto& dataArray = _pSource->_data;
-		_pEntry = &dataArray[pKey->_dataIdx];
+		_pEntry = &dataArray[pKey->_idx];
 	} else
 		_pEntry = nullptr;
 }
