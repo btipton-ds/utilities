@@ -35,13 +35,13 @@ This file is part of the DistFieldHexMesh application/library.
 namespace MultiCore {
 
 TEMPL_DECL
-SET_DECL::set(const std::initializer_list<T>& src)
+inline SET_DECL::set(const std::initializer_list<T>& src)
 {
 	insert(end(), src);
 }
 
 TEMPL_DECL
-SET_DECL::~set()
+inline SET_DECL::~set()
 {
 }
 
@@ -68,13 +68,13 @@ void SET_DECL::insert(const ITER_TYPE& begin, const ITER_TYPE& end)
 }
 
 TEMPL_DECL
-size_t SET_DECL::size() const
+inline size_t SET_DECL::size() const
 {
 	return vector<T>::size();
 }
 
 TEMPL_DECL
-void SET_DECL::clear()
+inline void SET_DECL::clear()
 {
 	vector::clear();
 }
@@ -105,7 +105,7 @@ void SET_DECL::insert(const std::initializer_list<T>& vals)
 }
 
 TEMPL_DECL
-void SET_DECL::erase(const iterator& at)
+inline void SET_DECL::erase(const iterator& at)
 {
 #if DUPLICATE_STD_TESTS	
 	//	_set.erase(_set.begin() + idx);
@@ -115,7 +115,7 @@ void SET_DECL::erase(const iterator& at)
 }
 
 TEMPL_DECL
-void SET_DECL::erase(const iterator& begin, const iterator& end)
+inline void SET_DECL::erase(const iterator& begin, const iterator& end)
 {
 #if DUPLICATE_STD_TESTS	
 	//	_set.erase(begin, end);
@@ -124,7 +124,7 @@ void SET_DECL::erase(const iterator& begin, const iterator& end)
 }
 
 TEMPL_DECL
-MultiCore::set<T>& SET_DECL::operator = (const set& rhs)
+inline MultiCore::set<T>& SET_DECL::operator = (const set& rhs)
 {
 #if DUPLICATE_STD_TESTS	
 	_set = rhs._set;
@@ -135,49 +135,49 @@ MultiCore::set<T>& SET_DECL::operator = (const set& rhs)
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 typename SET_DECL::const_iterator SET_DECL::begin() const noexcept
+_NODISCARD _CONSTEXPR20 inline typename SET_DECL::const_iterator SET_DECL::begin() const noexcept
 {
 	return vector<T>::begin();
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 typename SET_DECL::iterator SET_DECL::begin() noexcept
+_NODISCARD _CONSTEXPR20 inline typename SET_DECL::iterator SET_DECL::begin() noexcept
 {
 	return vector<T>::begin();
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 typename SET_DECL::const_iterator SET_DECL::end() const noexcept
+_NODISCARD _CONSTEXPR20 inline typename SET_DECL::const_iterator SET_DECL::end() const noexcept
 {
 	return vector<T>::end();
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 typename SET_DECL::iterator SET_DECL::end() noexcept
+_NODISCARD _CONSTEXPR20 inline typename SET_DECL::iterator SET_DECL::end() noexcept
 {
 	return vector<T>::end();
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 typename SET_DECL::const_reverse_iterator SET_DECL::rbegin() const noexcept
+_NODISCARD _CONSTEXPR20 inline typename SET_DECL::const_reverse_iterator SET_DECL::rbegin() const noexcept
 {
 	return vector<T>::rbegin();
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 typename SET_DECL::reverse_iterator SET_DECL::rbegin() noexcept
+_NODISCARD _CONSTEXPR20 inline typename SET_DECL::reverse_iterator SET_DECL::rbegin() noexcept
 {
 	return vector<T>::rbegin();
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 typename SET_DECL::const_reverse_iterator SET_DECL::rend() const noexcept
+_NODISCARD _CONSTEXPR20 inline typename SET_DECL::const_reverse_iterator SET_DECL::rend() const noexcept
 {
 	return vector<T>::rend();
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 typename SET_DECL::reverse_iterator SET_DECL::rend() noexcept
+_NODISCARD _CONSTEXPR20 inline typename SET_DECL::reverse_iterator SET_DECL::rend() noexcept
 {
 	return vector<T>::rend();
 }
@@ -204,10 +204,16 @@ _NODISCARD _CONSTEXPR20 typename SET_DECL::const_iterator SET_DECL::find(const T
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 typename SET_DECL::iterator SET_DECL::find(const T& val) noexcept
+_NODISCARD _CONSTEXPR20 inline typename SET_DECL::iterator SET_DECL::find(const T& val) noexcept
 {
 	iterator next;
 	return find(val, next);
+}
+
+TEMPL_DECL
+inline bool SET_DECL::contains(const T& val) const
+{
+	return find(val) != end();
 }
 
 TEMPL_DECL
@@ -219,9 +225,12 @@ _NODISCARD _CONSTEXPR20 typename SET_DECL::iterator SET_DECL::find(const T& val,
 	size_t idx = (min + max) / 2;
 	while (idx < size() && min != max) {
 		const auto& curVal = vector<T>::operator[](idx);
-		if (val < curVal)
+		if (val < curVal) {
+			if (max == idx) {
+				assert(!"Unexpected/impossible condition.");
+			}
 			max = idx;
-		else if (curVal < val) {
+		} else if (curVal < val) {
 			if (min == idx) {
 				if (idx < size() - 1)
 					next = iterator(this, vector<T>::data() + idx + 1);

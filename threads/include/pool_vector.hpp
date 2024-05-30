@@ -188,11 +188,12 @@ VECTOR_DECL::iterator VECTOR_DECL::erase(const iterator& at)
 #if DUPLICATE_STD_TESTS	
 	_data.erase(_data.begin() + idx);
 #endif
-
-	for (size_t i = idx; i < _size - 1; i++) {
-		_pData[i] = _pData[i + 1];
+	if (idx < _size) {
+		for (size_t i = idx; i < _size - 1; i++) {
+			_pData[i] = _pData[i + 1];
+		}
+		_size--;
 	}
-	_size--;
 	return iterator(this, at.get());
 }
 
@@ -202,6 +203,20 @@ VECTOR_DECL::iterator VECTOR_DECL::erase(const iterator& begin, const iterator& 
 #if DUPLICATE_STD_TESTS	
 	_data.erase(begin, end);
 #endif
+	size_t startIdx = (size_t)(begin.get() - data());
+	size_t endIdx = (size_t)(end.get() - data());
+	if (startIdx == endIdx)
+		return begin;
+
+	if (endIdx >= size()) {
+		endIdx = size() - 1;
+	}
+	size_t num = endIdx - startIdx;
+	for (size_t i = startIdx; i < _size - num; i++) {
+		_pData[i] = _pData[i + num];
+	}
+	_size -= num;
+
 	return iterator(this, begin._pEntry);
 }
 

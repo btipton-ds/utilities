@@ -75,6 +75,7 @@ public:
 	_NODISCARD _CONSTEXPR20 reverse_iterator rend() noexcept;
 	_NODISCARD _CONSTEXPR20 const_iterator find(const T& val) const noexcept;
 	_NODISCARD _CONSTEXPR20 iterator find(const T& val) noexcept;
+	bool contains(const T& val) const;
 
 protected:
 	_NODISCARD _CONSTEXPR20 iterator find(const T& val, iterator& next) noexcept;
