@@ -67,7 +67,7 @@ public:
 
         bool m_needsUpdate = true;
         std::vector<float> m_points, m_normals, m_parameters;
-        std::vector<unsigned int> m_colors, m_backColors;
+        std::vector<float> m_colors, m_backColors;
         std::map<int, std::vector<unsigned int>> m_indexMap;
         std::vector<std::shared_ptr<ElemIndexMapRec>> m_texturedFaces;
 
@@ -95,12 +95,16 @@ public:
 
     void beginFaceTesselation();
     // vertiIndices is index pairs into points, normals and parameters to form triangles. It's the standard OGL element index structure
-    const OGLIndices* setFaceTessellation(long entityKey, int changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters, const std::vector<unsigned int>& vertiIndices);
+    const OGLIndices* setFaceTessellation(long entityKey, int changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
+        const std::vector<unsigned int>& vertiIndices);
+    const OGLIndices* setFaceTessellation(long entityKey, int changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
+        const std::vector<float>& colors, const std::vector<unsigned int>& vertiIndices);
     void endFaceTesselation(bool smoothNormals);
 
     void beginEdgeTesselation();
     const OGLIndices* setEdgeStripTessellation(long entityKey, const std::vector<float>& lineStripPoints);
-    const OGLIndices* setEdgeSegTessellation(long entityKey, int changeNumber, const std::vector<float>& points, const std::vector<int>& indices);
+    const OGLIndices* setEdgeSegTessellation(long entityKey, int changeNumber, const std::vector<float>& points, const std::vector<unsigned int>& indices);
+    const OGLIndices* setEdgeSegTessellation(long entityKey, int changeNumber, const std::vector<float>& points, const std::vector<float>& colors, const std::vector<unsigned int>& indices);
     void endEdgeTesselation();
 
     bool getRawData(long entityKey, std::vector<unsigned int>& indices) const;
@@ -126,8 +130,8 @@ public:
 
     bool getRawData(long entityKey, std::vector<float>& points, std::vector<float>& normals, std::vector<float>& parameters) const;
 
-    bool setColorVBO(long entityKey, std::vector<unsigned int>& colors);
-    bool setBackColorVBO(long entityKey, std::vector<unsigned int>& colors);
+    bool setColorVBO(long entityKey, std::vector<float>& colors);
+    bool setBackColorVBO(long entityKey, std::vector<float>& colors);
 
     int findLayerForKey(int key) const;
 
@@ -166,13 +170,13 @@ private:
     // Returns the vertex index in the block.
     // If no released storage is found, batchIndex doesn't change
     // If the data fits in released storage, it is consumed and the batchIndex may change
-    void getStorageFor(size_t numVertsNeeded, size_t& batchIndex, size_t& chunkIndex, size_t& blockSizeInChunks);
+    void getStorageFor(size_t numVertsNeeded, bool needColorStorage, size_t& batchIndex, size_t& chunkIndex, size_t& blockSizeInChunks);
 
     void setFaceTessellationInner(size_t batchIndex, size_t chunkIndex, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
-        const std::vector<unsigned int>& triIndices, OGLIndices& glIndicesOut);
+        const std::vector<float>& colors, const std::vector<unsigned int>& triIndices, OGLIndices& glIndicesOut);
 
     void setEdgeStripTessellationInner(size_t batchIndex, size_t vertChunkIndex, const std::vector<float>& lineStripPts, OGLIndices& glIndicesOut);
-    void setEdgeSegTessellationInner(size_t batchIndex, size_t vertChunkIndex, const std::vector<float>& pts, const std::vector<int>& indices, OGLIndices& glIndicesOut);
+    void setEdgeSegTessellationInner(size_t batchIndex, size_t vertChunkIndex, const std::vector<float>& pts, const std::vector<float>& colors, const std::vector<unsigned int>& indices, OGLIndices& glIndicesOut);
 
     // Supporting methods for drawKeys
     void bindCommonBuffers(std::shared_ptr<VertexBatch> batchPtr) const;
