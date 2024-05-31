@@ -147,9 +147,9 @@ public:
 	using reverse_iterator = _iterator<REV>;
 	using const_reverse_iterator = _iterator<REV_CONST>;
 
-	map();
-	map(const map& src);
-	~map();
+	map() = default;
+	map(const map& src) = default;
+	~map() = default;
 
 	bool empty() const;
 	size_t size() const;

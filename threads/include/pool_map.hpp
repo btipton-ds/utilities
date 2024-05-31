@@ -35,25 +35,6 @@ This file is part of the DistFieldHexMesh application/library.
 #define ITER_DECL MultiCore::map<KEY, T>::_iterator<IterType>
 
 TEMPL_DECL
-MAP_DECL::map()
-{
-}
-
-TEMPL_DECL
-MAP_DECL::map(const map& src)
-{
-	insert(src.begin(), src.end());
-}
-
-TEMPL_DECL
-MAP_DECL::~map()
-{
-	_keySet.clear();
-	_data.clear();
-	_availEntries.clear();
-}
-
-TEMPL_DECL
 std::pair<typename MAP_DECL::iterator, bool> MAP_DECL::insert(const DataPair& pair)
 {
 	auto keyIter = _keySet.find(KeyRec(pair.first)); // Confused about value vs index. Must be able to compare and index for a pair that isn't in the array yet.

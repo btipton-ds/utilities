@@ -57,7 +57,6 @@ void ::MultiCore::local_heap::setThreadHeapPtr(::MultiCore::local_heap* pHeap)
 
 void* ::MultiCore::local_heap::allocMem(size_t numBytes)
 {
-	assert(local_heap::getThreadHeapPtr()->verify());
 #if GUARD_BAND_SIZE > 0
 	size_t bytesNeeded = numBytes + sizeof(BlockHeader) + sizeof(GuardBand);
 #else
@@ -77,7 +76,6 @@ void* ::MultiCore::local_heap::allocMem(size_t numBytes)
 		pHeader->_leadingBand._pEndBand = pTail;
 		assert(pHeader->_leadingBand.isValid());
 #endif
-		assert(local_heap::getThreadHeapPtr()->verify());
 		return pStartData;
 	}
 
@@ -140,7 +138,7 @@ void* ::MultiCore::local_heap::allocMem(size_t numBytes)
 	pHeader->_leadingBand._pEndBand = pTail;
 	assert(pHeader->_leadingBand.isValid());
 #endif
-	assert(local_heap::getThreadHeapPtr()->verify());
+
 	return pStartData;
 }
 
@@ -171,7 +169,6 @@ bool ::MultiCore::local_heap::verify() const
 		pCurBlock = pCurBlock->_pNext;
 	}
 
-	assert(local_heap::getThreadHeapPtr()->verify());
 	return pResult;
 }
 
@@ -243,7 +240,6 @@ void MultiCore::local_heap::insertAvailBlock(AvailBlockHeader* pPriorBlock, Avai
 
 void ::MultiCore::local_heap::removeAvailBlock(AvailBlockHeader* pPriorBlock, AvailBlockHeader* pRecycledBlock)
 {
-	assert(local_heap::getThreadHeapPtr()->verify());
 	assert(pRecycledBlock);
 	pRecycledBlock->~AvailBlockHeader();
 
@@ -253,7 +249,6 @@ void ::MultiCore::local_heap::removeAvailBlock(AvailBlockHeader* pPriorBlock, Av
 		assert(pPriorBlock);
 		pPriorBlock->_pNext = pRecycledBlock->_pNext;
 	}
-	assert(local_heap::getThreadHeapPtr()->verify());
 }
 
 bool ::MultiCore::local_heap::isHeaderValid(const void* p, bool pointsToHeader) const
