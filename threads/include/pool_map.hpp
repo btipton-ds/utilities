@@ -35,7 +35,7 @@ This file is part of the DistFieldHexMesh application/library.
 #define ITER_DECL MultiCore::map<KEY, T>::_iterator<IterType>
 
 TEMPL_DECL
-std::pair<typename MAP_DECL::iterator, bool> MAP_DECL::insert(const pairRec& pair)
+std::pair<typename MAP_DECL::iterator, bool> MAP_DECL::insert(const pair& pair)
 {
 	auto keyIter = _keySet.find(KeyRec(pair.first)); // Confused about value vs index. Must be able to compare and index for a pair that isn't in the array yet.
 	if (keyIter == _keySet.end()) {
@@ -55,11 +55,21 @@ std::pair<typename MAP_DECL::iterator, bool> MAP_DECL::insert(const pairRec& pai
 }
 
 TEMPL_DECL
+void MAP_DECL::erase(const iterator& at)
+{
+	pair* p = at.get();
+	size_t idx = (size_t)(p - _data.data());
+	*p = pair();
+	_keySet.erase(at._keyIter);
+	_availEntries.push_back(idx);
+}
+
+TEMPL_DECL
 void MAP_DECL::erase(const const_iterator& at)
 {
-	pairRec* p = at.get();
+	pair* p = at.get();
 	size_t idx = (size_t)(p - _data.data());
-	*p = pairRec();
+	*p = pair();
 	_keySet.erase(at._keyIter);
 	_availEntries.push_back(idx);
 }
@@ -96,7 +106,7 @@ _NODISCARD _CONSTEXPR20 inline typename MAP_DECL::const_iterator MAP_DECL::find(
 }
 
 TEMPL_DECL
-typename MAP_DECL::pairRec* MAP_DECL::allocEntry(const pairRec& pair)
+typename MAP_DECL::pair* MAP_DECL::allocEntry(const pair& pair)
 {
 	if (_availEntries.empty()) {
 		_data.push_back(pair);
@@ -110,12 +120,12 @@ typename MAP_DECL::pairRec* MAP_DECL::allocEntry(const pairRec& pair)
 }
 
 TEMPL_DECL
-void MAP_DECL::releaseEntry(const pairRec* pPair)
+void MAP_DECL::releaseEntry(const pair* pPair)
 {
 	if (!pPair)
 		return;
 
-	*pPair = pairRec();
+	*pPair = pair();
 	size_t idx = (size_t)(pPair - _data.data());
 	_availEntries.push_back(idx);
 }
@@ -169,13 +179,13 @@ _NODISCARD _CONSTEXPR20 inline typename MAP_DECL::const_reverse_iterator MAP_DEC
 }
 
 TEMPL_DECL
-inline const typename MAP_DECL::pairRec* MAP_DECL::data() const
+inline const typename MAP_DECL::pair* MAP_DECL::data() const
 {
 	return _data.data();
 }
 
 TEMPL_DECL
-inline typename MAP_DECL::pairRec* MAP_DECL::data()
+inline typename MAP_DECL::pair* MAP_DECL::data()
 {
 	return _data.data();
 }

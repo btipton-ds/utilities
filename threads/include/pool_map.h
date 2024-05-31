@@ -39,12 +39,38 @@ This file is part of the DistFieldHexMesh application/library.
 namespace MultiCore
 {
 
+template<class A, class B>
+struct pair_const_key {
+	const A first;
+	B second;
+
+	inline pair_const_key(const A& a = A(), const B& b = B())
+		: first(a)
+		, second(b)
+	{
+	}
+
+	inline pair_const_key& operator = (const pair_const_key& rhs) {
+		A* pFirst = (A*)&first;
+		*pFirst = rhs.first;
+		second = rhs.second;
+
+		return *this;
+	}
+};
+
+template<class A, class B>
+inline pair_const_key<A, B> make_pair(A a, B b)
+{
+	return pair_const_key<A, B>(a, b);
+}
+
 template<class KEY, class T>
 class map {
 public:
-	using pairRec = std::pair<KEY, T>;
+	using pair = MultiCore::pair_const_key<KEY, T>;
 	using DataMap = MultiCore::map<KEY, T>;
-	using DataVec = ::MultiCore::vector<pairRec>;
+	using DataVec = ::MultiCore::vector<pair>;
 
 	struct KeyRec
 	{
@@ -73,8 +99,8 @@ private:
 
 		using value_type = std::remove_cv_t<T>;
 		using KeyIter = std::conditional_t<IterType == FORW || IterType == FORW_CONST, typename KeySet::const_iterator, typename KeySet::const_reverse_iterator>;
-		using pointer = std::conditional_t<CONST, pairRec const*, pairRec*>;
-		using reference = std::conditional_t<CONST, pairRec const&, pairRec&>;
+		using pointer = std::conditional_t<CONST, pair const*, pair*>;
+		using reference = std::conditional_t<CONST, pair const&, pair&>;
 
 		_iterator() = default;
 		_iterator(DataMap* pSource, const KeyIter& keyIter, pointer pEntry);
@@ -119,11 +145,12 @@ public:
 	bool empty() const;
 	size_t size() const;
 	void clear();
-	const pairRec* data() const;
-	pairRec* data() ;
+	const pair* data() const;
+	pair* data() ;
 
-	std::pair<iterator, bool> insert(const pairRec& pair);
+	std::pair<iterator, bool> insert(const pair& pair);
 
+	void erase(const iterator& at);
 	void erase(const const_iterator& at);
 
 	map& operator = (const map& rhs);
@@ -147,10 +174,10 @@ protected:
 	_NODISCARD _CONSTEXPR20 const_iterator find(const KEY& val, const_iterator& next) const noexcept;
 
 private:
-	pairRec* allocEntry(const pairRec& pair);
-	void releaseEntry(const pairRec* pData);
+	pair* allocEntry(const pair& pair);
+	void releaseEntry(const pair* pData);
 
-	::MultiCore::vector<pairRec> _data;
+	::MultiCore::vector<pair> _data;
 	::MultiCore::set<KeyRec> _keySet;
 	::MultiCore::vector<size_t> _availEntries;
 
