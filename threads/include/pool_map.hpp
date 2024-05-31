@@ -35,7 +35,7 @@ This file is part of the DistFieldHexMesh application/library.
 #define ITER_DECL MultiCore::map<KEY, T>::_iterator<IterType>
 
 TEMPL_DECL
-std::pair<typename MAP_DECL::iterator, bool> MAP_DECL::insert(const pair& pair)
+std::pair<typename MAP_DECL::iterator, bool> MAP_DECL::insert(const DataPair& pair)
 {
 	auto keyIter = _keySet.find(KeyRec(pair.first)); // Confused about value vs index. Must be able to compare and index for a pair that isn't in the array yet.
 	if (keyIter == _keySet.end()) {
@@ -46,30 +46,37 @@ std::pair<typename MAP_DECL::iterator, bool> MAP_DECL::insert(const pair& pair)
 
 		keyIter = _keySet.insert(rec);
 
-		return std::pair(iterator(this, keyIter, pPair), true);
+		return std::pair(iterator(this, keyIter), true);
 	}
 
 	const KeyRec& keyRec = *keyIter;
 	auto pPair = &_data[keyRec._idx];
-	return std::pair(iterator(this, keyIter, pPair), false);
+	return std::pair(iterator(this, keyIter), false);
 }
 
 TEMPL_DECL
 void MAP_DECL::erase(const iterator& at)
 {
-	pair* p = at.get();
+	DataPair* p = const_cast<DataPair*> (at.get());
 	size_t idx = (size_t)(p - _data.data());
-	*p = pair();
+	*p = DataPair();
+
 	_keySet.erase(at._keyIter);
-	_availEntries.push_back(idx);
+	if (_keySet.empty()) {
+		_data.clear();
+		_availEntries.clear();
+	} else if (idx == _data.size() - 1)
+		_data.pop_back();
+	else
+		_availEntries.push_back(idx);
 }
 
 TEMPL_DECL
 void MAP_DECL::erase(const const_iterator& at)
 {
-	pair* p = at.get();
+	DataPair* p = const_cast<DataPair*> (at.get());
 	size_t idx = (size_t)(p - _data.data());
-	*p = pair();
+	*p = DataPair();
 	_keySet.erase(at._keyIter);
 	_availEntries.push_back(idx);
 }
@@ -96,17 +103,19 @@ void MAP_DECL::clear()
 TEMPL_DECL
 _NODISCARD _CONSTEXPR20 inline typename MAP_DECL::iterator MAP_DECL::find(const KEY& val) noexcept
 {
-	return _keySet.find(val);
+	auto keyIter = _keySet.find(KeyRec(val));
+	return iterator(this, keyIter);
 }
 
 TEMPL_DECL
 _NODISCARD _CONSTEXPR20 inline typename MAP_DECL::const_iterator MAP_DECL::find(const KEY& val) const noexcept
 {
-	return _keySet.find(val);
+	auto keyIter = _keySet.find(KeyRec(val));
+	return iterator(this, keyIter);
 }
 
 TEMPL_DECL
-typename MAP_DECL::pair* MAP_DECL::allocEntry(const pair& pair)
+typename MAP_DECL::DataPair* MAP_DECL::allocEntry(const DataPair& pair)
 {
 	if (_availEntries.empty()) {
 		_data.push_back(pair);
@@ -120,7 +129,7 @@ typename MAP_DECL::pair* MAP_DECL::allocEntry(const pair& pair)
 }
 
 TEMPL_DECL
-void MAP_DECL::releaseEntry(const pair* pPair)
+void MAP_DECL::releaseEntry(const DataPair* pPair)
 {
 	if (!pPair)
 		return;
@@ -133,25 +142,25 @@ void MAP_DECL::releaseEntry(const pair* pPair)
 TEMPL_DECL
 _NODISCARD _CONSTEXPR20 inline typename MAP_DECL::iterator MAP_DECL::begin() noexcept
 {
-	return iterator(this, _keySet.begin(), &_data[0]);
+	return iterator(this, _keySet.begin());
 }
 
 TEMPL_DECL
 _NODISCARD _CONSTEXPR20 inline typename MAP_DECL::iterator MAP_DECL::end() noexcept
 {
-	return iterator(this, _keySet.end(), nullptr);
+	return iterator(this, _keySet.end());
 }
 
 TEMPL_DECL
 _NODISCARD _CONSTEXPR20 inline typename MAP_DECL::const_iterator MAP_DECL::begin() const noexcept
 {
-	return iterator(this, _keySet.begin(), &_data[0]);
+	return iterator(this, _keySet.begin());
 }
 
 TEMPL_DECL
 _NODISCARD _CONSTEXPR20 inline typename MAP_DECL::const_iterator MAP_DECL::end() const noexcept
 {
-	return iterator(this, _keySet.end(), nullptr);
+	return iterator(this, _keySet.end());
 }
 
 TEMPL_DECL
@@ -179,13 +188,13 @@ _NODISCARD _CONSTEXPR20 inline typename MAP_DECL::const_reverse_iterator MAP_DEC
 }
 
 TEMPL_DECL
-inline const typename MAP_DECL::pair* MAP_DECL::data() const
+inline const typename MAP_DECL::DataPair* MAP_DECL::data() const
 {
 	return _data.data();
 }
 
 TEMPL_DECL
-inline typename MAP_DECL::pair* MAP_DECL::data()
+inline typename MAP_DECL::DataPair* MAP_DECL::data()
 {
 	return _data.data();
 }
@@ -195,10 +204,9 @@ inline typename MAP_DECL::pair* MAP_DECL::data()
 
 TEMPL_DECL
 ITER_TEMPL_DECL
-ITER_DECL::_iterator(DataMap* pSource, const KeyIter& keyIter, pointer pEntry)
+ITER_DECL::_iterator(DataMap* pSource, const KeyIter& keyIter)
 	: _pSource(pSource)
 	, _keyIter(keyIter)
-	, _pEntry(pEntry)
 {
 }
 
@@ -232,22 +240,9 @@ inline bool ITER_DECL::operator > (const _iterator& rhs) const
 
 TEMPL_DECL
 ITER_TEMPL_DECL
-inline void ITER_DECL::refreshDataPointer()
-{
-	const KeyRec* pKey = _keyIter.get();
-	if (pKey && pKey->_idx < _pSource->size()) {
-		auto& dataArray = _pSource->_data;
-		_pEntry = &dataArray[pKey->_idx];
-	} else
-		_pEntry = nullptr;
-}
-
-TEMPL_DECL
-ITER_TEMPL_DECL
 inline typename ITER_DECL::_iterator& ITER_DECL::operator ++ ()
 {
 	_keyIter.operator++();
-	refreshDataPointer();
 	return *this;
 }
 
@@ -256,7 +251,6 @@ ITER_TEMPL_DECL
 inline typename ITER_DECL::_iterator& ITER_DECL::operator --()
 {
 	_keyIter.operator--();
-	refreshDataPointer();
 	return *this;
 }
 
@@ -265,7 +259,6 @@ ITER_TEMPL_DECL
 inline typename ITER_DECL::_iterator& ITER_DECL::operator ++ (int)
 {
 	_keyIter.operator++(1);
-	refreshDataPointer();
 	return *this;
 }
 
@@ -274,7 +267,6 @@ ITER_TEMPL_DECL
 inline typename ITER_DECL::_iterator& ITER_DECL::operator --(int)
 {
 	_keyIter.operator--(1);
-	refreshDataPointer();
 	return *this;
 }
 
@@ -284,7 +276,6 @@ inline typename ITER_DECL::_iterator ITER_DECL::operator + (size_t val) const
 {
 	_iterator result(this);
 	result._keyIter = _keyIter.operator+(val);
-	result.refreshDataPointer();
 	return result;
 }
 
@@ -294,7 +285,6 @@ inline typename ITER_DECL::_iterator ITER_DECL::operator - (size_t val) const
 {
 	_iterator result(this);
 	result._keyIter = _keyIter.operator-(val);
-	result.refreshDataPointer();
 	return result;
 }
 
@@ -307,23 +297,54 @@ inline size_t ITER_DECL::operator - (const _iterator& rhs) const
 
 TEMPL_DECL
 ITER_TEMPL_DECL
-inline typename ITER_DECL::reference ITER_DECL::operator *() const
+inline const MAP_DECL::DataPair& ITER_DECL::operator *() const
 {
 	return *get();
 }
 
 TEMPL_DECL
 ITER_TEMPL_DECL
-inline typename ITER_DECL::pointer ITER_DECL::operator->() const
+inline typename MAP_DECL::DataPair& ITER_DECL::operator *()
+{
+	return *get();
+}
+
+TEMPL_DECL
+ITER_TEMPL_DECL
+inline const typename MAP_DECL::DataPair* ITER_DECL::operator->() const
 {
 	return get();
 }
 
 TEMPL_DECL
 ITER_TEMPL_DECL
-inline typename ITER_DECL::pointer ITER_DECL::get() const
+inline typename MAP_DECL::DataPair* ITER_DECL::operator->()
 {
-	return _pEntry ? _pEntry : _pSource ? _pSource->data() : nullptr;
+	return get();
+}
+
+TEMPL_DECL
+ITER_TEMPL_DECL
+inline const typename MAP_DECL::DataPair* ITER_DECL::get() const
+{
+	const KeyRec& key = *_keyIter;
+	if (key._pVec && key._idx < key._pVec->size()) {
+		auto& arr = *key._pVec;
+		return &arr[key._idx];
+	}
+	return nullptr;
+}
+
+TEMPL_DECL
+ITER_TEMPL_DECL
+inline typename MAP_DECL::DataPair* ITER_DECL::get()
+{
+	const KeyRec& key = *_keyIter;
+	if (key._pVec && key._idx < key._pVec->size()) {
+		auto& arr = *key._pVec;
+		return &arr[key._idx];
+	}
+	return nullptr;
 }
 
 TEMPL_DECL

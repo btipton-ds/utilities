@@ -68,9 +68,9 @@ inline pair_const_key<A, B> make_pair(A a, B b)
 template<class KEY, class T>
 class map {
 public:
-	using pair = MultiCore::pair_const_key<KEY, T>;
+	using DataPair = pair_const_key<KEY, T>;
 	using DataMap = MultiCore::map<KEY, T>;
-	using DataVec = ::MultiCore::vector<pair>;
+	using DataVec = ::MultiCore::vector<DataPair>;
 
 	struct KeyRec
 	{
@@ -99,11 +99,11 @@ private:
 
 		using value_type = std::remove_cv_t<T>;
 		using KeyIter = std::conditional_t<IterType == FORW || IterType == FORW_CONST, typename KeySet::const_iterator, typename KeySet::const_reverse_iterator>;
-		using pointer = std::conditional_t<CONST, pair const*, pair*>;
-		using reference = std::conditional_t<CONST, pair const&, pair&>;
+		using pointer = std::conditional_t<CONST, DataPair const*, DataPair*>;
+		using reference = std::conditional_t<CONST, DataPair const&, DataPair&>;
 
 		_iterator() = default;
-		_iterator(DataMap* pSource, const KeyIter& keyIter, pointer pEntry);
+		_iterator(DataMap* pSource, const KeyIter& keyIter);
 		_iterator(const _iterator& src) = default;
 
 		bool operator == (const _iterator& rhs) const;
@@ -121,15 +121,18 @@ private:
 		_iterator operator - (size_t val) const;
 		size_t operator - (const _iterator& rhs) const;
 
-		reference operator *() const;
-		pointer operator->() const;
-		pointer get() const;
+		const DataPair& operator *() const;
+		DataPair& operator *();
+
+		const DataPair* operator->() const;
+		DataPair* operator->();
+
+		const DataPair* get() const;
+		DataPair* get();
 
 	private:
-		void refreshDataPointer();
-		pointer _pEntry = nullptr;
-		DataMap* _pSource;
 		KeyIter _keyIter;
+		DataMap* _pSource;
 	};
 
 public:
@@ -145,10 +148,10 @@ public:
 	bool empty() const;
 	size_t size() const;
 	void clear();
-	const pair* data() const;
-	pair* data() ;
+	const DataPair* data() const;
+	DataPair* data() ;
 
-	std::pair<iterator, bool> insert(const pair& pair);
+	std::pair<iterator, bool> insert(const DataPair& pair);
 
 	void erase(const iterator& at);
 	void erase(const const_iterator& at);
@@ -174,11 +177,11 @@ protected:
 	_NODISCARD _CONSTEXPR20 const_iterator find(const KEY& val, const_iterator& next) const noexcept;
 
 private:
-	pair* allocEntry(const pair& pair);
-	void releaseEntry(const pair* pData);
+	DataPair* allocEntry(const DataPair& pair);
+	void releaseEntry(const DataPair* pData);
 
-	::MultiCore::vector<pair> _data;
 	::MultiCore::set<KeyRec> _keySet;
+	::MultiCore::vector<DataPair> _data;
 	::MultiCore::vector<size_t> _availEntries;
 
 #if DUPLICATE_STD_TESTS	
