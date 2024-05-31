@@ -48,29 +48,13 @@ public:
 
 	struct KeyRec
 	{
-		size_t _idx = -1;
-		DataVec* _pVec;
-
 		KeyRec(const KeyRec& src) = default;
-		inline KeyRec(DataVec* pVec = nullptr, size_t idx = -1)
-			: _pVec(pVec)
-			, _idx(idx)
-		{
-		}
+		KeyRec(const KEY& key = KEY(), DataVec* pVec = nullptr, size_t idx = -1);
+		bool operator < (const KeyRec& rhs) const;
 
-		inline bool operator < (const KeyRec& rhs) const
-		{
-			assert(_pVec == rhs._pVec);
-
-			if (_idx < _pVec->size() && rhs._idx < _pVec->size())
-				return (*_pVec)[_idx].first < (*rhs._pVec)[rhs._idx]valRhs.first;
-			else if (_idx < _pVec->size())
-				return true; // rhs is out of bounds
-
-
-
-		}
-
+		KEY _key;
+		size_t _idx = -1;
+		DataVec* _pVec = nullptr;
 	};
 
 	using KeySet = ::MultiCore::set<KeyRec>;

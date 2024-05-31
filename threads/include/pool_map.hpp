@@ -37,12 +37,12 @@ This file is part of the DistFieldHexMesh application/library.
 TEMPL_DECL
 std::pair<typename MAP_DECL::iterator, bool> MAP_DECL::insert(const pairRec& pair)
 {
-	auto keyIter = _keySet.find(KeyRec(&_data, pair.first)); // Confused about value vs index. Must be able to compare and index for a pair that isn't in the array yet.
+	auto keyIter = _keySet.find(KeyRec(pair.first)); // Confused about value vs index. Must be able to compare and index for a pair that isn't in the array yet.
 	if (keyIter == _keySet.end()) {
 		auto* pPair = allocEntry(pair);
 		size_t idx = (size_t)(pPair - _data.data());
 
-		KeyRec rec(&_data, idx);
+		KeyRec rec(pair.first, &_data, idx);
 
 		keyIter = _keySet.insert(rec);
 
@@ -314,6 +314,27 @@ ITER_TEMPL_DECL
 inline typename ITER_DECL::pointer ITER_DECL::get() const
 {
 	return _pEntry ? _pEntry : _pSource ? _pSource->data() : nullptr;
+}
+
+TEMPL_DECL
+inline MAP_DECL::KeyRec::KeyRec(const KEY& key, DataVec* pVec, size_t idx)
+	: _key(key)
+	, _pVec(pVec)
+	, _idx(idx)
+{
+}
+
+TEMPL_DECL
+inline bool MAP_DECL::KeyRec::operator < (const KeyRec& rhs) const
+{
+	if (_pVec && rhs._pVec && _idx < _pVec->size() && rhs._idx < rhs._pVec->size())
+		return (*_pVec)[_idx].first < (*rhs._pVec)[rhs._idx].first;
+	else if (_pVec && _idx < _pVec->size())
+		return (*_pVec)[_idx].first < rhs._key;
+	else if (rhs._pVec && rhs._idx < rhs._pVec->size())
+		return _key < (*rhs._pVec)[rhs._idx].first;
+
+	return _key < rhs._key;
 }
 
 #undef TEMPL_DECL 
