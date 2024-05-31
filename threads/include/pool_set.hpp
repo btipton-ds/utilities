@@ -81,7 +81,7 @@ inline size_t SET_DECL::size() const
 TEMPL_DECL
 inline void SET_DECL::clear()
 {
-	vector::clear();
+	vector<T>::clear();
 }
 
 TEMPL_DECL

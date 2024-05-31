@@ -93,8 +93,8 @@ public:
 	using reverse_iterator = _iterator<REV>;
 	using const_reverse_iterator = _iterator<REV_CONST>;
 
-	vector() = default;
-	vector(const vector& src) = default;
+	vector();
+	vector(const vector& src);
 	vector(const std::vector<T>& src);
 	vector(const std::initializer_list<T>& src);
 	~vector();

@@ -37,7 +37,25 @@ This file is part of the DistFieldHexMesh application/library.
 namespace MultiCore {
 
 TEMPL_DECL
-	VECTOR_DECL::vector(const std::vector<T>& src)
+VECTOR_DECL::vector()
+{
+	_size = 0;
+	_capacity = 0;
+	_pData = nullptr;
+}
+
+TEMPL_DECL
+VECTOR_DECL::vector(const vector& src)
+{
+	if (src._size > 0) {
+		resize(src._size);
+		for (size_t i = 0; i < _size; i++)
+			_pData[i] = src._pData[i];
+	}
+}
+
+TEMPL_DECL
+VECTOR_DECL::vector(const std::vector<T>& src)
 {
 	insert(end(), src);
 }
@@ -52,6 +70,7 @@ TEMPL_DECL
 VECTOR_DECL::~vector()
 {
 	free(_pData); // free<T> will handle destruction for each object in local_heap
+	_pData = nullptr;
 }
 
 TEMPL_DECL
@@ -66,7 +85,11 @@ TEMPL_DECL
 void VECTOR_DECL::clear()
 {
 	for (size_t i = 0; i < _size; i++) {
-		_pData[i] = T(); // Replace with empty objects, but DO NOT destroy them YET.
+		// Replace with empty objects, but DO NOT destroy them YET.
+		// Use destructor/constructor to get around const members
+		_pData[i].~T();
+		new(&_pData[i]) T();
+//		_pData[i] = T(); 
 	}
 	_size = 0;
 
@@ -115,12 +138,20 @@ void VECTOR_DECL::reserve(size_t newCapacity)
 	if (newCapacity > _capacity) {
 		T* pTmp = _pData;
 		_pData = alloc<T>(newCapacity);
-
+		assert(local_heap::getThreadHeapPtr()->verify());
 		if (pTmp) {
-			for (size_t i = 0; i < _size; i++)
-				_pData[i] = pTmp[i];
+			for (size_t i = 0; i < _size; i++) {
+				_pData[i].~T();
+				new(&_pData[i]) T(pTmp[i]);
+
+				pTmp[i].~T();
+				new(&pTmp[i]) T();
+//				_pData[i] = pTmp[i];
+			}
+			assert(local_heap::getThreadHeapPtr()->verify());
 
 			free(pTmp);
+			assert(local_heap::getThreadHeapPtr()->verify());
 		}
 		_capacity = newCapacity;
 	}
@@ -399,7 +430,9 @@ size_t VECTOR_DECL::push_back(const T& val)
 		reserve(newCapacity);
 	}
 
-	_pData[_size] = val;
+	_pData[_size].~T();
+	new(&_pData[_size]) T(val);
+//	_pData[_size] = val;
 	_size += 1;
 
 	return _size;

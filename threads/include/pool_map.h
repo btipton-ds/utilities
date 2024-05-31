@@ -39,6 +39,11 @@ This file is part of the DistFieldHexMesh application/library.
 namespace MultiCore
 {
 
+#if 1
+	template<class A, class B>
+	using pair_const_key = std::pair<A, B>;
+#else
+
 template<class A, class B>
 struct pair_const_key {
 	const A first;
@@ -58,6 +63,7 @@ struct pair_const_key {
 		return *this;
 	}
 };
+#endif
 
 template<class A, class B>
 inline pair_const_key<A, B> make_pair(A a, B b)
@@ -141,9 +147,9 @@ public:
 	using reverse_iterator = _iterator<REV>;
 	using const_reverse_iterator = _iterator<REV_CONST>;
 
-	map() = default;
-	map(const map& src) = default;
-	~map() = default;
+	map();
+	map(const map& src);
+	~map();
 
 	bool empty() const;
 	size_t size() const;

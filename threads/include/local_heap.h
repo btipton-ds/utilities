@@ -31,6 +31,7 @@ This file is part of the DistFieldHexMesh application/library.
 #include <list>
 
 #define DUPLICATE_STD_TESTS 0
+#define GUARD_BAND_SIZE 2
 
 namespace MultiCore
 {
@@ -76,15 +77,70 @@ public:
 	T* alloc(size_t num);
 
 	template<class T>
-	void free(T* ptr);
+	void free(T*& ptr);
+
+#if GUARD_BAND_SIZE > 0
+	struct GuardBand {
+		size_t _b0[GUARD_BAND_SIZE];
+		GuardBand* _pEndBand = nullptr;
+		size_t _b1[GUARD_BAND_SIZE];
+
+		inline GuardBand() {
+			for (size_t i = 0; i < GUARD_BAND_SIZE; i++) {
+				_b0[i] = 0xdeadbeefdeadbeef;
+				_b1[i] = 0xdeadbeefdeadbeef;
+			}
+		}
+
+		inline GuardBand(const GuardBand& src) {
+			for (size_t i = 0; i < GUARD_BAND_SIZE; i++) {
+				assert(src._b0[i] == 0xdeadbeefdeadbeef);
+				assert(src._b1[i] == 0xdeadbeefdeadbeef);
+				_b0[i] = 0xdeadbeefdeadbeef;
+				_b1[i] = 0xdeadbeefdeadbeef;
+			}
+		}
+
+		inline GuardBand& operator = (const GuardBand& rhs) {
+			for (size_t i = 0; i < GUARD_BAND_SIZE; i++) {
+				assert(_b0[i] == 0xdeadbeefdeadbeef);
+				assert(rhs._b0[i] == 0xdeadbeefdeadbeef);
+				_b0[i] = 0xdeadbeefdeadbeef;
+				assert(_b1[i] == 0xdeadbeefdeadbeef);
+				assert(rhs._b1[i] == 0xdeadbeefdeadbeef);
+				_b1[i] = 0xdeadbeefdeadbeef;
+			}
+			return *this;
+		}
+
+		inline bool isValid() const {
+			for (size_t i = 0; i < GUARD_BAND_SIZE; i++) {
+				if (_b0[i] != 0xdeadbeefdeadbeef)
+					return false;
+				if (_b1[i] != 0xdeadbeefdeadbeef)
+					return false;
+			}
+			if (_pEndBand)
+				return _pEndBand->isValid();
+			return true;
+		}
+	};
+#endif
 
 	bool verify() const;
 private:	
 	struct BlockHeader {
+		BlockHeader() = default;
+		BlockHeader(const BlockHeader& src) = default;
+
 		uint32_t _numChunks;
 		uint32_t _blockIdx;
 		uint32_t _chunkIdx;
 		uint32_t _numObj = 0;
+#if GUARD_BAND_SIZE > 0
+		GuardBand _leadingBand;
+#endif
+
 
 		inline bool operator == (const BlockHeader& rhs) const
 		{
@@ -93,23 +149,31 @@ private:
 	};
 
 	struct AvailBlockHeader {
+		AvailBlockHeader() = default;
+		AvailBlockHeader(const AvailBlockHeader& src) = default;
+		AvailBlockHeader(const BlockHeader& src)
+			: _header(src)
+			, _pNext(nullptr)
+		{}
 		BlockHeader _header;
 		AvailBlockHeader* _pNext = nullptr;
 	};
 
 	void* allocMem(size_t bytes);
 
-	void freeMem(void* ptr);
+	template<class P>
+	void freeMem(P*& ptr);
 
 	BlockHeader* getAvailBlock(size_t numChunksNeeded);
 	void addBlockToAvailList(const BlockHeader& header);
-	void insertAvailBlock(AvailBlockHeader* pPriorBlock, AvailBlockHeader* pCurBlock, AvailBlockHeader* pNewBlock);
-	void removeAvailBlock(AvailBlockHeader* pPriorBlock, AvailBlockHeader* pDeadBlock);
+	void insertAvailBlock(AvailBlockHeader* pPriorBlock, AvailBlockHeader* pCurBlock, AvailBlockHeader* pAvailBlock);
+	void removeAvailBlock(AvailBlockHeader* pPriorBlock, AvailBlockHeader* pRecycledBlock);
 
 	bool isHeaderValid(const void* p, bool pointsToHeader) const;
 	bool verifyAvailList() const;
-	bool isBlockValid(const AvailBlockHeader* pBlock) const;
+	bool isAvailBlockValid(const AvailBlockHeader* pBlock) const;
 	bool isPointerInBounds(const void* ptr) const;
+	bool isBlockAvail(const BlockHeader* pBlock) const;
 
 	const size_t _blockSizeChunks;
 	const size_t _chunkSizeBytes;
@@ -137,26 +201,53 @@ T* local_heap::alloc(size_t num)
 		assert(px == &pT[i]);
 	}
 
+#if GUARD_BAND_SIZE > 0
+	assert(pHeader->_leadingBand.isValid());
+#endif
 	assert(isHeaderValid(pT, false));
 	return pT;
 }
 
 template<class T>
-void local_heap::free(T* ptr)
+void local_heap::free(T*& ptr)
 {
 	if (ptr) {
 		assert(isHeaderValid(ptr, false));
 
 		char* pc = (char*)ptr;
-		const BlockHeader* pHeader = (BlockHeader*)(pc - sizeof(BlockHeader));
+		BlockHeader* pHeader = (BlockHeader*)(pc - sizeof(BlockHeader));
+#if GUARD_BAND_SIZE > 0
+		assert(pHeader->_leadingBand.isValid());
+#endif
+		assert(!isBlockAvail(pHeader));
 		size_t num = pHeader->_numObj;
 		for (size_t i = 0; i < num; i++)
 			ptr[i].~T();
 
+		pHeader->_numObj = 0;
 		assert(isHeaderValid(ptr, false));
 		freeMem(ptr);
+		ptr = nullptr;
 	}
 }
+
+template<class P>
+void ::MultiCore::local_heap::freeMem(P*& ptr)
+{
+	if (ptr) {
+		assert(local_heap::getThreadHeapPtr()->verify());
+		char* pc = (char*)ptr - sizeof(BlockHeader);
+		BlockHeader* pHeader = (BlockHeader*)pc;
+#if GUARD_BAND_SIZE > 0
+		assert(pHeader->_leadingBand.isValid());
+#endif
+		assert(!isBlockAvail(pHeader));
+		addBlockToAvailList(*pHeader);
+		ptr = nullptr;
+		assert(local_heap::getThreadHeapPtr()->verify());
+	}
+}
+
 
 class local_heap_user
 {
@@ -168,7 +259,7 @@ protected:
 	}
 
 	template<class T>
-	void free(T* ptr) const
+	void free(T*& ptr) const
 	{
 		getHeap()->free(ptr);
 	}
