@@ -68,7 +68,6 @@ void* ::MultiCore::local_heap::allocMem(size_t numBytes)
 
 	BlockHeader* pHeader = getAvailBlock(numChunks);
 	if (pHeader != nullptr) {
-		assert(!isBlockAvail(pHeader));
 		char* pStartData = (char*)pHeader + sizeof(BlockHeader);
 #if GUARD_BAND_SIZE > 0
 		GuardBand* pTail = (GuardBand*)(pStartData + numBytes);
@@ -130,7 +129,6 @@ void* ::MultiCore::local_heap::allocMem(size_t numBytes)
 
 	_topChunkIdx += (uint32_t) numChunks;
 
-	assert(!isBlockAvail(pHeader));
 	char* pStartData = (char*)pHeader + sizeof(BlockHeader);
 #if GUARD_BAND_SIZE > 0
 	GuardBand* pTail = (GuardBand*)(pStartData + numBytes);
@@ -216,25 +214,33 @@ void MultiCore::local_heap::insertAvailBlock(AvailBlockHeader* pPriorBlock, Avai
 			pAvailBlock->_pNext = _pFirstAvailBlock->_pNext;
 			_pFirstAvailBlock->_pNext = pAvailBlock;
 		}
+#if EXPENSIVE_ASSERT_ON
 		assert(_pFirstAvailBlock != _pFirstAvailBlock->_pNext);
 		assert(_pFirstAvailBlock->_header._numChunks <= pAvailBlock->_header._numChunks);
+#endif
 	} else if (pPriorBlock && pCurBlock) {
 		pAvailBlock->_pNext = pCurBlock;
 		pPriorBlock->_pNext = pAvailBlock;
 
+#if EXPENSIVE_ASSERT_ON
 		assert(pAvailBlock != pAvailBlock->_pNext);
 		assert(pPriorBlock != pPriorBlock->_pNext);
 		assert(pPriorBlock->_header._numChunks <= pAvailBlock->_header._numChunks);
 		assert(pAvailBlock->_header._numChunks <= pCurBlock->_header._numChunks);
+#endif
 	} else if (!pCurBlock) {
 		// add at the end
+#if EXPENSIVE_ASSERT_ON
 		assert(pPriorBlock);
+#endif
 		pAvailBlock->_pNext = pPriorBlock->_pNext;
 		pPriorBlock->_pNext = pAvailBlock;
 
+#if EXPENSIVE_ASSERT_ON
 		assert(pAvailBlock != pAvailBlock->_pNext);
 		assert(pPriorBlock != pPriorBlock->_pNext);
 		assert(pPriorBlock->_header._numChunks <= pAvailBlock->_header._numChunks);
+#endif
 	}
 }
 

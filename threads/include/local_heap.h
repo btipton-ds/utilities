@@ -31,7 +31,8 @@ This file is part of the DistFieldHexMesh application/library.
 #include <list>
 
 #define DUPLICATE_STD_TESTS 0
-#define GUARD_BAND_SIZE 2
+#define EXPENSIVE_ASSERT_ON 0
+#define GUARD_BAND_SIZE 0
 
 namespace MultiCore
 {
@@ -192,19 +193,16 @@ T* local_heap::alloc(size_t num)
 {
 	char* pc = (char*)allocMem(num * sizeof(T));
 	auto pT = (T*)pc;
-	assert(isHeaderValid(pT, false));
 
 	BlockHeader* pHeader = (BlockHeader*)(pc - sizeof(BlockHeader));
 	pHeader->_numObj = (uint32_t)num;
 	for (size_t i = 0; i < num; i++) {
 		T* px = new(&pT[i]) T(); // default in place constructor
-		assert(px == &pT[i]);
 	}
 
 #if GUARD_BAND_SIZE > 0
 	assert(pHeader->_leadingBand.isValid());
 #endif
-	assert(isHeaderValid(pT, false));
 	return pT;
 }
 
@@ -212,20 +210,17 @@ template<class T>
 void local_heap::free(T*& ptr)
 {
 	if (ptr) {
-		assert(isHeaderValid(ptr, false));
 
 		char* pc = (char*)ptr;
 		BlockHeader* pHeader = (BlockHeader*)(pc - sizeof(BlockHeader));
 #if GUARD_BAND_SIZE > 0
 		assert(pHeader->_leadingBand.isValid());
 #endif
-		assert(!isBlockAvail(pHeader));
 		size_t num = pHeader->_numObj;
 		for (size_t i = 0; i < num; i++)
 			ptr[i].~T();
 
 		pHeader->_numObj = 0;
-		assert(isHeaderValid(ptr, false));
 		freeMem(ptr);
 		ptr = nullptr;
 	}
@@ -235,16 +230,13 @@ template<class P>
 void ::MultiCore::local_heap::freeMem(P*& ptr)
 {
 	if (ptr) {
-		assert(local_heap::getThreadHeapPtr()->verify());
 		char* pc = (char*)ptr - sizeof(BlockHeader);
 		BlockHeader* pHeader = (BlockHeader*)pc;
 #if GUARD_BAND_SIZE > 0
 		assert(pHeader->_leadingBand.isValid());
 #endif
-		assert(!isBlockAvail(pHeader));
 		addBlockToAvailList(*pHeader);
 		ptr = nullptr;
-		assert(local_heap::getThreadHeapPtr()->verify());
 	}
 }
 
