@@ -147,10 +147,6 @@ public:
 private:
 	size_t _size = 0, _capacity = 0;
 	T* _pData = nullptr;
-
-#if DUPLICATE_STD_TESTS	
-	std::vector<T> _data;
-#endif
 };
 
 }

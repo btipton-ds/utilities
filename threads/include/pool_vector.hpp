@@ -92,10 +92,6 @@ void VECTOR_DECL::clear()
 //		_pData[i] = T(); 
 	}
 	_size = 0;
-
-#if DUPLICATE_STD_TESTS	
-	_data.clear();
-#endif
 }
 
 TEMPL_DECL
@@ -108,19 +104,12 @@ inline bool VECTOR_DECL::empty() const
 TEMPL_DECL
 size_t VECTOR_DECL::size() const
 {
-#if DUPLICATE_STD_TESTS	
-	assert(_size == _data.size());
-#endif
 	return _size;
 }
 
 TEMPL_DECL
 void VECTOR_DECL::resize(size_t val)
 {
-#if DUPLICATE_STD_TESTS	
-	_data.resize(val);
-#endif
-
 	size_t oldSize = _size;
 	size_t needed = val;
 	if (needed < 8)
@@ -132,13 +121,9 @@ void VECTOR_DECL::resize(size_t val)
 TEMPL_DECL
 void VECTOR_DECL::reserve(size_t newCapacity)
 {
-#if DUPLICATE_STD_TESTS	
-	_data.reserve(newCapacity);
-#endif
 	if (newCapacity > _capacity) {
 		T* pTmp = _pData;
 		_pData = alloc<T>(newCapacity);
-		assert(local_heap::getThreadHeapPtr()->verify());
 		if (pTmp) {
 			for (size_t i = 0; i < _size; i++) {
 				_pData[i].~T();
@@ -148,10 +133,8 @@ void VECTOR_DECL::reserve(size_t newCapacity)
 				new(&pTmp[i]) T();
 //				_pData[i] = pTmp[i];
 			}
-			assert(local_heap::getThreadHeapPtr()->verify());
 
 			free(pTmp);
-			assert(local_heap::getThreadHeapPtr()->verify());
 		}
 		_capacity = newCapacity;
 	}
@@ -172,10 +155,6 @@ TEMPL_DECL
 VECTOR_DECL::iterator VECTOR_DECL::insert(const iterator& at, const T& val)
 {
 	size_t idx = (size_t)(at.get() - _pData);
-#if DUPLICATE_STD_TESTS	
-	_data.insert(_data.begin() + idx, val);
-#endif
-
 	resize(_size + 1);
 	for (size_t i = _size - 1; i > idx; i--)
 		_pData[i] = _pData[i - 1];
@@ -189,10 +168,6 @@ TEMPL_DECL
 VECTOR_DECL::const_iterator VECTOR_DECL::insert(const const_iterator& at, const T& val)
 {
 	size_t idx = (size_t)(at.get() - _pData);
-#if DUPLICATE_STD_TESTS	
-	_data.insert(_data.begin() + idx, val);
-#endif
-
 	resize(_size + 1);
 	for (size_t i = _size - 1; i > idx; i--)
 		_pData[i] = _pData[i - 1];
@@ -206,10 +181,6 @@ TEMPL_DECL
 void VECTOR_DECL::insert(const iterator& at, const std::initializer_list<T>& vals)
 {
 	size_t idx = (size_t) (at.get() - _pData);
-#if DUPLICATE_STD_TESTS	
-	_data.insert(_data.begin() + idx, vals.begin(), vals.end());
-#endif
-
 	auto begin = vals.begin();
 	auto end = vals.end();
 
@@ -227,9 +198,6 @@ TEMPL_DECL
 VECTOR_DECL::iterator VECTOR_DECL::erase(const iterator& at)
 {
 	size_t idx = (size_t)(at.get() - _pData);
-#if DUPLICATE_STD_TESTS	
-	_data.erase(_data.begin() + idx);
-#endif
 	if (idx < _size) {
 		for (size_t i = idx; i < _size - 1; i++) {
 			_pData[i] = _pData[i + 1];
@@ -243,9 +211,6 @@ TEMPL_DECL
 VECTOR_DECL::const_iterator VECTOR_DECL::erase(const const_iterator& at)
 {
 	size_t idx = (size_t)(at.get() - _pData);
-#if DUPLICATE_STD_TESTS	
-	_data.erase(_data.begin() + idx);
-#endif
 	if (idx < _size) {
 		for (size_t i = idx; i < _size - 1; i++) {
 			_pData[i] = _pData[i + 1];
@@ -258,9 +223,6 @@ VECTOR_DECL::const_iterator VECTOR_DECL::erase(const const_iterator& at)
 TEMPL_DECL
 VECTOR_DECL::iterator VECTOR_DECL::erase(const iterator& begin, const iterator& end)
 {
-#if DUPLICATE_STD_TESTS	
-	_data.erase(begin, end);
-#endif
 	size_t startIdx = (size_t)(begin.get() - data());
 	size_t endIdx = (size_t)(end.get() - data());
 	if (startIdx == endIdx)
@@ -360,36 +322,24 @@ inline T* VECTOR_DECL::data()
 TEMPL_DECL
 inline const T& VECTOR_DECL::front() const
 {
-#if DUPLICATE_STD_TESTS	
-	assert(_data.front() == *_pData);
-#endif
 	return *_pData;
 }
 
 TEMPL_DECL
 inline T& VECTOR_DECL::front()
 {
-#if DUPLICATE_STD_TESTS	
-	assert(_data.front() == *_pData);
-#endif
 	return *_pData;
 }
 
 TEMPL_DECL
 inline const T& VECTOR_DECL::back() const
 {
-#if DUPLICATE_STD_TESTS	
-	assert(_data[idx] == pTData[idx]);
-#endif
 	return _pData[_size - 1];
 }
 
 TEMPL_DECL
 inline T& VECTOR_DECL::back()
 {
-#if DUPLICATE_STD_TESTS	
-	assert(_data[idx] == pTData[idx]);
-#endif
 	return _pData[_size - 1];
 }
 
@@ -408,10 +358,6 @@ inline T& VECTOR_DECL::operator[](size_t idx)
 TEMPL_DECL
 size_t VECTOR_DECL::push_back(const T& val)
 {
-#if DUPLICATE_STD_TESTS	
-	_data.push_back(val);
-#endif
-
 	if (_size + 1 > _capacity) {
 		size_t newCapacity = _capacity;
 		if (newCapacity == 0)
@@ -433,10 +379,6 @@ size_t VECTOR_DECL::push_back(const T& val)
 TEMPL_DECL
 void VECTOR_DECL::pop_back()
 {
-#if DUPLICATE_STD_TESTS	
-	_data.pop_back();
-#endif
-
 //	assert(_size > 0);
 	_size--;
 }
@@ -559,7 +501,6 @@ TEMPL_DECL
 ITER_TEMPL_DECL
 size_t ITER_DECL::operator - (const _iterator& rhs) const
 {
-	assert(_pSource == rhs._pSource);
 	if (IterType == FORW_CONST || IterType == FORW) {
 		return (size_t)(_pEntry - rhs._pEntry);
 	} else {

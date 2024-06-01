@@ -30,7 +30,6 @@ This file is part of the DistFieldHexMesh application/library.
 #include <vector>
 #include <list>
 
-#define DUPLICATE_STD_TESTS 0
 #define EXPENSIVE_ASSERT_ON 0
 #define GUARD_BAND_SIZE 0
 
