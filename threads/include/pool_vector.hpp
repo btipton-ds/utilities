@@ -159,20 +159,12 @@ void VECTOR_DECL::reserve(size_t newCapacity)
 
 TEMPL_DECL
 template<class ITER_TYPE>
-void VECTOR_DECL::insert(const iterator& at, const ITER_TYPE& begin, const ITER_TYPE& end)
+void VECTOR_DECL::insert(const iterator& atIn, const ITER_TYPE& begin, const ITER_TYPE& end)
 {
-	size_t idx = (size_t)(at.get() - _pData);
-#if DUPLICATE_STD_TESTS	
-	_data.insert(_data.begin() + idx, begin, end);
-#endif
-
-	size_t entriesNeeded = end - begin;
-	resize(_size + entriesNeeded);
-	for (size_t i = _size - 1; i > idx + entriesNeeded; i--)
-		_pData[i] = _pData[i - 1];
-
+	iterator at(atIn);
 	for (auto iter = begin; iter != end; iter++) {
-		_pData[idx++] = *iter;
+		at = insert(at, *iter);
+		at++;
 	}
 }
 
@@ -449,6 +441,10 @@ void VECTOR_DECL::pop_back()
 	_size--;
 }
 
+/*************************************************************************************************/
+/*************************************************************************************************/
+/*************************************************************************************************/
+
 TEMPL_DECL
 ITER_TEMPL_DECL
 ITER_DECL::_iterator(const MultiCore::vector<T>* pSource, pointer pEntry)
@@ -491,8 +487,11 @@ bool ITER_DECL::operator > (const _iterator& rhs) const
 
 TEMPL_DECL
 ITER_TEMPL_DECL
-ITER_DECL& ITER_DECL::operator ++ ()
+ITER_DECL& ITER_DECL::operator ++ ()		// prefix
 {
+	if (!_pEntry)
+		return *this;
+
 	if (IterType == FORW_CONST || IterType == FORW)
 		_pEntry++;
 	else
@@ -502,19 +501,20 @@ ITER_DECL& ITER_DECL::operator ++ ()
 
 TEMPL_DECL
 ITER_TEMPL_DECL
-ITER_DECL& ITER_DECL::operator ++ (int)
+ITER_DECL ITER_DECL::operator ++ (int)
 {
-	if (IterType == FORW_CONST || IterType == FORW)
-		_pEntry++;
-	else
-		_pEntry--;
-	return *this;
+	_iterator tmp(*this);
+	++*this; // call prefix ++
+	return tmp;
 }
 
 TEMPL_DECL
 ITER_TEMPL_DECL
 ITER_DECL& ITER_DECL::operator --()
 {
+	if (!_pEntry)
+		return *this;
+
 	if (IterType == FORW_CONST || IterType == FORW)
 		_pEntry--;
 	else
@@ -524,13 +524,11 @@ ITER_DECL& ITER_DECL::operator --()
 
 TEMPL_DECL
 ITER_TEMPL_DECL
-ITER_DECL& ITER_DECL::operator --(int)
+ITER_DECL ITER_DECL::operator --(int)
 {
-	if (IterType == FORW_CONST || IterType == FORW)
-		_pEntry--;
-	else
-		_pEntry++;
-	return *this;
+	_iterator tmp(*this);
+	--*this; // call prefix --
+	return tmp;
 }
 
 TEMPL_DECL
@@ -587,7 +585,15 @@ TEMPL_DECL
 ITER_TEMPL_DECL
 inline typename ITER_DECL::pointer ITER_DECL::get() const
 {
-	return _pEntry ? _pEntry : _pSource ? _pSource->data() : nullptr;
+	if (_pEntry)
+		return _pEntry;
+	else if (_pSource) {
+		// null indicates end of the array
+		auto p = _pSource->data() + _pSource->size();
+		return p;
+	}
+
+	return nullptr;
 }
 
 }

@@ -256,18 +256,20 @@ inline typename ITER_DECL::_iterator& ITER_DECL::operator --()
 
 TEMPL_DECL
 ITER_TEMPL_DECL
-inline typename ITER_DECL::_iterator& ITER_DECL::operator ++ (int)
+inline typename ITER_DECL::_iterator ITER_DECL::operator ++ (int)
 {
-	_keyIter.operator++(1);
-	return *this;
+	_iterator tmp(*this);
+	++*this;
+	return tmp;
 }
 
 TEMPL_DECL
 ITER_TEMPL_DECL
-inline typename ITER_DECL::_iterator& ITER_DECL::operator --(int)
+inline typename ITER_DECL::_iterator ITER_DECL::operator --(int)
 {
-	_keyIter.operator--(1);
-	return *this;
+	_iterator tmp(*this);
+	--*this;
+	return tmp;
 }
 
 TEMPL_DECL

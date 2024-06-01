@@ -26,7 +26,7 @@ This file is part of the DistFieldHexMesh application/library.
 	Dark Sky Innovative Solutions http://darkskyinnovation.com/
 */
 
-#include <vector>
+#include <set>
 #include <pool_vector.h>
 
 namespace MultiCore

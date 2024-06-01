@@ -68,10 +68,10 @@ protected:
 		bool operator < (const _iterator& rhs) const;
 		bool operator > (const _iterator& rhs) const;
 
-		_iterator& operator ++ ();
-		_iterator& operator --();
-		_iterator& operator ++ (int);
-		_iterator& operator --(int);
+		_iterator& operator ++ ();		// prefix
+		_iterator& operator --();		// prefix
+		_iterator operator ++ (int);	// postfix
+		_iterator operator --(int);		// postfix
 
 		_iterator operator + (size_t val) const;
 
