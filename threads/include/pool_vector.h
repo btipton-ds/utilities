@@ -41,8 +41,9 @@ namespace MultiCore
 template<class T>
 class vector : private local_heap_user {
 protected:
-	template <int IterType>
-	class _iterator
+
+template <int IterType>
+class _iterator
 	{
 	public:
 		friend class MultiCore::vector;
@@ -94,8 +95,8 @@ public:
 	using const_reverse_iterator = _iterator<REV_CONST>;
 
 	vector();
-	vector(const vector& src);
-	vector(const std::vector<T>& src);
+	vector(const MultiCore::vector<T>& src);
+	explicit vector(const std::vector<T>& src);
 	vector(const std::initializer_list<T>& src);
 	~vector();
 
