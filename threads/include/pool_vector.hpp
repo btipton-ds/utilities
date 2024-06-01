@@ -241,7 +241,7 @@ VECTOR_DECL::iterator VECTOR_DECL::erase(const iterator& begin, const iterator& 
 }
 
 TEMPL_DECL
-MultiCore::vector<T>& VECTOR_DECL::operator = (const vector& rhs)
+MultiCore::vector<T>& VECTOR_DECL::operator = (const MultiCore::vector<T>& rhs)
 {
 	if (_pData) {
 		free(_pData);
@@ -258,6 +258,27 @@ MultiCore::vector<T>& VECTOR_DECL::operator = (const vector& rhs)
 
 	return *this;
 }
+
+#if 0
+TEMPL_DECL
+MultiCore::vector<T>& VECTOR_DECL::operator = (const std::vector<T>& rhs)
+{
+	if (_pData) {
+		free(_pData);
+		_pData = nullptr;
+	}
+	_size = rhs.size();
+	_capacity = _size;
+
+	if (_capacity > 0) {
+		_pData = alloc<T>(_capacity);
+		for (size_t i = 0; i < _size; i++)
+			_pData[i] = rhs[i];
+	}
+
+	return *this;
+}
+#endif
 
 TEMPL_DECL
 _NODISCARD _CONSTEXPR20 typename VECTOR_DECL::const_iterator VECTOR_DECL::begin() const noexcept

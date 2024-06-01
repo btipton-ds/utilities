@@ -50,8 +50,6 @@
 
 namespace MultiCore {
 
-	using namespace std;
-
 	class SafeLock{
 	public:
 		inline SafeLock(std::mutex& mtx)
@@ -72,7 +70,7 @@ namespace MultiCore {
 
 	inline int getNumCores()
 	{
-		return thread::hardware_concurrency();
+		return std::thread::hardware_concurrency();
 	}
 
 	template<class T, typename M>
@@ -84,7 +82,7 @@ namespace MultiCore {
 
 		void start()
 		{
-			_pThread = make_shared<thread>(&func, this);
+			_pThread = std::make_shared<std::thread>(&func, this);
 		}
 
 		static void func(void* p) {
@@ -96,14 +94,14 @@ namespace MultiCore {
 		M _method;
 		size_t _threadNum;
 		size_t _numThreads;
-		shared_ptr<thread> _pThread = nullptr;
+		std::shared_ptr<std::thread> _pThread = nullptr;
 	};
 
 	template<class T, class M>
 	void runMethod(T* obj, M method, bool multiCore)
 	{
 		if (multiCore) {
-			vector<FuncWrapper<T, M>> threads;
+			std::vector<FuncWrapper<T, M>> threads;
 			threads.resize(getNumCores());
 			for (size_t i = 0; i < threads.size(); i++) {
 				threads[i]._obj = obj;
@@ -130,10 +128,10 @@ namespace MultiCore {
 	{
 		if (multiCore) {
 			size_t numCores = getNumCores();
-			vector<thread> threads;
+			std::vector<std::thread> threads;
 			threads.reserve(numCores);
 			for (size_t i = 0; i < numCores; i++) {
-				threads.push_back(move(thread(fLambda, i, numCores)));
+				threads.push_back(std::move(std::thread(fLambda, i, numCores)));
 			}
 
 			for (size_t i = 0; i < threads.size(); i++) {
@@ -153,26 +151,29 @@ namespace MultiCore {
 			std::vector<size_t> indexPool(indexPoolIn);
 
 			size_t numThreads = getNumCores();
-			vector<thread> threads;
+			std::vector<std::thread> threads;
 			threads.reserve(numThreads);
 			for (size_t i = 0; i < numThreads; i++) {
-				threads.push_back(thread([fLambda, &indexPool, &indexPoolMutex]() {
+				auto outerLambda = [fLambda, &indexPool, &indexPoolMutex]() {
 					size_t index = 0;
 					while (index != -1) {
 						index = -1;
 						{
-							std::lock_guard<mutex> lock(indexPoolMutex); // Tested that mutex overhead is minimal.
+							std::lock_guard<std::mutex> lock(indexPoolMutex); // Tested that mutex overhead is minimal.
 							if (!indexPool.empty()) {
 								index = indexPool.back();
 								indexPool.pop_back();
-							} else
+							}
+							else
 								break;
 						}
 						if (index != -1)
 							if (!fLambda(index))
 								break;
 					}
-				}));
+				};
+
+				threads.push_back(move(std::thread(outerLambda)));
 			}
 
 			for (size_t i = 0; i < threads.size(); i++) {

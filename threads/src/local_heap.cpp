@@ -55,6 +55,16 @@ void ::MultiCore::local_heap::setThreadHeapPtr(::MultiCore::local_heap* pHeap)
 	_data.reserve(10);
 }
 
+void ::MultiCore::local_heap::clear()
+{
+	_data.clear();
+
+	_topBlockIdx = 0;
+	_topChunkIdx = 0;
+	AvailBlockHeader* _pFirstAvailBlock = nullptr; // Sorted indices into _availChunks
+
+}
+
 void* ::MultiCore::local_heap::allocMem(size_t numBytes)
 {
 #if GUARD_BAND_SIZE > 0

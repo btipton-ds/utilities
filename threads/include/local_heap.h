@@ -73,6 +73,8 @@ public:
 
 	local_heap(size_t blockSizeChunks, size_t chunkSizeBytes = 32);
 	
+	void clear();
+
 	template<class T>
 	T* alloc(size_t num);
 
@@ -178,11 +180,11 @@ private:
 	const size_t _blockSizeChunks;
 	const size_t _chunkSizeBytes;
 
-	uint32_t _topBlockIdx = 0;
-	uint32_t _topChunkIdx = 0;
-
 	using BlockPtr = std::shared_ptr<_STD vector<char>>;
 	_STD vector<BlockPtr> _data;
+
+	uint32_t _topBlockIdx = 0;
+	uint32_t _topChunkIdx = 0;
 
 	AvailBlockHeader* _pFirstAvailBlock = nullptr; // Sorted indices into _availChunks
 };

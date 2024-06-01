@@ -134,7 +134,7 @@ void MAP_DECL::releaseEntry(const DataPair* pPair)
 	if (!pPair)
 		return;
 
-	*pPair = pair();
+	*pPair = DataPair();
 	size_t idx = (size_t)(pPair - _data.data());
 	_availEntries.push_back(idx);
 }

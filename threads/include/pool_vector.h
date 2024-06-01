@@ -33,7 +33,7 @@ This file is part of the DistFieldHexMesh application/library.
 #define REV_CONST 1
 #define FORW 2
 #define REV 3
-#define CONST (IterType < FORW)
+#define IS_ITER_CONST (IterType < FORW)
 
 namespace MultiCore
 {
@@ -53,8 +53,8 @@ class _iterator
 
 #if 1
 		using value_type = std::remove_cv_t<T>;
-		using pointer = std::conditional_t<CONST, T const*, T*>;
-		using reference = std::conditional_t<CONST, T const&, T&>;
+		using pointer = std::conditional_t<IS_ITER_CONST, T const*, T*>;
+		using reference = std::conditional_t<IS_ITER_CONST, T const&, T&>;
 #else
 		using value_type = T;
 		using pointer = T*;
@@ -119,7 +119,8 @@ public:
 	const_iterator erase(const const_iterator& at);
 	iterator erase(const iterator& begin, const iterator& end);
 
-	vector& operator = (const vector& rhs);
+	vector& operator = (const MultiCore::vector<T>& rhs);
+//	vector& operator = (const std::vector<T>& rhs);
 
 	_NODISCARD _CONSTEXPR20 const_iterator begin() const noexcept;
 	_NODISCARD _CONSTEXPR20 iterator begin() noexcept;
@@ -158,4 +159,4 @@ private:
 #undef REV_CONST
 #undef FORW
 #undef REV
-#undef CONST
+#undef IS_ITER_CONST
