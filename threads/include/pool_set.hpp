@@ -35,14 +35,21 @@ This file is part of the DistFieldHexMesh application/library.
 namespace MultiCore {
 
 TEMPL_DECL
-inline SET_DECL::set(const std::initializer_list<T>& src)
+	inline SET_DECL::set(const MultiCore::vector<T>& src)
 {
 	insert(end(), src);
 }
 
 TEMPL_DECL
-inline SET_DECL::~set()
+	inline SET_DECL::set(const std::set<T>& src)
 {
+	insert(src.begin(), src.end());
+}
+
+TEMPL_DECL
+	inline SET_DECL::set(const std::initializer_list<T>& src)
+{
+	insert(end(), src);
 }
 
 TEMPL_DECL
@@ -51,6 +58,11 @@ SET_DECL::operator std::set<T>() const
 	std::set<T> result;
 	result.insert(result.end(), begin(), end());
 	return result;
+}
+
+TEMPL_DECL
+inline SET_DECL::~set()
+{
 }
 
 TEMPL_DECL
