@@ -56,7 +56,7 @@ TEMPL_DECL
 SET_DECL::operator std::set<T>() const
 {
 	std::set<T> result;
-	result.insert(result.end(), begin(), end());
+	result.insert(begin(), end());
 	return result;
 }
 
