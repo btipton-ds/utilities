@@ -26,6 +26,7 @@ This file is part of the DistFieldHexMesh application/library.
 	Dark Sky Innovative Solutions http://darkskyinnovation.com/
 */
 
+#include <assert.h>
 #include <local_heap.h>
 #include <pool_vector.h>
 
