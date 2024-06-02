@@ -133,6 +133,14 @@ inline void SET_DECL::erase(const const_iterator& at)
 }
 
 TEMPL_DECL
+inline void SET_DECL::erase(const T& val)
+{
+	auto iter = find(val);
+	if (iter != end())
+		erase(iter);
+}
+
+TEMPL_DECL
 inline void SET_DECL::erase(const const_iterator& begin, const const_iterator& end)
 {
 #if DUPLICATE_STD_TESTS	
@@ -187,6 +195,12 @@ TEMPL_DECL
 inline bool SET_DECL::contains(const T& val) const
 {
 	return find(val) != end();
+}
+
+TEMPL_DECL
+inline size_t SET_DECL::count(const T& val) const
+{
+	return find(val) == end() ? 0 : 1;
 }
 
 TEMPL_DECL

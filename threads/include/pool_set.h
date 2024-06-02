@@ -62,6 +62,7 @@ public:
 	template<class ITER_TYPE>
 	void insert(const ITER_TYPE& begin, const ITER_TYPE& end);
 
+	void erase(const T& val);
 	void erase(const const_iterator& at);
 	void erase(const const_iterator& begin, const const_iterator& end);
 
@@ -75,6 +76,7 @@ public:
 
 	_NODISCARD _CONSTEXPR20 const_iterator find(const T& val) const noexcept;
 	bool contains(const T& val) const;
+	size_t count(const T& val) const;
 
 protected:
 	_NODISCARD _CONSTEXPR20 const_iterator find(const T& val, const_iterator& next) const noexcept;
