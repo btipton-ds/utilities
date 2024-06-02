@@ -154,13 +154,14 @@ _NODISCARD _CONSTEXPR20 inline typename MAP_DECL::iterator MAP_DECL::end() noexc
 TEMPL_DECL
 _NODISCARD _CONSTEXPR20 inline typename MAP_DECL::const_iterator MAP_DECL::begin() const noexcept
 {
-	return iterator(this, _keySet.begin());
+	typename MultiCore::set<KeyRec>::const_iterator iter = _keySet.begin();
+	return const_iterator(this, iter);
 }
 
 TEMPL_DECL
 _NODISCARD _CONSTEXPR20 inline typename MAP_DECL::const_iterator MAP_DECL::end() const noexcept
 {
-	return iterator(this, _keySet.end());
+	return const_iterator(this, _keySet.end());
 }
 
 TEMPL_DECL
@@ -204,7 +205,7 @@ inline typename MAP_DECL::DataPair* MAP_DECL::data()
 
 TEMPL_DECL
 ITER_TEMPL_DECL
-ITER_DECL::_iterator(DataMap* pSource, const KeyIter& keyIter)
+ITER_DECL::_iterator(dataMap* pSource, const KeyIter& keyIter)
 	: _pSource(pSource)
 	, _keyIter(keyIter)
 {

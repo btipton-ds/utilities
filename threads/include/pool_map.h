@@ -34,7 +34,7 @@ This file is part of the DistFieldHexMesh application/library.
 #define REV_CONST 1
 #define FORW 2
 #define REV 3
-#define CONST (IterType < FORW)
+#define IS_CONST (IterType < FORW)
 
 namespace MultiCore
 {
@@ -105,11 +105,12 @@ private:
 
 		using value_type = std::remove_cv_t<T>;
 		using KeyIter = std::conditional_t<IterType == FORW || IterType == FORW_CONST, typename KeySet::const_iterator, typename KeySet::const_reverse_iterator>;
-		using pointer = std::conditional_t<CONST, DataPair const*, DataPair*>;
-		using reference = std::conditional_t<CONST, DataPair const&, DataPair&>;
+		using dataMap = std::conditional_t<IS_CONST, const DataMap, DataMap>;
+		using pointer = std::conditional_t<IS_CONST, DataPair const*, DataPair*>;
+		using reference = std::conditional_t<IS_CONST, DataPair const&, DataPair&>;
 
 		_iterator() = default;
-		_iterator(DataMap* pSource, const KeyIter& keyIter);
+		_iterator(dataMap* pSource, const KeyIter& keyIter);
 		_iterator(const _iterator& src) = default;
 
 		bool operator == (const _iterator& rhs) const;
@@ -138,7 +139,7 @@ private:
 
 	private:
 		KeyIter _keyIter;
-		DataMap* _pSource;
+		dataMap* _pSource;
 	};
 
 public:
@@ -196,10 +197,12 @@ private:
 };
 
 }
-#include <pool_map.hpp>
 
 #undef FORW_CONST
 #undef REV_CONST
 #undef FORW
 #undef REV
-#undef CONST
+#undef IS_CONST
+
+#include <pool_map.hpp>
+
