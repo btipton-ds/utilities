@@ -143,12 +143,23 @@ namespace MultiCore {
 		}
 	}
 
+	class ThreadPool
+	{
+	public:
+		void init();
+	};
+
 	template<class L>
-	void runLambda(L fLambda, const std::vector<size_t>& indexPoolIn, bool multiCore)
+	void runLambda(ThreadPool& pool, L fLambda, const std::vector<size_t>& indexPoolIn, bool multiCore)
+	{
+		pool.init();
+	}
+	
+	template<class L>
+	void runLambda(L fLambda, std::vector<size_t>& indexPool, bool multiCore)
 	{
 		if (multiCore) {
 			std::mutex indexPoolMutex;
-			std::vector<size_t> indexPool(indexPoolIn);
 
 			size_t numThreads = getNumCores();
 			std::vector<std::thread> threads;
@@ -181,7 +192,7 @@ namespace MultiCore {
 			}
 		}
 		else {
-			for (size_t index : indexPoolIn)
+			for (size_t index : indexPool)
 				if (index != -1)
 					if (!fLambda(index))
 						break;
@@ -191,10 +202,29 @@ namespace MultiCore {
 	template<class L>
 	void runLambda(L fLambda, size_t numIndices, bool multiCore)
 	{
-		std::vector<size_t> indexPool(numIndices);
-		for (size_t i = 0; i < numIndices; i++)
-			indexPool[i] = numIndices - 1 - i;
-		runLambda(fLambda, indexPool, multiCore);
+		if (multiCore) {
+			size_t numThreads = getNumCores();
+			std::vector<std::thread> threads;
+			threads.reserve(numThreads);
+			for (size_t threadNum = 0; threadNum < numThreads; threadNum++) {
+				auto outerLambda = [fLambda, numIndices, threadNum, numThreads]() {
+					for (size_t index = threadNum; index < numIndices; index += numThreads) {
+						if (!fLambda(index))
+							break;
+					}
+				};
+
+				threads.push_back(move(std::thread(outerLambda)));
+			}
+
+			for (size_t i = 0; i < threads.size(); i++) {
+				threads[i].join();
+			}
+		} else {
+			for (size_t index = 0; index < numIndices; index++)
+				if (!fLambda(index))
+					break;
+		}
 	}
 
 	// ********************************************
