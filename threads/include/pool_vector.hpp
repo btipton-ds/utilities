@@ -57,7 +57,11 @@ VECTOR_DECL::vector(const vector& src)
 TEMPL_DECL
 VECTOR_DECL::vector(const std::vector<T>& src)
 {
-	insert(end(), src);
+	if (src.size() > 0) {
+		resize(src.size());
+		for (size_t i = 0; i < _size; i++)
+			_pData[i] = src[i];
+	}
 }
 
 TEMPL_DECL
