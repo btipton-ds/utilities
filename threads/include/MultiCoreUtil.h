@@ -155,6 +155,95 @@ namespace MultiCore {
 		}
 	}
 
+	class ThreadPool {
+	public:
+		using FuncType = std::function<void(size_t)>;
+
+		ThreadPool(size_t numThreads = -1)
+			: _numThreads(numThreads == -1 ? getNumCores() : numThreads)
+		{
+			_runCount.resize(_numThreads, 0);
+		}
+
+		~ThreadPool()
+		{
+			int dbgBreak = 1;
+		}
+
+
+		void start() {
+			_start.lock();
+
+			for (size_t i = 0; i < _numThreads; i++) {
+				_threads.push_back(move(std::thread(_lambda, i)));
+			}
+		}
+
+		void runFunc(const FuncType* f, size_t numSteps) {
+			_numSteps = numSteps;
+			_pFunc = f;
+			_stop.lock();
+			_start.unlock();
+
+			std::unique_lock lk(_start);
+			_cv.wait(lk, [this]()->bool {
+				for (size_t i = 0; i < _numThreads; i++) {
+					if (_runCount[i] != _counter + 1)
+						return false;
+				}
+				return true;
+			});
+
+			// .wait locks start
+			_stop.unlock();
+			_counter++;
+			_cv.notify_all();
+
+			_pFunc = nullptr;
+		}
+
+		FuncType _lambda = FuncType([this](size_t threadNum) {
+			while (_running) {
+				_start.lock(); // Block until we get the lock
+				_start.unlock(); // release it immediately
+
+
+				if (_pFunc) {
+					for (size_t i = threadNum; i < _numSteps; i += _numThreads)
+						(*_pFunc)(i);
+				}
+
+
+				_runCount[threadNum] = _counter + 1;
+				_cv.notify_all();
+
+				_stop.lock();
+				_stop.unlock();
+			}
+		});
+
+		void stop()
+		{
+			_running = false;
+
+			for (auto& t : _threads)
+				t.join();
+			_threads.clear();
+		}
+
+	private:
+		bool _running = true;
+		size_t _numSteps = 0;
+		size_t _counter = 0;
+		const size_t _numThreads;
+
+		const FuncType* _pFunc = nullptr;
+
+		std::condition_variable _cv;
+		std::mutex _start, _stop;
+		std::vector<std::thread> _threads;
+		std::vector<size_t> _runCount;
+	};
 
 } // namespace MultiCore
 
