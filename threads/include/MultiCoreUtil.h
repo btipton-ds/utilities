@@ -50,79 +50,18 @@
 
 namespace MultiCore {
 
-	class SafeLock{
-	public:
-		inline SafeLock(std::mutex& mtx)
-			: _mtx(mtx)
-		{
-			_mtx.lock();
-		}
-
-		inline ~SafeLock()
-		{
-			_mtx.unlock();
-		}
-	private:
-		std::mutex& _mtx;
-	};
-
-	
-
-	inline int getNumCores()
+	inline int getNumCores(int val = -1)
 	{
-		return std::thread::hardware_concurrency();
+		static int numCores = -1;
+		if (numCores == -1) {
+			if (val == -1)
+				numCores = std::thread::hardware_concurrency();
+			else
+				numCores = val;
+		}
+		return numCores;
 	}
 
-	template<class T, typename M>
-	class FuncWrapper {
-	public:
-		FuncWrapper()
-		{
-		}
-
-		void start()
-		{
-			_pThread = std::make_shared<std::thread>(&func, this);
-		}
-
-		static void func(void* p) {
-			FuncWrapper* pFW = (FuncWrapper*)p;
-			(pFW->_obj->*pFW->_method)(pFW->_threadNum, pFW->_numThreads);
-		}
-
-		T* _obj;
-		M _method;
-		size_t _threadNum;
-		size_t _numThreads;
-		std::shared_ptr<std::thread> _pThread = nullptr;
-	};
-
-	template<class T, class M>
-	void runMethod(T* obj, M method, bool multiCore)
-	{
-		if (multiCore) {
-			std::vector<FuncWrapper<T, M>> threads;
-			threads.resize(getNumCores());
-			for (size_t i = 0; i < threads.size(); i++) {
-				threads[i]._obj = obj;
-				threads[i]._method = method;
-				threads[i]._threadNum = i;
-				threads[i]._numThreads = threads.size();
-			}
-
-			for (size_t i = 0; i < threads.size(); i++) {
-				threads[i].start();
-			}
-
-			for (size_t i = 0; i < threads.size(); i++) {
-				threads[i]._pThread->join();
-			}
-
-		}
-		else {
-			(obj->*method)(0, 1);
-		}
-	}
 	template<class L>
 	void runLambda(L fLambda, bool multiCore)
 	{
@@ -143,18 +82,6 @@ namespace MultiCore {
 		}
 	}
 
-	class ThreadPool
-	{
-	public:
-		void init();
-	};
-
-	template<class L>
-	void runLambda(ThreadPool& pool, L fLambda, const std::vector<size_t>& indexPoolIn, bool multiCore)
-	{
-		pool.init();
-	}
-	
 	template<class L>
 	void runLambda(L fLambda, std::vector<size_t>& indexPool, bool multiCore)
 	{
@@ -178,6 +105,7 @@ namespace MultiCore {
 							else
 								break;
 						}
+
 						if (index != -1)
 							if (!fLambda(index))
 								break;
@@ -227,129 +155,6 @@ namespace MultiCore {
 		}
 	}
 
-	// ********************************************
-	// MultiCore std::vector sorting classes
-	// ********************************************
-
-	template <class T>
-	class DefaultComp
-	{
-	public:
-		bool operator()(const T& a, const T& b) const
-		{
-			return a < b;
-		}
-	};
-
-	template <class T, class Comp>
-	struct SortRec
-	{
-		struct Range
-		{
-			Range(int startIn = 0, int stopIn = 0)
-				: start(startIn)
-				, stop(stopIn)
-			{}
-
-			int start, stop;
-		};
-
-		// All the work is done in the constructor which modifies list
-		SortRec(std::vector<T>& list, const Comp& comp)
-			: m_list(list)
-			, m_comp(comp)
-		{
-			int size = (int)m_list.size();
-			int numT = getNumCores();
-			bool runMulti = size > (50 * numT);
-			if (!runMulti)
-				numT = 1;
-			run(this, &SortRec::sortRangeMC, runMulti);
-
-			if (runMulti) {
-				m_ranges.resize(numT);
-				for (int i = 0; i < numT; i++) {
-					m_ranges[i].start = (i * size) / numT;
-					m_ranges[i].stop = ((i+1) * size) / numT;
-				}
-				while (m_ranges.size() > 1) {
-					run(this, &SortRec::mergeZonesMC);
-					if (m_ranges.size() % 2 == 1)
-						numT = m_ranges.size() / 2 + 1;
-					else
-						numT = m_ranges.size() / 2;
-					for (int i = 0; i < numT; i++) {
-						if (i == 0)
-							m_ranges[i].start = 0;
-						else
-							m_ranges[i].start = m_ranges[i-1].stop;
-						int idx = 2 * i + 1;
-						if (idx >= m_ranges.size())
-							idx = m_ranges.size() - 1;
-						m_ranges[i].stop = m_ranges[idx].stop;
-					}
-					m_ranges.resize(numT);
-				}
-			}
-		}
-
-		// Sorts each range of m_list on its own CPU
-		void sortRangeMC(int threadNum, int numThreads)
-		{
-			int size = (int)m_list.size();
-			int start = (threadNum * size) / numThreads;
-			int stop = ((threadNum+1) * size) / numThreads;
-			std::sort(m_list.begin() + start, m_list.begin() + stop, m_comp);
-		}
-
-		// Merges pairs of ranges of m_list on its own CPU
-		// If there is no range for this CPU it simply returns
-		void mergeZonesMC(int threadNum, int numThreads)
-		{
-			int steps = (int)(m_ranges.size() / 2);
-			for (int i = threadNum; i < steps; i += numThreads) {
-				if (i % numThreads == threadNum) {
-					std::inplace_merge(m_list.begin() + m_ranges[2*i].start, 
-									   m_list.begin() + m_ranges[2*i+1].start, 
-									   m_list.begin() + m_ranges[2*i+1].stop, m_comp);
-				}
-			}
-		}
-
-	private:
-		std::vector<Range> m_ranges; // Range of each sub sorting region
-		std::vector<T>& m_list;		// List to be sorted
-		const Comp& m_comp;		// Comparison functor
-	};
-
-	// sort sorts an std::vector<T> from begin to end.
-	// Measured time on a 6 core system in a release build was about 4X - 5X 
-	// faster than std::sort.
-	// If there are fewer than 50 X numCPUs entries in list it runs single threaded
-	// It divides the vector into ranges, sorts each range on its own core
-	// and then merges the results together. 
-	// All the work is done with std::sort and std::inplace_merge so if it
-	// works with sort it should work with this.
-	template <class T>
-	void sort(std::vector<T>& list)
-	{
-		SortRec<T, DefaultComp<T>> rec(list, DefaultComp<T>());
-	}
-
-	// sort sorts an std::vector<T> from begin to end.
-	// Measured time on a 6 core system in a release build was about 4X - 5X 
-	// faster than std::sort.
-	// If there are fewer than 50 X numCPUs entries in list it runs single threaded
-	// It divides the vector into ranges, sorts each range on its own core
-	// and then merges the results together. 
-	// All the work is done with std::sort and std::inplace_merge so if it
-	// works with sort it should work with this.
-	// This version takes a comparison functor.
-	template <class T, class Comp>
-	void sort(std::vector<T>& list, const Comp& comp = DefaultComp<T>())
-	{
-		SortRec<T, Comp> rec(list, comp);
-	}
 
 } // namespace MultiCore
 
