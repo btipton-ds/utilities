@@ -47,6 +47,9 @@
 #include <algorithm>
 #include <mutex>
 #include <thread>
+#include <functional>
+
+#define STD ::std
 
 namespace MultiCore {
 
@@ -55,7 +58,7 @@ namespace MultiCore {
 		static int numCores = -1;
 		if (numCores == -1) {
 			if (val == -1)
-				numCores = std::thread::hardware_concurrency();
+				numCores = STD::thread::hardware_concurrency();
 			else
 				numCores = val;
 		}
@@ -67,10 +70,10 @@ namespace MultiCore {
 	{
 		if (multiCore) {
 			size_t numCores = getNumCores();
-			std::vector<std::thread> threads;
+			STD::vector<STD::thread> threads;
 			threads.reserve(numCores);
 			for (size_t i = 0; i < numCores; i++) {
-				threads.push_back(std::move(std::thread(fLambda, i, numCores)));
+				threads.push_back(STD::move(STD::thread(fLambda, i, numCores)));
 			}
 
 			for (size_t i = 0; i < threads.size(); i++) {
@@ -83,13 +86,13 @@ namespace MultiCore {
 	}
 
 	template<class L>
-	void runLambda(L fLambda, std::vector<size_t>& indexPool, bool multiCore)
+	void runLambda(L fLambda, STD::vector<size_t>& indexPool, bool multiCore)
 	{
 		if (multiCore) {
-			std::mutex indexPoolMutex;
+			STD::mutex indexPoolMutex;
 
 			size_t numThreads = getNumCores();
-			std::vector<std::thread> threads;
+			STD::vector<STD::thread> threads;
 			threads.reserve(numThreads);
 			for (size_t i = 0; i < numThreads; i++) {
 				auto outerLambda = [fLambda, &indexPool, &indexPoolMutex]() {
@@ -97,7 +100,7 @@ namespace MultiCore {
 					while (index != -1) {
 						index = -1;
 						{
-							std::lock_guard<std::mutex> lock(indexPoolMutex); // Tested that mutex overhead is minimal.
+							STD::lock_guard<STD::mutex> lock(indexPoolMutex); // Tested that mutex overhead is minimal.
 							if (!indexPool.empty()) {
 								index = indexPool.back();
 								indexPool.pop_back();
@@ -112,7 +115,7 @@ namespace MultiCore {
 					}
 				};
 
-				threads.push_back(move(std::thread(outerLambda)));
+				threads.push_back(move(STD::thread(outerLambda)));
 			}
 
 			for (size_t i = 0; i < threads.size(); i++) {
@@ -132,7 +135,7 @@ namespace MultiCore {
 	{
 		if (multiCore) {
 			size_t numThreads = getNumCores();
-			std::vector<std::thread> threads;
+			STD::vector<STD::thread> threads;
 			threads.reserve(numThreads);
 			for (size_t threadNum = 0; threadNum < numThreads; threadNum++) {
 				auto outerLambda = [fLambda, numIndices, threadNum, numThreads]() {
@@ -142,7 +145,7 @@ namespace MultiCore {
 					}
 				};
 
-				threads.push_back(move(std::thread(outerLambda)));
+				threads.push_back(move(STD::thread(outerLambda)));
 			}
 
 			for (size_t i = 0; i < threads.size(); i++) {
@@ -155,95 +158,155 @@ namespace MultiCore {
 		}
 	}
 
-	class ThreadPool {
-	public:
-		using FuncType = std::function<void(size_t)>;
+class ThreadPool {
+public:
+	using FuncType = STD::function<void(size_t)>;
 
-		ThreadPool(size_t numThreads = -1)
-			: _numThreads(numThreads == -1 ? getNumCores() : numThreads)
+	ThreadPool(size_t numThreads = -1)
+		: _numThreads(numThreads == -1 ? getNumCores() : numThreads)
+	{
+		// In primary thread
+		_workerStartedCount.resize(_numThreads, 0);
+		_workerDoneCount.resize(_numThreads, 0);
+		start();
+	}
+
+	~ThreadPool()
+	{
+		// In primary thread
+		int dbgBreak = 1;
+		stop();
+	}
+
+	template<class L>
+	inline void run(size_t numSteps, const L& f) {
+		// In primary thread
+		FuncType wrapper(f);
+		runFunc_private(numSteps, &wrapper);
+	}
+
+private:
+	void start() {
+		// In primary thread
+		_start.lock();
+		_stop.lock();
+
+		for (size_t i = 0; i < _numThreads; i++) {
+			_threads.push_back(move(STD::thread(_lambda, i)));
+		}
+		_stop.unlock();
+	}
+
+	void stop()
+	{
+		// In primary thread
+		_running = false;
+
+		for (auto& t : _threads)
+			t.join();
+		_threads.clear();
+	}
+
+	bool allStarted() const
+	{
+		for (size_t i = 0; i < _numThreads; i++) {
+			if (_workerStartedCount[i] != _counter + 1)
+				return false;
+		}
+		return true;
+	}
+
+	bool allDone() const
+	{
+		for (size_t i = 0; i < _numThreads; i++) {
+			if (_workerDoneCount[i] != _workerStartedCount[i])
+				return false;
+		}
+		return true;
+	}
+
+	void runFunc_private(size_t numSteps, const FuncType* f) {
+		// In primary thread
+		std::cout << "Starting method counter: " << _counter << "\n";
+		_numSteps = numSteps;
+		_pFunc = f;
+		_stop.lock();
+		_start.unlock(); // Release all threads
+		_cv.notify_all(); // Wake up all threads to let them try for the lock
+
 		{
-			_runCount.resize(_numThreads, 0);
-		}
-
-		~ThreadPool()
-		{
-			int dbgBreak = 1;
-		}
-
-
-		void start() {
-			_start.lock();
-
-			for (size_t i = 0; i < _numThreads; i++) {
-				_threads.push_back(move(std::thread(_lambda, i)));
-			}
-		}
-
-		void runFunc(const FuncType* f, size_t numSteps) {
-			_numSteps = numSteps;
-			_pFunc = f;
-			_stop.lock();
-			_start.unlock();
-
-			std::unique_lock lk(_start);
+			// lock start, nothing may have changed
+			STD::unique_lock lk(_start);
+			// Unlock start, if all are done keep the lock. If not then release the lock to allow another thread to try for it
 			_cv.wait(lk, [this]()->bool {
-				for (size_t i = 0; i < _numThreads; i++) {
-					if (_runCount[i] != _counter + 1)
-						return false;
-				}
-				return true;
+				return allStarted();
 			});
+			// All threads are past the starting block. It's now safe to grap it again.
+			std::cout << "All methods running\n";
+		}
+		{
+			STD::unique_lock lk(_start);
 
-			// .wait locks start
-			_stop.unlock();
-			_counter++;
+			_cv.wait(lk, [this]()->bool {
+				return allDone();
+			});
+			// All threads are blocked, waiting for _stop to be released.
+			std::cout << "Main methods done\n";
+		}
+		_start.lock(); // Get start for the next tick
+
+		// Wait for all threads to be done
+
+		_pFunc = nullptr;
+		_counter++;
+
+		_stop.unlock();
+		_cv.notify_all();
+		// Every thread should advance from stop to start
+
+		std::cout << "Main thread all threads finished\n";
+	}
+
+	FuncType _lambda = FuncType([this](size_t threadNum) {
+		// In worker thread
+		while (_running) {
+			// stop and start should be locked.
+			_start.lock(); // Block until we get the lock
+			_start.unlock(); // release it immediately
+
+			_workerStartedCount[threadNum] = _counter + 1;
+			std::cout << "_lambda starting:" << threadNum << ", counter: " << _counter << "\n";
 			_cv.notify_all();
 
-			_pFunc = nullptr;
-		}
-
-		FuncType _lambda = FuncType([this](size_t threadNum) {
-			while (_running) {
-				_start.lock(); // Block until we get the lock
-				_start.unlock(); // release it immediately
-
-
-				if (_pFunc) {
-					for (size_t i = threadNum; i < _numSteps; i += _numThreads)
-						(*_pFunc)(i);
-				}
-
-
-				_runCount[threadNum] = _counter + 1;
-				_cv.notify_all();
-
-				_stop.lock();
-				_stop.unlock();
+			if (_pFunc) {
+				for (size_t i = threadNum; i < _numSteps; i += _numThreads)
+					(*_pFunc)(i);
 			}
-		});
 
-		void stop()
-		{
-			_running = false;
+			std::cout << "_lambda finished:" << threadNum << ", counter: " << _counter << "\n";
+			_workerDoneCount[threadNum] = _workerStartedCount[threadNum];
+			_cv.notify_all();
 
-			for (auto& t : _threads)
-				t.join();
-			_threads.clear();
+			STD::unique_lock lkDone(_stop);
+			_cv.wait(lkDone, [this]()->bool {
+				return allDone();
+			});
+			std::cout << "All _lambdas finished:" << threadNum << ", counter: " << _counter << "\n";
 		}
+	});
 
-	private:
-		bool _running = true;
-		size_t _numSteps = 0;
-		size_t _counter = 0;
-		const size_t _numThreads;
+	bool _running = true;
+	size_t _numSteps = 0;
+	size_t _counter = 0;
+	const size_t _numThreads;
 
-		const FuncType* _pFunc = nullptr;
+	const FuncType* _pFunc = nullptr;
 
-		std::condition_variable _cv;
-		std::mutex _start, _stop;
-		std::vector<std::thread> _threads;
-		std::vector<size_t> _runCount;
-	};
+	STD::condition_variable _cv;
+	STD::mutex _start, _stop;
+	STD::vector<STD::thread> _threads;
+	STD::vector<size_t> _workerStartedCount, _workerDoneCount;
+};
 
 } // namespace MultiCore
 
