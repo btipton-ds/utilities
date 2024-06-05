@@ -174,7 +174,9 @@ public:
 	inline size_t getNumThreads() const;
 
 	template<class L>
-	inline void run(size_t numSteps, const L& f);
+	inline void run(size_t numSteps, const L& f, bool multiCore);
+	template<class L>
+	inline void run(size_t numSteps, const L& f, bool multiCore) const;
 
 private:
 	void start();
@@ -214,10 +216,27 @@ inline size_t ThreadPool::getNumThreads() const
 }
 
 template<class L>
-inline void ThreadPool::run(size_t numSteps, const L& f) {
-	// In primary thread
-	FuncType wrapper(f);
-	runFunc_private(numSteps, &wrapper);
+inline void ThreadPool::run(size_t numSteps, const L& f, bool multiCore) {
+	if (multiCore) {
+		// In primary thread
+		FuncType wrapper(f);
+		runFunc_private(numSteps, &wrapper);
+	} else {
+		for (size_t i = 0; i < numSteps; i++)
+			f(0, i);
+	}
+}
+
+template<class L>
+inline void ThreadPool::run(size_t numSteps, const L& f, bool multiCore) const {
+	if (multiCore) {
+		// In primary thread
+		FuncType wrapper(f);
+		runFunc_private(numSteps, &wrapper);
+	} else {
+		for (size_t i = 0; i < numSteps; i++)
+			f(0, i);
+	}
 }
 
 } // namespace MultiCore
