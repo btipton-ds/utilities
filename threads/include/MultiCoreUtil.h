@@ -162,7 +162,7 @@ private:
 		AT_NOT_CREATED,
 		AT_STOPPED,
 		AT_RUNNING,
-		AT_DONE,
+		AT_TERMINATED,
 	};
 public:
 	using FuncType = STD::function<void(size_t threadNum, size_t idx)>;

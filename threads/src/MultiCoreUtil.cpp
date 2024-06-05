@@ -86,14 +86,12 @@ void ThreadPool::stop()
 {
 	// In primary thread
 	{
+		_running = false;
 		_cv.notify_all();
 		std::unique_lock lk(_stageMutex);
 		_cv.wait(lk, [this]()->bool {
-			return atStage(AT_STOPPED);
-			});
-
-		_running = false;
-		setStageForAll(AT_RUNNING);
+			return atStage(AT_TERMINATED);
+		});
 	}
 
 	for (auto& t : _threads)
@@ -142,7 +140,7 @@ void ThreadPool::runFunc_private(size_t numSteps, const FuncType* f) {
 		std::unique_lock lk(_stageMutex);
 		_cv.wait(lk, [this]()->bool {
 			return atStage(AT_STOPPED);
-			});
+		});
 
 		_numSteps = numSteps;
 		_pFunc = f;
@@ -152,12 +150,13 @@ void ThreadPool::runFunc_private(size_t numSteps, const FuncType* f) {
 	{
 		std::unique_lock lk(_stageMutex);
 		_cv.wait(lk, [this]()->bool {
-			return atStage(AT_DONE);
-			});
+			return atStage(AT_STOPPED);
+		});
 
 		_numSteps = 0;
 		_pFunc = nullptr;
-		setStageForAll(AT_STOPPED);
+
+		_cv.notify_all();
 	}
 }
 
@@ -174,11 +173,9 @@ void ThreadPool::run(size_t threadNum) {
 	while (_running) {
 		{
 			std::unique_lock lk(_stageMutex);
-			_cv.wait(lk, [this]()->bool {
-				return atStage(AT_RUNNING, AT_DONE) || !_running;
-				});
-			if (!_running)
-				break;
+			_cv.wait(lk, [this, threadNum]()->bool {
+				return (_stage[threadNum] == AT_RUNNING) || !_running;
+			});
 		}
 
 		if (_pFunc) {
@@ -186,9 +183,11 @@ void ThreadPool::run(size_t threadNum) {
 				(*_pFunc)(threadNum, i);
 		}
 
-		if (_stage[threadNum] == AT_RUNNING) {
+		{
 			std::unique_lock lk(_stageMutex);
-			setStage(AT_DONE, threadNum);
+			setStage(AT_STOPPED, threadNum);
 		}
 	}
+	std::unique_lock lk(_stageMutex);
+	setStage(AT_TERMINATED, threadNum);
 }
