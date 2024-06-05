@@ -26,6 +26,7 @@ This file is part of the DistFieldHexMesh application/library.
 	Dark Sky Innovative Solutions http://darkskyinnovation.com/
 */
 
+#include <assert.h>
 #include <local_heap.h>
 #include <pool_vector.h>
 
@@ -35,22 +36,34 @@ This file is part of the DistFieldHexMesh application/library.
 namespace MultiCore {
 
 TEMPL_DECL
-inline SET_DECL::set(const std::initializer_list<T>& src)
+	inline SET_DECL::set(const MultiCore::vector<T>& src)
 {
 	insert(end(), src);
 }
 
 TEMPL_DECL
-inline SET_DECL::~set()
+	inline SET_DECL::set(const std::set<T>& src)
 {
+	insert(src.begin(), src.end());
+}
+
+TEMPL_DECL
+	inline SET_DECL::set(const std::initializer_list<T>& src)
+{
+	insert(end(), src);
 }
 
 TEMPL_DECL
 SET_DECL::operator std::set<T>() const
 {
 	std::set<T> result;
-	result.insert(result.end(), begin(), end());
+	result.insert(begin(), end());
 	return result;
+}
+
+TEMPL_DECL
+inline SET_DECL::~set()
+{
 }
 
 TEMPL_DECL
@@ -121,6 +134,14 @@ inline void SET_DECL::erase(const const_iterator& at)
 }
 
 TEMPL_DECL
+inline void SET_DECL::erase(const T& val)
+{
+	auto iter = find(val);
+	if (iter != end())
+		erase(iter);
+}
+
+TEMPL_DECL
 inline void SET_DECL::erase(const const_iterator& begin, const const_iterator& end)
 {
 #if DUPLICATE_STD_TESTS	
@@ -175,6 +196,12 @@ TEMPL_DECL
 inline bool SET_DECL::contains(const T& val) const
 {
 	return find(val) != end();
+}
+
+TEMPL_DECL
+inline size_t SET_DECL::count(const T& val) const
+{
+	return find(val) == end() ? 0 : 1;
 }
 
 TEMPL_DECL

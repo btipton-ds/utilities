@@ -33,7 +33,7 @@ This file is part of the DistFieldHexMesh application/library.
 #define REV_CONST 1
 #define FORW 2
 #define REV 3
-#define CONST (IterType < FORW)
+#define IS_ITER_CONST (IterType < FORW)
 
 namespace MultiCore
 {
@@ -41,8 +41,9 @@ namespace MultiCore
 template<class T>
 class vector : private local_heap_user {
 protected:
-	template <int IterType>
-	class _iterator
+
+template <int IterType>
+class _iterator
 	{
 	public:
 		friend class MultiCore::vector;
@@ -52,8 +53,8 @@ protected:
 
 #if 1
 		using value_type = std::remove_cv_t<T>;
-		using pointer = std::conditional_t<CONST, T const*, T*>;
-		using reference = std::conditional_t<CONST, T const&, T&>;
+		using pointer = std::conditional_t<IS_ITER_CONST, T const*, T*>;
+		using reference = std::conditional_t<IS_ITER_CONST, T const&, T&>;
 #else
 		using value_type = T;
 		using pointer = T*;
@@ -68,10 +69,10 @@ protected:
 		bool operator < (const _iterator& rhs) const;
 		bool operator > (const _iterator& rhs) const;
 
-		_iterator& operator ++ ();
-		_iterator& operator --();
-		_iterator& operator ++ (int);
-		_iterator& operator --(int);
+		_iterator& operator ++ ();		// prefix
+		_iterator& operator --();		// prefix
+		_iterator operator ++ (int);	// postfix
+		_iterator operator --(int);		// postfix
 
 		_iterator operator + (size_t val) const;
 
@@ -94,8 +95,8 @@ public:
 	using const_reverse_iterator = _iterator<REV_CONST>;
 
 	vector();
-	vector(const vector& src);
-	vector(const std::vector<T>& src);
+	vector(const MultiCore::vector<T>& src);
+	explicit vector(const std::vector<T>& src);
 	vector(const std::initializer_list<T>& src);
 	~vector();
 
@@ -118,7 +119,8 @@ public:
 	const_iterator erase(const const_iterator& at);
 	iterator erase(const iterator& begin, const iterator& end);
 
-	vector& operator = (const vector& rhs);
+	vector& operator = (const MultiCore::vector<T>& rhs);
+//	vector& operator = (const std::vector<T>& rhs);
 
 	_NODISCARD _CONSTEXPR20 const_iterator begin() const noexcept;
 	_NODISCARD _CONSTEXPR20 iterator begin() noexcept;
@@ -147,10 +149,6 @@ public:
 private:
 	size_t _size = 0, _capacity = 0;
 	T* _pData = nullptr;
-
-#if DUPLICATE_STD_TESTS	
-	std::vector<T> _data;
-#endif
 };
 
 }
@@ -161,4 +159,4 @@ private:
 #undef REV_CONST
 #undef FORW
 #undef REV
-#undef CONST
+#undef IS_ITER_CONST

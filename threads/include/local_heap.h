@@ -30,9 +30,9 @@ This file is part of the DistFieldHexMesh application/library.
 #include <vector>
 #include <list>
 
-#define DUPLICATE_STD_TESTS 0
 #define EXPENSIVE_ASSERT_ON 0
 #define GUARD_BAND_SIZE 0
+#define NUM_AVAIL_SIZE 256
 
 namespace MultiCore
 {
@@ -58,6 +58,7 @@ namespace MultiCore
 	I tried using the std memory pool system, but it didn't come anywhere close to the required speed.
 */
 
+
 class local_heap {
 public:
 	static void setThreadHeapPtr(local_heap* pHeap);
@@ -74,6 +75,8 @@ public:
 
 	local_heap(size_t blockSizeChunks, size_t chunkSizeBytes = 32);
 	
+	void clear();
+
 	template<class T>
 	T* alloc(size_t num);
 
@@ -167,25 +170,27 @@ private:
 
 	BlockHeader* getAvailBlock(size_t numChunksNeeded);
 	void addBlockToAvailList(const BlockHeader& header);
-	void insertAvailBlock(AvailBlockHeader* pPriorBlock, AvailBlockHeader* pCurBlock, AvailBlockHeader* pAvailBlock);
-	void removeAvailBlock(AvailBlockHeader* pPriorBlock, AvailBlockHeader* pRecycledBlock);
+	void insertAvailBlock(AvailBlockHeader*& pFirstAvailBlock, AvailBlockHeader* pPriorBlock, AvailBlockHeader* pCurBlock, AvailBlockHeader* pAvailBlock);
+	void removeAvailBlock(AvailBlockHeader*& pFirstAvailBlock, AvailBlockHeader* pPriorBlock, AvailBlockHeader* pRecycledBlock);
 
 	bool isHeaderValid(const void* p, bool pointsToHeader) const;
 	bool verifyAvailList() const;
 	bool isAvailBlockValid(const AvailBlockHeader* pBlock) const;
 	bool isPointerInBounds(const void* ptr) const;
-	bool isBlockAvail(const BlockHeader* pBlock) const;
+	bool isBlockAvail(const BlockHeader* pHeader) const;
+
+	AvailBlockHeader*& getFirstAvailBlockPtr(size_t numChunksNeeded) const;
 
 	const size_t _blockSizeChunks;
 	const size_t _chunkSizeBytes;
 
-	uint32_t _topBlockIdx = 0;
-	uint32_t _topChunkIdx = 0;
-
 	using BlockPtr = std::shared_ptr<_STD vector<char>>;
 	_STD vector<BlockPtr> _data;
 
-	AvailBlockHeader* _pFirstAvailBlock = nullptr; // Sorted indices into _availChunks
+	uint32_t _topBlockIdx = 0;
+	uint32_t _topChunkIdx = 0;
+
+	mutable AvailBlockHeader* _pFirstAvailBlockTable[NUM_AVAIL_SIZE]; // Sorted indices into _availChunks
 };
 
 template<class T>
