@@ -183,29 +183,29 @@ private:
 
 	void stop();
 
-	bool atStage(Stage st);
+	bool atStage(Stage st) const;
 
-	bool atStage(Stage st0, Stage st1);
+	bool atStage(Stage st0, Stage st1) const;
 
-	void setStageForAll(Stage st);
+	void setStageForAll(Stage st) const;
 
-	void setStage(Stage st, size_t threadNum);
+	void setStage(Stage st, size_t threadNum) const;
 
-	void runFunc_private(size_t numSteps, const FuncType* f);
+	void runFunc_private(size_t numSteps, FuncType* f) const;
 
 	static void runStat(ThreadPool* pSelf, size_t threadNum);
 
 	void run(size_t threadNum);
 
 	bool _running = true;
-	size_t _numSteps = 0;
+	mutable size_t _numSteps = 0;
 	const size_t _numThreads;
 
-	const FuncType* _pFunc = nullptr;
+	mutable FuncType* _pFunc = nullptr;
 
-	std::condition_variable _cv;
-	STD::mutex _stageMutex;
-	STD::vector<Stage> _stage;
+	mutable std::condition_variable _cv;
+	mutable STD::mutex _stageMutex;
+	mutable STD::vector<Stage> _stage;
 
 	STD::vector<STD::thread> _threads;
 };

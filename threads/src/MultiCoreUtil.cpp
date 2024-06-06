@@ -99,7 +99,7 @@ void ThreadPool::stop()
 	_threads.clear();
 }
 
-bool ThreadPool::atStage(Stage st)
+bool ThreadPool::atStage(Stage st) const
 {
 	for (size_t i = 0; i < _numThreads; i++) {
 		if (_stage[i] != st)
@@ -109,7 +109,7 @@ bool ThreadPool::atStage(Stage st)
 	return true;
 }
 
-bool ThreadPool::atStage(Stage st0, Stage st1)
+bool ThreadPool::atStage(Stage st0, Stage st1) const
 {
 	for (size_t i = 0; i < _numThreads; i++) {
 		if (_stage[i] != st0 && _stage[i] != st1)
@@ -119,7 +119,7 @@ bool ThreadPool::atStage(Stage st0, Stage st1)
 	return true;
 }
 
-void ThreadPool::setStageForAll(Stage st)
+void ThreadPool::setStageForAll(Stage st) const
 {
 	for (size_t i = 0; i < _numThreads; i++) {
 		_stage[i] = st;
@@ -127,13 +127,14 @@ void ThreadPool::setStageForAll(Stage st)
 	_cv.notify_all();
 }
 
-void ThreadPool::setStage(Stage st, size_t threadNum)
+void ThreadPool::setStage(Stage st, size_t threadNum) const
 {
 	_stage[threadNum] = st;
 	_cv.notify_all();
 }
 
-void ThreadPool::runFunc_private(size_t numSteps, const FuncType* f) {
+void ThreadPool::runFunc_private(size_t numSteps, FuncType* f) const
+{
 	// In primary thread
 	_cv.notify_all();
 	{
@@ -151,7 +152,7 @@ void ThreadPool::runFunc_private(size_t numSteps, const FuncType* f) {
 		std::unique_lock lk(_stageMutex);
 		_cv.wait(lk, [this]()->bool {
 			return atStage(AT_STOPPED);
-		});
+			});
 
 		_numSteps = 0;
 		_pFunc = nullptr;
