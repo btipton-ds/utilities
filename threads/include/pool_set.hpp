@@ -44,7 +44,8 @@ TEMPL_DECL
 TEMPL_DECL
 	inline SET_DECL::set(const std::set<T>& src)
 {
-	insert(src.begin(), src.end());
+	if (!src.empty())
+		insert(src.begin(), src.end());
 }
 
 TEMPL_DECL
