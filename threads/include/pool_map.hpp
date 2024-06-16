@@ -101,6 +101,18 @@ void MAP_DECL::clear()
 }
 
 TEMPL_DECL
+size_t MAP_DECL::count(const KEY& key) const
+{
+	return _keySet.count(key);
+}
+
+TEMPL_DECL
+bool MAP_DECL::contains(const KEY& key)
+{
+	return _keySet.contains(key);
+}
+
+TEMPL_DECL
 _NODISCARD _CONSTEXPR20 inline typename MAP_DECL::iterator MAP_DECL::find(const KEY& val) noexcept
 {
 	auto keyIter = _keySet.find(KeyRec(val));
@@ -111,7 +123,7 @@ TEMPL_DECL
 _NODISCARD _CONSTEXPR20 inline typename MAP_DECL::const_iterator MAP_DECL::find(const KEY& val) const noexcept
 {
 	auto keyIter = _keySet.find(KeyRec(val));
-	return iterator(this, keyIter);
+	return const_iterator(this, keyIter);
 }
 
 TEMPL_DECL
@@ -137,6 +149,20 @@ void MAP_DECL::releaseEntry(const DataPair* pPair)
 	*pPair = DataPair();
 	size_t idx = (size_t)(pPair - _data.data());
 	_availEntries.push_back(idx);
+}
+
+TEMPL_DECL
+const T& MAP_DECL::operator[](const KEY& key) const
+{
+	return find(key)->second;
+}
+
+TEMPL_DECL
+T& MAP_DECL::operator[](const KEY& key)
+{
+	if (find(key) == end())
+		insert(make_pair(key, T()));
+	return find(key)->second;
 }
 
 TEMPL_DECL

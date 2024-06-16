@@ -154,6 +154,8 @@ public:
 
 	bool empty() const;
 	size_t size() const;
+	size_t count(const KEY& key) const;
+	bool contains(const KEY& key);
 	void clear();
 	const DataPair* data() const;
 	DataPair* data() ;
@@ -163,7 +165,11 @@ public:
 	void erase(const iterator& at);
 	void erase(const const_iterator& at);
 
+	const T& operator[](const KEY& key) const;
+	T& operator[](const KEY& key);
+
 	map& operator = (const map& rhs);
+	bool contains(const KEY& val) const;
 
 	_NODISCARD _CONSTEXPR20 iterator begin() noexcept;
 	_NODISCARD _CONSTEXPR20 iterator end() noexcept;
@@ -177,7 +183,6 @@ public:
 
 	_NODISCARD _CONSTEXPR20 iterator find(const KEY& val) noexcept;
 	_NODISCARD _CONSTEXPR20 const_iterator find(const KEY& val) const noexcept;
-	bool contains(const KEY& val) const;
 
 protected:
 	_NODISCARD _CONSTEXPR20 iterator find(const KEY& val, const_iterator& next) noexcept;
