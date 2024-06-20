@@ -303,8 +303,7 @@ TEMPL_DECL
 ITER_TEMPL_DECL
 inline typename ITER_DECL::_iterator ITER_DECL::operator + (size_t val) const
 {
-	_iterator result(this);
-	result._keyIter = _keyIter.operator+(val);
+	_iterator result(_pSource, _keyIter.operator+(val));
 	return result;
 }
 
@@ -312,8 +311,7 @@ TEMPL_DECL
 ITER_TEMPL_DECL
 inline typename ITER_DECL::_iterator ITER_DECL::operator - (size_t val) const
 {
-	_iterator result(this);
-	result._keyIter = _keyIter.operator-(val);
+	_iterator result(_pSource, _keyIter.operator-(val));
 	return result;
 }
 
