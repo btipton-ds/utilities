@@ -58,20 +58,23 @@ namespace MultiCore
 	I tried using the std memory pool system, but it didn't come anywhere close to the required speed.
 */
 
+class local_heap;
+
+class scoped_set_local_heap {
+public:
+	scoped_set_local_heap(local_heap* pHeap);
+	scoped_set_local_heap(const local_heap* pHeap);
+	~scoped_set_local_heap();
+
+private:
+	local_heap* _priorHeapPtr = nullptr;
+};
+
 
 class local_heap {
 public:
 	static void setThreadHeapPtr(local_heap* pHeap);
 	static local_heap* getThreadHeapPtr();
-
-	class scoped_set_thread_heap {
-	public:
-		scoped_set_thread_heap(local_heap* pHeap);
-		~scoped_set_thread_heap();
-
-	private:
-		local_heap* _priorHeap = nullptr;
-	};
 
 	local_heap(size_t blockSizeChunks, size_t chunkSizeBytes = 32);
 	
@@ -268,16 +271,21 @@ private:
 
 };
 
-inline local_heap::scoped_set_thread_heap::scoped_set_thread_heap(local_heap* pHeap)
+inline scoped_set_local_heap::scoped_set_local_heap(local_heap* pHeap)
 {
 
-	_priorHeap = local_heap::getThreadHeapPtr();
+	_priorHeapPtr = local_heap::getThreadHeapPtr();
 	local_heap::setThreadHeapPtr(pHeap);
 }
 
-inline local_heap::scoped_set_thread_heap::~scoped_set_thread_heap()
+inline scoped_set_local_heap::scoped_set_local_heap(const local_heap* pHeap)
 {
-	setThreadHeapPtr(_priorHeap);
+}
+
+inline scoped_set_local_heap::~scoped_set_local_heap()
+{
+	if (_priorHeapPtr)
+		local_heap::setThreadHeapPtr(_priorHeapPtr);
 }
 
 inline local_heap* local_heap_user::getHeap() const
