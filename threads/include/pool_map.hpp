@@ -46,12 +46,12 @@ std::pair<typename MAP_DECL::iterator, bool> MAP_DECL::insert(const DataPair& pa
 
 		keyIter = _keySet.insert(rec);
 
-		return std::pair(iterator(this, keyIter), true);
+		iterator newIter(this, keyIter);
+		return std::pair(newIter, true);
 	}
 
-	const KeyRec& keyRec = *keyIter;
-	auto pPair = &_data[keyRec._idx];
-	return std::pair(iterator(this, keyIter), false);
+	iterator newIter(this, keyIter);
+	return std::pair(newIter, false);
 }
 
 TEMPL_DECL
