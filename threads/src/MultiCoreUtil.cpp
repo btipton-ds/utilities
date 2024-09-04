@@ -46,13 +46,14 @@
 #include <mutex>
 #include <assert.h>
 
-#if !defined(MAC) && !defined(LINUX)
+#if defined(_WIN32)
 #include <process.h>
 #endif
+
 #include <algorithm>
 #include <MultiCoreUtil.h>
 
-#if !defined(MAC) && !defined(LINUX)
+#if defined(_WIN32)
 #include <tchar.h>
 #endif
 

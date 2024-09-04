@@ -48,6 +48,7 @@
 #include <algorithm>
 #include <mutex>
 #include <thread>
+#include <condition_variable>
 #include <functional>
 
 #define STD ::std
