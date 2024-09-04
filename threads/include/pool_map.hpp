@@ -193,25 +193,25 @@ _NODISCARD _CONSTEXPR20 inline typename MAP_DECL::const_iterator MAP_DECL::end()
 TEMPL_DECL
 _NODISCARD _CONSTEXPR20 inline typename MAP_DECL::reverse_iterator MAP_DECL::rbegin() noexcept
 {
-	return reverse_iterator(this, _keySet.rbegin(), &_data.back());
+	return reverse_iterator(this, _keySet.rbegin());
 }
 
 TEMPL_DECL
 _NODISCARD _CONSTEXPR20 inline typename MAP_DECL::reverse_iterator MAP_DECL::rend() noexcept
 {
-	return reverse_iterator(this, _keySet.rend(), nullptr);
+	return reverse_iterator(this, _keySet.rend());
 }
 
 TEMPL_DECL
 _NODISCARD _CONSTEXPR20 inline typename MAP_DECL::const_reverse_iterator MAP_DECL::rbegin() const noexcept
 {
-	return reverse_iterator(this, _keySet.rbegin(), &_data.back());
+	return reverse_iterator(this, _keySet.rbegin());
 }
 
 TEMPL_DECL
 _NODISCARD _CONSTEXPR20 inline typename MAP_DECL::const_reverse_iterator MAP_DECL::rend() const noexcept
 {
-	return reverse_iterator(this, _keySet.rend(), nullptr);
+	return reverse_iterator(this, _keySet.rend());
 }
 
 TEMPL_DECL
