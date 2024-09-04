@@ -37,7 +37,7 @@ class map;
 template<class T>
 class set : private vector<T> {
 private:
-	template<class KEY, class T>
+	template<class KEY, class TT>
 	friend class map;
 
 public:
@@ -68,18 +68,18 @@ public:
 
 	set& operator = (const set& rhs);
 
-	_NODISCARD _CONSTEXPR20 const_iterator begin() const noexcept;
-	_NODISCARD _CONSTEXPR20 const_iterator end() const noexcept;
+	const_iterator begin() const noexcept;
+	const_iterator end() const noexcept;
 
-	_NODISCARD _CONSTEXPR20 const_reverse_iterator rbegin() const noexcept;
-	_NODISCARD _CONSTEXPR20 const_reverse_iterator rend() const noexcept;
+	const_reverse_iterator rbegin() const noexcept;
+	const_reverse_iterator rend() const noexcept;
 
-	_NODISCARD _CONSTEXPR20 const_iterator find(const T& val) const noexcept;
+	const_iterator find(const T& val) const noexcept;
 	bool contains(const T& val) const;
 	size_t count(const T& val) const;
 
 protected:
-	_NODISCARD _CONSTEXPR20 const_iterator find(const T& val, const_iterator& next) const noexcept;
+	const_iterator find(const T& val, const_iterator& next) const noexcept;
 
 private:
 

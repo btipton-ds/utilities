@@ -29,6 +29,7 @@ This file is part of the DistFieldHexMesh application/library.
 #include <assert.h>
 #include <algorithm>
 #include <local_heap.h>
+#include <cmath>
 
 namespace
 {

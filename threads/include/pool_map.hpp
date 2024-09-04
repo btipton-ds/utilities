@@ -113,14 +113,14 @@ bool MAP_DECL::contains(const KEY& key)
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 inline typename MAP_DECL::iterator MAP_DECL::find(const KEY& val) noexcept
+inline typename MAP_DECL::iterator MAP_DECL::find(const KEY& val) noexcept
 {
 	auto keyIter = _keySet.find(KeyRec(val));
 	return iterator(this, keyIter);
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 inline typename MAP_DECL::const_iterator MAP_DECL::find(const KEY& val) const noexcept
+inline typename MAP_DECL::const_iterator MAP_DECL::find(const KEY& val) const noexcept
 {
 	auto keyIter = _keySet.find(KeyRec(val));
 	return const_iterator(this, keyIter);
@@ -166,50 +166,50 @@ T& MAP_DECL::operator[](const KEY& key)
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 inline typename MAP_DECL::iterator MAP_DECL::begin() noexcept
+inline typename MAP_DECL::iterator MAP_DECL::begin() noexcept
 {
 	return iterator(this, _keySet.begin());
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 inline typename MAP_DECL::iterator MAP_DECL::end() noexcept
+inline typename MAP_DECL::iterator MAP_DECL::end() noexcept
 {
 	return iterator(this, _keySet.end());
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 inline typename MAP_DECL::const_iterator MAP_DECL::begin() const noexcept
+inline typename MAP_DECL::const_iterator MAP_DECL::begin() const noexcept
 {
 	typename MultiCore::set<KeyRec>::const_iterator iter = _keySet.begin();
 	return const_iterator(this, iter);
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 inline typename MAP_DECL::const_iterator MAP_DECL::end() const noexcept
+inline typename MAP_DECL::const_iterator MAP_DECL::end() const noexcept
 {
 	return const_iterator(this, _keySet.end());
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 inline typename MAP_DECL::reverse_iterator MAP_DECL::rbegin() noexcept
+inline typename MAP_DECL::reverse_iterator MAP_DECL::rbegin() noexcept
 {
 	return reverse_iterator(this, _keySet.rbegin());
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 inline typename MAP_DECL::reverse_iterator MAP_DECL::rend() noexcept
+inline typename MAP_DECL::reverse_iterator MAP_DECL::rend() noexcept
 {
 	return reverse_iterator(this, _keySet.rend());
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 inline typename MAP_DECL::const_reverse_iterator MAP_DECL::rbegin() const noexcept
+inline typename MAP_DECL::const_reverse_iterator MAP_DECL::rbegin() const noexcept
 {
 	return reverse_iterator(this, _keySet.rbegin());
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 inline typename MAP_DECL::const_reverse_iterator MAP_DECL::rend() const noexcept
+inline typename MAP_DECL::const_reverse_iterator MAP_DECL::rend() const noexcept
 {
 	return reverse_iterator(this, _keySet.rend());
 }
