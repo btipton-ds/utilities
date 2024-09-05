@@ -81,7 +81,10 @@ TEMPL_DECL
 VECTOR_DECL::operator std::vector<T>() const
 {
 	std::vector<T> result;
-	result.insert(result.end(), begin(), end());
+	result.resize(size());
+	for (size_t i = 0; i < size(); i++)
+		result[i] = (T) operator[](i);
+//	result.insert(result.end(), begin(), end());
 	return result;
 }
 
