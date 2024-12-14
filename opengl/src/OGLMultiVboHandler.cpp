@@ -71,14 +71,14 @@ void COglMultiVboHandler::doGarbageCollection(const std::vector<ChangeRec>& enti
             iter->second->m_inUse = true;
     }
 
-    vector<long> entityKeysToRelease;
+    vector<size_t> entityKeysToRelease;
     for (const auto& pair : m_entityKeyToOGLIndicesMap) {
         if (!pair.second->m_inUse)
             entityKeysToRelease.push_back(pair.first);
     }
 
     while (!entityKeysToRelease.empty()) {
-        long entityKey = entityKeysToRelease.back();
+        size_t entityKey = entityKeysToRelease.back();
         releaseTessellation(entityKey);
 
         entityKeysToRelease.pop_back();
@@ -129,14 +129,14 @@ void COglMultiVboHandler::beginFaceTesselation()
     m_insideBeginFaceTessellation = true;
     // Nothing else required at this time
 }
-const COglMultiVboHandler::OGLIndices* COglMultiVboHandler::setFaceTessellation(long entityKey, int changeNumber, const vector<float>& points, const vector<float>& normals, const vector<float>& parameters,
+const COglMultiVboHandler::OGLIndices* COglMultiVboHandler::setFaceTessellation(size_t entityKey, size_t changeNumber, const vector<float>& points, const vector<float>& normals, const vector<float>& parameters,
     const vector<unsigned int>& vertIndices)
 {
     vector<float> colors;
     return setFaceTessellation(entityKey, changeNumber, points, normals, parameters, colors, vertIndices);
 }
 
-const COglMultiVboHandler::OGLIndices* COglMultiVboHandler::setFaceTessellation(long entityKey, int changeNumber, const vector<float>& points, const vector<float>& normals, 
+const COglMultiVboHandler::OGLIndices* COglMultiVboHandler::setFaceTessellation(size_t entityKey, size_t changeNumber, const vector<float>& points, const vector<float>& normals,
     const vector<float>& parameters, const std::vector<float>& colors, const vector<unsigned int>& vertIndices)
 {
     assert(m_insideBeginFaceTessellation);
@@ -297,7 +297,7 @@ bool COglMultiVBO::getVBOArray(GLuint vboId, vector<unsigned int>& values) const
     return result;
 }
 
-bool COglMultiVboHandler::getRawData(long entityKey, vector<float>& vertices, vector<float>& normals, vector<float>& parameters) const
+bool COglMultiVboHandler::getRawData(size_t entityKey, vector<float>& vertices, vector<float>& normals, vector<float>& parameters) const
 {
     vertices.clear();
     normals.clear();
@@ -321,7 +321,7 @@ bool COglMultiVboHandler::getRawData(long entityKey, vector<float>& vertices, ve
     return result;
 }
 
-bool COglMultiVboHandler::setColorVBO(long entityKey, vector<float>& srcColors)
+bool COglMultiVboHandler::setColorVBO(size_t entityKey, vector<float>& srcColors)
 {
     auto p = m_entityKeyToOGLIndicesMap.find(entityKey);
     if (p == m_entityKeyToOGLIndicesMap.end())
@@ -351,7 +351,7 @@ bool COglMultiVboHandler::setColorVBO(long entityKey, vector<float>& srcColors)
     return batchPtr->m_VBO.copyColorsToExistingVBO(currentColors);
 }
 
-bool COglMultiVboHandler::setBackColorVBO(long entityKey, vector<float>& srcColors)
+bool COglMultiVboHandler::setBackColorVBO(size_t entityKey, vector<float>& srcColors)
 {
     auto p = m_entityKeyToOGLIndicesMap.find(entityKey);
     if (p == m_entityKeyToOGLIndicesMap.end())
@@ -502,7 +502,7 @@ void COglMultiVboHandler::getStorageFor(size_t numVertsNeeded, bool needColorSto
     batchPtr->m_allocatedChunks[vertChunkIndex] = blockSizeInChunks;
 }
 
-void COglMultiVboHandler::releaseTessellation(long entityKey)
+void COglMultiVboHandler::releaseTessellation(size_t entityKey)
 {
     const auto iter = m_entityKeyToOGLIndicesMap.find(entityKey);
     if (iter == m_entityKeyToOGLIndicesMap.end())
@@ -541,7 +541,7 @@ void COglMultiVboHandler::beginEdgeTesselation()
     // Nothing else required at this time
 }
 
-const COglMultiVboHandler::OGLIndices* COglMultiVboHandler::setEdgeStripTessellation(long entityKey, const vector<float>& lineStripPoints)
+const COglMultiVboHandler::OGLIndices* COglMultiVboHandler::setEdgeStripTessellation(size_t entityKey, const vector<float>& lineStripPoints)
 {
     assert(m_insideBeginEdgeTessellation);
     size_t numVerts = lineStripPoints.size() / 3;
@@ -558,13 +558,13 @@ const COglMultiVboHandler::OGLIndices* COglMultiVboHandler::setEdgeStripTessella
     return pOglIndices.get();
 }
 
-const COglMultiVboHandler::OGLIndices* COglMultiVboHandler::setEdgeSegTessellation(long entityKey, int changeNumber, const std::vector<float>& points, const std::vector<unsigned int>& indices)
+const COglMultiVboHandler::OGLIndices* COglMultiVboHandler::setEdgeSegTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points, const std::vector<unsigned int>& indices)
 {
     vector<float> colors;
     return setEdgeSegTessellation(entityKey, changeNumber, points, colors, indices);
 }
 
-const COglMultiVboHandler::OGLIndices* COglMultiVboHandler::setEdgeSegTessellation(long entityKey, int changeNumber, const std::vector<float>& points, 
+const COglMultiVboHandler::OGLIndices* COglMultiVboHandler::setEdgeSegTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points,
     const std::vector<float>& colors, const std::vector<unsigned int>& indices)
 {
     assert(m_insideBeginEdgeTessellation);
@@ -665,7 +665,7 @@ void COglMultiVboHandler::endEdgeTesselation()
     }
 }
 
-bool COglMultiVboHandler::getRawData(long entityKey, std::vector<unsigned int>& indices) const
+bool COglMultiVboHandler::getRawData(size_t entityKey, std::vector<unsigned int>& indices) const
 {
     indices.clear();
 
