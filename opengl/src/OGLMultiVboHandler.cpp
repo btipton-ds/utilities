@@ -634,13 +634,17 @@ void COglMultiVboHandler::setEdgeSegTessellationInner(size_t batchIndex, size_t 
         }
     }
 
-    if (!colors.empty()) {
+    bool hasColors = !batchPtr->m_colors.empty();
+    bool needsColors = !colors.empty();
+    if (needsColors || hasColors) {
         if (batchPtr->m_colors.size() < spaceRequired)
             batchPtr->m_colors.resize(spaceRequired);
 
-        for (size_t vertIdx = 0; vertIdx < numVerts; vertIdx++) {
-            for (int j = 0; j < 3; j++) {
-                batchPtr->m_colors[3 * (vertBaseIndex + vertIdx) + j] = colors[3 * vertIdx + j];
+        if (!colors.empty()) {
+            for (size_t vertIdx = 0; vertIdx < numVerts; vertIdx++) {
+                for (int j = 0; j < 3; j++) {
+                    batchPtr->m_colors[3 * (vertBaseIndex + vertIdx) + j] = colors[3 * vertIdx + j];
+                }
             }
         }
     }
