@@ -55,7 +55,7 @@ void main() {
     fragLights = lightDir;
 
     gl_Position = proj * modelView * vec4(inPosition, 1.0);
-	vec3 blackColor = vec3(0.0, 0.0, 0.0);
+    vec3 blackColor = vec3(0.0, 0.0, 0.0);
 	
 	if (defColor == blackColor) {
 		fragColor = inColor;
