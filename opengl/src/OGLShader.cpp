@@ -927,22 +927,13 @@ bool COglShaderBase::load()
     // insert the 'shader include source' in the fragment source
     // we may want to extend this in the future
     size_t len = isource ? strlen(isource)+strlen(fsource)+1 : strlen(fsource);
-    char* source = new char[len+1];
 
 #pragma warning(push)
 #pragma warning(disable: 4996)
-    if(isource)
-    {
-        strcpy(source, isource);
-        strcpy(&source[strlen(isource)], fsource);
-    }
-    else
-        strcpy(source,fsource);
 
 #pragma warning(pop)
-    source[len] = '\0';
 
-    LOG_AND_RETURN( !source || !vsource, "Failed to access shader code" )
+    LOG_AND_RETURN( !vsource, "Failed to access shader code" )
 
     // Create Shader And Program Objects
 
@@ -958,7 +949,7 @@ bool COglShaderBase::load()
 
     // Load Shader Sources
     glShaderSource(_vertexId, 1, (const GLchar**)&vsource, NULL); GL_ASSERT;
-    glShaderSource(_fragmentId, 1, (const GLchar**) &source, NULL); GL_ASSERT;
+    glShaderSource(_fragmentId, 1, (const GLchar**) &fsource, NULL); GL_ASSERT;
 
     if (gsource && _geometryId) {
         glShaderSource(_geometryId, 1, (const GLchar**)&gsource, NULL); GL_ASSERT;
@@ -995,7 +986,6 @@ bool COglShaderBase::load()
 
     // Link The Program Object
     glLinkProgram(_programId); GL_ASSERT
-    delete [] source; // NB: living with the leak if we have an error condition
 
     bind();
     // These are required. If they fail, abort
