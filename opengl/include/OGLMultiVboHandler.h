@@ -18,29 +18,29 @@ namespace OGL
 {
 class ShaderBase;
 
+struct Indices {
+    Indices() = default;
+    Indices(const Indices&) = default;
+    Indices(size_t batchIndex, const std::vector<unsigned int>& elementIndices);
+
+    void clear();
+
+    std::vector<unsigned int> m_elementIndices;
+
+    size_t m_batchIndex = _SIZE_T_ERROR;   // Pointer to the batch which stores this face's data
+    unsigned int m_vertBaseIndex = -1;    // Index of the entity's first vertex index in the batch
+    size_t m_numVertsInBatch = 0;          // Number of entity vertices in the batch
+
+    // Memory managment members
+    bool m_inUse = true; // Used for mark and sweep garbage collection
+    size_t m_changeNumber = -1;
+    size_t m_chunkIdx = _SIZE_T_ERROR; // Index of the first chunk
+    size_t m_numChunks = _SIZE_T_ERROR;// Number of chunks
+};
+
 class MultiVboHandler : public Extensions
 {
 public:
-    struct OGLIndices {
-        OGLIndices() = default;
-        OGLIndices(const OGLIndices&) = default;
-        OGLIndices(size_t batchIndex, const std::vector<unsigned int>& elementIndices);
-
-        void clear();
-
-        std::vector<unsigned int> m_elementIndices;
-
-        size_t m_batchIndex = _SIZE_T_ERROR;   // Pointer to the batch which stores this face's data
-        unsigned int m_vertBaseIndex = -1;    // Index of the entity's first vertex index in the batch
-        size_t m_numVertsInBatch = 0;          // Number of entity vertices in the batch
-
-        // Memory managment members
-        bool m_inUse = true; // Used for mark and sweep garbage collection
-        size_t m_changeNumber = -1;
-        size_t m_chunkIdx = _SIZE_T_ERROR; // Index of the first chunk
-        size_t m_numChunks = _SIZE_T_ERROR;// Number of chunks
-    };
-
     struct OGLIndex {
         OGLIndex(const OGLIndex&) = default;
         OGLIndex(size_t batchIndex = 0, size_t vertIndex = 0);
@@ -97,24 +97,24 @@ public:
 
     void beginFaceTesselation();
     // vertiIndices is index pairs into points, normals and parameters to form triangles. It's the standard OGL element index structure
-    const OGLIndices* setFaceTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
+    const Indices* setFaceTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
         const std::vector<unsigned int>& vertiIndices);
-    const OGLIndices* setFaceTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
+    const Indices* setFaceTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
         const std::vector<float>& colors, const std::vector<unsigned int>& vertiIndices);
     void endFaceTesselation(bool smoothNormals);
 
     void beginEdgeTesselation();
-    const OGLIndices* setEdgeStripTessellation(size_t entityKey, const std::vector<float>& lineStripPoints);
-    const OGLIndices* setEdgeSegTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points, const std::vector<unsigned int>& indices);
-    const OGLIndices* setEdgeSegTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& colors, const std::vector<unsigned int>& indices);
+    const Indices* setEdgeStripTessellation(size_t entityKey, const std::vector<float>& lineStripPoints);
+    const Indices* setEdgeSegTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points, const std::vector<unsigned int>& indices);
+    const Indices* setEdgeSegTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& colors, const std::vector<unsigned int>& indices);
     void endEdgeTesselation();
 
     bool getRawData(size_t entityKey, std::vector<unsigned int>& indices) const;
 
-    const OGLIndices* getOglIndices(size_t entityKey) const;
+    const Indices* getOglIndices(size_t entityKey) const;
 
     void beginSettingElementIndices(size_t layerBitMask);
-    void includeElementIndices(int key, const OGLIndices& batchIndices, GLuint texId = 0);
+    void includeElementIndices(int key, const Indices& batchIndices, GLuint texId = 0);
     void endSettingElementIndices();
     void draw(int key, MultiVBO::DrawVertexColorMode drawColors = MultiVBO::DRAW_COLOR_NONE) const;
 
@@ -175,10 +175,10 @@ private:
     void getStorageFor(size_t numVertsNeeded, bool needColorStorage, size_t& batchIndex, size_t& chunkIndex, size_t& blockSizeInChunks);
 
     void setFaceTessellationInner(size_t batchIndex, size_t chunkIndex, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
-        const std::vector<float>& colors, const std::vector<unsigned int>& triIndices, OGLIndices& glIndicesOut);
+        const std::vector<float>& colors, const std::vector<unsigned int>& triIndices, Indices& glIndicesOut);
 
-    void setEdgeStripTessellationInner(size_t batchIndex, size_t vertChunkIndex, const std::vector<float>& lineStripPts, OGLIndices& glIndicesOut);
-    void setEdgeSegTessellationInner(size_t batchIndex, size_t vertChunkIndex, const std::vector<float>& pts, const std::vector<float>& colors, const std::vector<unsigned int>& indices, OGLIndices& glIndicesOut);
+    void setEdgeStripTessellationInner(size_t batchIndex, size_t vertChunkIndex, const std::vector<float>& lineStripPts, Indices& glIndicesOut);
+    void setEdgeSegTessellationInner(size_t batchIndex, size_t vertChunkIndex, const std::vector<float>& pts, const std::vector<float>& colors, const std::vector<unsigned int>& indices, Indices& glIndicesOut);
 
     // Supporting methods for drawKeys
     void bindCommonBuffers(std::shared_ptr<VertexBatch> batchPtr) const;
@@ -202,7 +202,7 @@ private:
     std::vector<int> m_keysLayer;
     std::vector<std::vector<int>> m_layersKeys;
     std::vector<std::shared_ptr<VertexBatch>> m_batches;
-    std::map<size_t, std::shared_ptr<OGLIndices>> m_entityKeyToOGLIndicesMap;
+    std::map<size_t, std::shared_ptr<Indices>> m_entityKeyToOGLIndicesMap;
 };
 
 inline void MultiVboHandler::setShader(const ShaderBase* pShader)
@@ -215,7 +215,7 @@ inline bool MultiVboHandler::empty() const
     return m_batches.empty();
 }
 
-inline const MultiVboHandler::OGLIndices* MultiVboHandler::getOglIndices(size_t entityKey) const
+inline const Indices* MultiVboHandler::getOglIndices(size_t entityKey) const
 {
     auto iter = m_entityKeyToOGLIndicesMap.find(entityKey);
     if (iter != m_entityKeyToOGLIndicesMap.end())

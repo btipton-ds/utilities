@@ -130,14 +130,14 @@ void MultiVboHandler::beginFaceTesselation()
     m_insideBeginFaceTessellation = true;
     // Nothing else required at this time
 }
-const MultiVboHandler::OGLIndices* MultiVboHandler::setFaceTessellation(size_t entityKey, size_t changeNumber, const vector<float>& points, const vector<float>& normals, const vector<float>& parameters,
+const Indices* MultiVboHandler::setFaceTessellation(size_t entityKey, size_t changeNumber, const vector<float>& points, const vector<float>& normals, const vector<float>& parameters,
     const vector<unsigned int>& vertIndices)
 {
     vector<float> colors;
     return setFaceTessellation(entityKey, changeNumber, points, normals, parameters, colors, vertIndices);
 }
 
-const MultiVboHandler::OGLIndices* MultiVboHandler::setFaceTessellation(size_t entityKey, size_t changeNumber, const vector<float>& points, const vector<float>& normals,
+const Indices* MultiVboHandler::setFaceTessellation(size_t entityKey, size_t changeNumber, const vector<float>& points, const vector<float>& normals,
     const vector<float>& parameters, const std::vector<float>& colors, const vector<unsigned int>& vertIndices)
 {
     assert(m_insideBeginFaceTessellation);
@@ -148,7 +148,7 @@ const MultiVboHandler::OGLIndices* MultiVboHandler::setFaceTessellation(size_t e
     size_t batchIndex, vertChunkIndex, blockSizeInChunks;
     getStorageFor(numVerts, !colors.empty(), batchIndex, vertChunkIndex, blockSizeInChunks);
 
-    shared_ptr<OGLIndices> pOglIndices = make_shared<OGLIndices>();
+    shared_ptr<Indices> pOglIndices = make_shared<Indices>();
     setFaceTessellationInner(batchIndex, vertChunkIndex, points, normals, parameters, colors, vertIndices, *pOglIndices);
 
     // Memory management
@@ -161,7 +161,7 @@ const MultiVboHandler::OGLIndices* MultiVboHandler::setFaceTessellation(size_t e
 }
 
 void MultiVboHandler::setFaceTessellationInner(size_t batchIndex, size_t vertChunkIndex, const vector<float>& points, const vector<float>& normals, const vector<float>& parameters,
-    const std::vector<float>& colors, const vector<unsigned int>& triIndices, OGLIndices& glIndicesOut)
+    const std::vector<float>& colors, const vector<unsigned int>& triIndices, Indices& glIndicesOut)
 {
     assert(!m_batches.empty() && batchIndex < m_batches.size());
 
@@ -307,7 +307,7 @@ bool MultiVboHandler::getRawData(size_t entityKey, vector<float>& vertices, vect
     auto p = m_entityKeyToOGLIndicesMap.find(entityKey);
     if (p == m_entityKeyToOGLIndicesMap.end())
         return false;
-    const OGLIndices& triIndices = *p->second;
+    const Indices& triIndices = *p->second;
     if ((triIndices.m_batchIndex == _SIZE_T_ERROR) || (triIndices.m_batchIndex >= m_batches.size()))
         return false;
 
@@ -327,7 +327,7 @@ bool MultiVboHandler::setColorVBO(size_t entityKey, vector<float>& srcColors)
     auto p = m_entityKeyToOGLIndicesMap.find(entityKey);
     if (p == m_entityKeyToOGLIndicesMap.end())
         return false;
-    const OGLIndices& triIndices = *p->second;
+    const Indices& triIndices = *p->second;
 
     if (m_batches.empty() || triIndices.m_batchIndex >= m_batches.size() || srcColors.empty())
         return false;
@@ -357,7 +357,7 @@ bool MultiVboHandler::setBackColorVBO(size_t entityKey, vector<float>& srcColors
     auto p = m_entityKeyToOGLIndicesMap.find(entityKey);
     if (p == m_entityKeyToOGLIndicesMap.end())
         return false;
-    const OGLIndices& triIndices = *p->second;
+    const Indices& triIndices = *p->second;
 
     if (m_batches.empty() || triIndices.m_batchIndex >= m_batches.size())
         return false;
@@ -542,7 +542,7 @@ void MultiVboHandler::beginEdgeTesselation()
     // Nothing else required at this time
 }
 
-const MultiVboHandler::OGLIndices* MultiVboHandler::setEdgeStripTessellation(size_t entityKey, const vector<float>& lineStripPoints)
+const Indices* MultiVboHandler::setEdgeStripTessellation(size_t entityKey, const vector<float>& lineStripPoints)
 {
     assert(m_insideBeginEdgeTessellation);
     size_t numVerts = lineStripPoints.size() / 3;
@@ -550,7 +550,7 @@ const MultiVboHandler::OGLIndices* MultiVboHandler::setEdgeStripTessellation(siz
     size_t batchIndex, vertChunkIndex, blockSizeInChunks;
     getStorageFor(numVerts, false, batchIndex, vertChunkIndex, blockSizeInChunks);
 
-    shared_ptr<OGLIndices> pOglIndices = make_shared<OGLIndices>();
+    shared_ptr<Indices> pOglIndices = make_shared<Indices>();
     setEdgeStripTessellationInner(batchIndex, vertChunkIndex, lineStripPoints, *pOglIndices);
     pOglIndices->m_chunkIdx = vertChunkIndex;
     pOglIndices->m_numChunks = blockSizeInChunks;
@@ -559,13 +559,13 @@ const MultiVboHandler::OGLIndices* MultiVboHandler::setEdgeStripTessellation(siz
     return pOglIndices.get();
 }
 
-const MultiVboHandler::OGLIndices* MultiVboHandler::setEdgeSegTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points, const std::vector<unsigned int>& indices)
+const Indices* MultiVboHandler::setEdgeSegTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points, const std::vector<unsigned int>& indices)
 {
     vector<float> colors;
     return setEdgeSegTessellation(entityKey, changeNumber, points, colors, indices);
 }
 
-const MultiVboHandler::OGLIndices* MultiVboHandler::setEdgeSegTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points,
+const Indices* MultiVboHandler::setEdgeSegTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points,
     const std::vector<float>& colors, const std::vector<unsigned int>& indices)
 {
     assert(m_insideBeginEdgeTessellation);
@@ -573,7 +573,7 @@ const MultiVboHandler::OGLIndices* MultiVboHandler::setEdgeSegTessellation(size_
 
     size_t batchIndex, vertChunkIndex, blockSizeInChunks;
     getStorageFor(numVerts, false, batchIndex, vertChunkIndex, blockSizeInChunks);
-    shared_ptr<OGLIndices> pOglIndices = make_shared<OGLIndices>();
+    shared_ptr<Indices> pOglIndices = make_shared<Indices>();
     setEdgeSegTessellationInner(batchIndex, vertChunkIndex, points, colors, indices, *pOglIndices);
     pOglIndices->m_chunkIdx = vertChunkIndex;
     pOglIndices->m_numChunks = blockSizeInChunks;
@@ -583,7 +583,7 @@ const MultiVboHandler::OGLIndices* MultiVboHandler::setEdgeSegTessellation(size_
     return pOglIndices.get();
 }
 
-void MultiVboHandler::setEdgeStripTessellationInner(size_t batchIndex, size_t vertChunkIndex, const vector<float>& lineStripPts, OGLIndices& glIndicesOut)
+void MultiVboHandler::setEdgeStripTessellationInner(size_t batchIndex, size_t vertChunkIndex, const vector<float>& lineStripPts, Indices& glIndicesOut)
 {
     const size_t numVerts = lineStripPts.size() / 3;
     unsigned int vertBaseIndex = (unsigned int) (vertChunkIndex * vertChunkSize());
@@ -612,7 +612,7 @@ void MultiVboHandler::setEdgeStripTessellationInner(size_t batchIndex, size_t ve
     }
 }
 
-void MultiVboHandler::setEdgeSegTessellationInner(size_t batchIndex, size_t vertChunkIndex, const std::vector<float>& pts, const std::vector<float>& colors, const std::vector<unsigned int>& indicesIn, OGLIndices& glIndicesOut)
+void MultiVboHandler::setEdgeSegTessellationInner(size_t batchIndex, size_t vertChunkIndex, const std::vector<float>& pts, const std::vector<float>& colors, const std::vector<unsigned int>& indicesIn, Indices& glIndicesOut)
 {
     const size_t numVerts = pts.size() / 3;
     unsigned int vertBaseIndex = (unsigned int) (vertChunkIndex * vertChunkSize());
@@ -722,7 +722,7 @@ void MultiVboHandler::beginSettingElementIndices(size_t layerBitMask)
     }
 }
 
-void MultiVboHandler::includeElementIndices(int key, const OGLIndices& batchIndices, GLuint texId)
+void MultiVboHandler::includeElementIndices(int key, const Indices& batchIndices, GLuint texId)
 {
     if (m_batches.empty() || batchIndices.m_batchIndex >= m_batches.size())
         return;
@@ -834,13 +834,13 @@ namespace
     }
 }
 
-MultiVboHandler::OGLIndices::OGLIndices(size_t batchIndex, const vector<unsigned int>& elementIndices)
+Indices::Indices(size_t batchIndex, const vector<unsigned int>& elementIndices)
     : m_batchIndex(batchIndex)
     , m_elementIndices(elementIndices)
 {
 }
 
-void MultiVboHandler::OGLIndices::clear()
+void Indices::clear()
 {
     m_elementIndices.clear();
 
