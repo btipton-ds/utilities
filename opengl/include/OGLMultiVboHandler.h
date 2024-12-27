@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <set>
 #include <memory>
 
 #ifdef WIN32
@@ -198,7 +199,7 @@ private:
 
     const int m_primitiveType;
     ChunkSizeBlockMap m_chunkSizeToBlocksMap; // The map key is the size of the chunk. The map value is the batchIndex and starting blockNum of the block
-    std::vector<bool> m_keysToDraw;
+    std::set<int> m_keysToDraw;
     bool m_clearAllLayers = true;
     size_t m_layerBitMask = 0;
     const ShaderBase* m_pShader = nullptr;

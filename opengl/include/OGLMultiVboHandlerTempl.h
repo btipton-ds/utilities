@@ -19,7 +19,7 @@ inline void OGL::MultiVboHandler::drawAllKeys(PRE_FUNC preDrawFunc, POST_FUNC po
         for (size_t layerNum = 0; layerNum < m_layersKeys.size(); layerNum++) { // Each layer has a list of keys to be drawn in the layer. The keys are stored in a set
             const std::vector<int>& layerKeys = m_layersKeys[layerNum];
             for (int key : layerKeys) {
-                if (m_keysToDraw[key] && (batchPtr->m_indexMap.count(key) != 0)) {
+                if (m_keysToDraw.contains(key) && (batchPtr->m_indexMap.count(key) != 0)) {
                     MultiVBO::DrawVertexColorMode colorMode = preDrawFunc(key); // Sets up the required gl calls for drawing this key
                     drawKeyForBatch(key, batchPtr, colorMode);
                     postDrawFunc(); // Clean up gl properties

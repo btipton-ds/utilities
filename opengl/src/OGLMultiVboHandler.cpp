@@ -698,10 +698,6 @@ void MultiVboHandler::beginSettingElementIndices(size_t layerBitMask)
     } else
         m_layerBitMask = layerBitMask;
 
-    // Draw the key, just don't change the element indices
-    if (m_keysToDraw.size() != m_keysLayer.size())
-        m_keysToDraw.resize(m_keysLayer.size(), false);
-
     for (auto& pBatch : m_batches) {
         int layer = 0;
         size_t bitMask = m_layerBitMask;
@@ -725,10 +721,10 @@ void MultiVboHandler::beginSettingElementIndices(size_t layerBitMask)
 
 void MultiVboHandler::includeElementIndices(int key, const IndicesPtr& batchIndices, GLuint texId)
 {
-    if (m_batches.empty() || batchIndices->m_batchIndex >= m_batches.size())
+    if (m_batches.empty() || !batchIndices || batchIndices->m_batchIndex >= m_batches.size())
         return;
 
-    m_keysToDraw[key] = true;
+    m_keysToDraw.insert(key);
 
     size_t layer = findLayerForKey(key);
     size_t layerBit = 1LL << layer;

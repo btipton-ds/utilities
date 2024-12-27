@@ -25,7 +25,7 @@
 #include <OGLCol4f.h>
 
 #ifdef _DEBUG
-#define GL_ASSERT ShaderBase::dumpGlErrors(__FILE__, __LINE__);
+#define GL_ASSERT ::OGL::ShaderBase::dumpGlErrors(__FILE__, __LINE__);
 #else
 #define GL_ASSERT
 #endif // _DEBUG
