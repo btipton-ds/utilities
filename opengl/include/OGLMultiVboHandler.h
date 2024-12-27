@@ -87,7 +87,7 @@ public:
     const IndicesPtr getOglIndices(size_t entityKey) const;
 
     void beginSettingElementIndices(size_t layerBitMask);
-    void includeElementIndices(int key, const Indices& batchIndices, GLuint texId = 0);
+    void includeElementIndices(int key, const IndicesPtr& batchIndices, GLuint texId = 0);
     void endSettingElementIndices();
     void draw(int key, MultiVBO::DrawVertexColorMode drawColors = MultiVBO::DRAW_COLOR_NONE) const;
 

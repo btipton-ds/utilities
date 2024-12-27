@@ -723,9 +723,9 @@ void MultiVboHandler::beginSettingElementIndices(size_t layerBitMask)
     }
 }
 
-void MultiVboHandler::includeElementIndices(int key, const Indices& batchIndices, GLuint texId)
+void MultiVboHandler::includeElementIndices(int key, const IndicesPtr& batchIndices, GLuint texId)
 {
-    if (m_batches.empty() || batchIndices.m_batchIndex >= m_batches.size())
+    if (m_batches.empty() || batchIndices->m_batchIndex >= m_batches.size())
         return;
 
     m_keysToDraw[key] = true;
@@ -736,9 +736,9 @@ void MultiVboHandler::includeElementIndices(int key, const Indices& batchIndices
         return;
     }
 
-    auto& pBatch = m_batches[batchIndices.m_batchIndex];
+    auto& pBatch = m_batches[batchIndices->m_batchIndex];
     if (texId) {
-        shared_ptr<VertexBatch::ElemIndexMapRec> pRec = make_shared<VertexBatch::ElemIndexMapRec>(texId, batchIndices.m_elementIndices);
+        shared_ptr<VertexBatch::ElemIndexMapRec> pRec = make_shared<VertexBatch::ElemIndexMapRec>(texId, batchIndices->m_elementIndices);
         pBatch->m_texturedFaces.push_back(pRec);
     } else {
         auto iter = pBatch->m_indexMap.find(key);
@@ -746,7 +746,7 @@ void MultiVboHandler::includeElementIndices(int key, const Indices& batchIndices
             iter = pBatch->m_indexMap.insert(make_pair(key, vector<unsigned int>())).first;
         }
         vector<unsigned int>& indices = iter->second;
-        const auto& triIndices = batchIndices.m_elementIndices;
+        const auto& triIndices = batchIndices->m_elementIndices;
         indices.insert(indices.end(), triIndices.begin(), triIndices.end());
     }
 }
