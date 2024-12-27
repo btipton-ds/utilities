@@ -38,17 +38,17 @@ struct Indices {
     size_t m_numChunks = _SIZE_T_ERROR;// Number of chunks
 };
 
+struct Index {
+    Index(const Index&) = default;
+    Index(size_t batchIndex = 0, size_t vertIndex = 0);
+    bool operator < (const Index& rhs) const;
+
+    size_t m_batchIndex = 0, m_vertIndex = 0;
+};
+
 class MultiVboHandler : public Extensions
 {
 public:
-    struct OGLIndex {
-        OGLIndex(const OGLIndex&) = default;
-        OGLIndex(size_t batchIndex = 0, size_t vertIndex = 0);
-        bool operator < (const OGLIndex& rhs) const;
-
-        size_t m_batchIndex = 0, m_vertIndex = 0;
-    };
-
     struct VertexBatch {
         struct ElemIndexMapRec {
             inline ElemIndexMapRec(GLuint texId, const std::vector<unsigned int>& elementIndices)
@@ -127,8 +127,8 @@ public:
     template<typename PRE_FUNC, typename POST_FUNC, typename PRE_TEX_FUNC, typename POST_TEX_FUNC>
     void drawAllKeys(PRE_FUNC preDrawFunc, POST_FUNC postDrawFunc, PRE_TEX_FUNC preDrawTexFunc, POST_TEX_FUNC postDrawTexFunc) const;
 
-    bool getVert(const MultiVboHandler::OGLIndex& glIndicesOut, float coords[3]) const;
-    bool getNormal(const MultiVboHandler::OGLIndex& glIndicesOut, float coords[3]) const;
+    bool getVert(const Index& glIndicesOut, float coords[3]) const;
+    bool getNormal(const Index& glIndicesOut, float coords[3]) const;
 
     bool getRawData(size_t entityKey, std::vector<float>& points, std::vector<float>& normals, std::vector<float>& parameters) const;
 
@@ -223,13 +223,13 @@ inline const Indices* MultiVboHandler::getOglIndices(size_t entityKey) const
     return nullptr;
 }
 
-inline MultiVboHandler::OGLIndex::OGLIndex(size_t batchIndex, size_t vertIndex)
+inline Index::Index(size_t batchIndex, size_t vertIndex)
     : m_batchIndex(batchIndex)
     , m_vertIndex(vertIndex)
 {
 }
 
-inline bool MultiVboHandler::OGLIndex::operator < (const OGLIndex& rhs) const
+inline bool Index::operator < (const Index& rhs) const
 {
     if (m_batchIndex < rhs.m_batchIndex)
         return true;

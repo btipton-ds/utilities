@@ -229,7 +229,7 @@ void MultiVboHandler::endFaceTesselation(bool smoothNormals)
     }
 }
 
-bool MultiVboHandler::getVert(const MultiVboHandler::OGLIndex& glIndicesOut, float coords[3]) const
+bool MultiVboHandler::getVert(const Index& glIndicesOut, float coords[3]) const
 {
     if (m_batches.empty() || glIndicesOut.m_batchIndex >= m_batches.size())
         return false;
@@ -247,7 +247,7 @@ bool MultiVboHandler::getVert(const MultiVboHandler::OGLIndex& glIndicesOut, flo
     return false;
 }
 
-bool MultiVboHandler::getNormal(const MultiVboHandler::OGLIndex& glIndicesOut, float coords[3]) const
+bool MultiVboHandler::getNormal(const Index& glIndicesOut, float coords[3]) const
 {
     if (m_batches.empty() || glIndicesOut.m_batchIndex >= m_batches.size())
         return false;
