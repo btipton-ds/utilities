@@ -36,6 +36,7 @@ Another refinement is to our own vertex mangement using partial VBO writing to r
 #define OGL_EDGE_BATCH_VERT_COUNT_MAX_K 16
 
 using namespace std;
+using namespace OGL;
 
 COglMultiVboHandler::COglMultiVboHandler(int primitiveType, int maxKeyIndex)
     : m_primitiveType(primitiveType)

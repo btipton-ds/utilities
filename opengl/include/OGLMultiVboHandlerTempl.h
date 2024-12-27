@@ -11,7 +11,7 @@
 #include <OGLMultiVboHandler.h>
 
 template<typename PRE_FUNC, typename POST_FUNC, typename PRE_TEX_FUNC, typename POST_TEX_FUNC>
-inline void COglMultiVboHandler::drawAllKeys(PRE_FUNC preDrawFunc, POST_FUNC postDrawFunc, PRE_TEX_FUNC preDrawTexFunc, POST_TEX_FUNC postDrawTexFunc) const
+inline void OGL::COglMultiVboHandler::drawAllKeys(PRE_FUNC preDrawFunc, POST_FUNC postDrawFunc, PRE_TEX_FUNC preDrawTexFunc, POST_TEX_FUNC postDrawTexFunc) const
 {
     for (auto batchPtr : m_batches) {
         bindCommonBuffers(batchPtr);

@@ -44,6 +44,7 @@ Another refinement is to our own vertex mangement using partial VBO writing to r
 */
 
 using namespace std;
+using namespace OGL;
 
 #ifndef HLOG
 #define HLOG(msg)

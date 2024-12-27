@@ -14,6 +14,8 @@
 // OGLMultiVboHandler.html
 //
 // If someone can find a way to hyperlink to a relative file, please do that.
+namespace OGL
+{
 class COglShaderBase;
 
 class COglMultiVboHandler : public COglExtensions
@@ -135,8 +137,8 @@ public:
 
     int findLayerForKey(int key) const;
 
-// Memory management
-    struct ChangeRec 
+    // Memory management
+    struct ChangeRec
     {
         inline ChangeRec(size_t entityKey, size_t changeNumber)
             : m_entityKey(entityKey)
@@ -237,3 +239,4 @@ inline bool COglMultiVboHandler::OGLIndex::operator < (const OGLIndex& rhs) cons
     return m_vertIndex < rhs.m_vertIndex;
 }
 
+}

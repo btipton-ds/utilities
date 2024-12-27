@@ -14,6 +14,8 @@
 //
 // If someone can find a way to hyperlink to a relative file, please do that.
 
+namespace OGL
+{
 class COglShaderBase;
 
 class COglMultiVBO : public COglExtensions
@@ -40,7 +42,7 @@ public:
     void dumpToStream(std::ostream& out) const;
 
     virtual bool copyToVBO(const std::vector<float>& verts, const std::vector<float>& normals, bool smoothNrmls, const std::vector<float>& textureCoords, int dataID = 0);    ///replaces whatever was there before, normal size == vertex size && tex size is 2/3 of vertex size or has no size
-    virtual bool copyToVBO(const std::vector<float>& verts, const std::vector<float>& normals, bool smoothNrmls, const std::vector<float>& textureCoords, 
+    virtual bool copyToVBO(const std::vector<float>& verts, const std::vector<float>& normals, bool smoothNrmls, const std::vector<float>& textureCoords,
         const std::vector<float>& colors, int dataID = 0);    ///replaces whatever was there before, normal size == vertex size && tex size is 2/3 of vertex size or has no size
     virtual bool copyToVBO(const std::vector<float>& verts, const std::vector<float>& colors, int dataID = 0);    ///replaces whatever was there before, normal size == vertex size && tex size is 2/3 of vertex size or has no size
     virtual bool copyToVBO(const std::vector<float>& verts, int dataID = 0);    ///replaces whatever was there before, normal size == vertex size && tex size is 2/3 of vertex size or has no size
@@ -149,4 +151,6 @@ inline size_t COglMultiVBO::ElementVBORec::getNumElements() const
 inline GLuint COglMultiVBO::ElementVBORec::getVboId() const
 {
     return m_elementIdxVboID;
+}
+
 }

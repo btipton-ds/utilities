@@ -25,6 +25,7 @@
 #include <OGLShader.h>
 
 using namespace std;
+using namespace OGL;
 
 #define	RETURN_IF_NOT_FIRST_TIME(a) static bool first=true; if(!first) return a; first = false;
 
