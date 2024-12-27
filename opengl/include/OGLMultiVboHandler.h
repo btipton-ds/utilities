@@ -18,6 +18,9 @@ namespace OGL
 {
 class ShaderBase;
 
+struct Indices;
+using IndicesPtr = std::shared_ptr<Indices>;
+
 struct Indices {
     Indices() = default;
     Indices(const Indices&) = default;
@@ -67,21 +70,21 @@ public:
 
     void beginFaceTesselation();
     // vertiIndices is index pairs into points, normals and parameters to form triangles. It's the standard OGL element index structure
-    const Indices* setFaceTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
+    const IndicesPtr setFaceTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
         const std::vector<unsigned int>& vertiIndices);
-    const Indices* setFaceTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
+    const IndicesPtr setFaceTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
         const std::vector<float>& colors, const std::vector<unsigned int>& vertiIndices);
     void endFaceTesselation(bool smoothNormals);
 
     void beginEdgeTesselation();
-    const Indices* setEdgeStripTessellation(size_t entityKey, const std::vector<float>& lineStripPoints);
-    const Indices* setEdgeSegTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points, const std::vector<unsigned int>& indices);
-    const Indices* setEdgeSegTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& colors, const std::vector<unsigned int>& indices);
+    const IndicesPtr setEdgeStripTessellation(size_t entityKey, const std::vector<float>& lineStripPoints);
+    const IndicesPtr setEdgeSegTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points, const std::vector<unsigned int>& indices);
+    const IndicesPtr setEdgeSegTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& colors, const std::vector<unsigned int>& indices);
     void endEdgeTesselation();
 
     bool getRawData(size_t entityKey, std::vector<unsigned int>& indices) const;
 
-    const Indices* getOglIndices(size_t entityKey) const;
+    const IndicesPtr getOglIndices(size_t entityKey) const;
 
     void beginSettingElementIndices(size_t layerBitMask);
     void includeElementIndices(int key, const Indices& batchIndices, GLuint texId = 0);
@@ -215,11 +218,11 @@ inline bool MultiVboHandler::empty() const
     return m_batches.empty();
 }
 
-inline const Indices* MultiVboHandler::getOglIndices(size_t entityKey) const
+inline const IndicesPtr MultiVboHandler::getOglIndices(size_t entityKey) const
 {
     auto iter = m_entityKeyToOGLIndicesMap.find(entityKey);
     if (iter != m_entityKeyToOGLIndicesMap.end())
-        return iter->second.get();
+        return iter->second;
     return nullptr;
 }
 
