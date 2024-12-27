@@ -49,36 +49,6 @@ struct Index {
 class MultiVboHandler : public Extensions
 {
 public:
-    struct VertexBatch {
-        struct ElemIndexMapRec {
-            inline ElemIndexMapRec(GLuint texId, const std::vector<unsigned int>& elementIndices)
-                : m_texId(texId)
-                , m_elementIndices(elementIndices)
-            {
-            }
-            ElemIndexMapRec(const ElemIndexMapRec& src) = default;
-            GLuint m_texId = 0;
-            std::vector<unsigned int> m_elementIndices;
-        };
-        VertexBatch(int primitiveType);
-        // TODO, in the future it may be beneficial to make this a real class and move some MultiVboHandler methods to here.
-        // for now, this is pure structure with no code.
-
-        // CPU side representation
-        size_t m_nextFreeVertIndex = 0; // This used to make blocks of similar sizes for reuse
-
-        bool m_needsUpdate = true;
-        std::vector<float> m_points, m_normals, m_parameters;
-        std::vector<float> m_colors, m_backColors;
-        std::map<int, std::vector<unsigned int>> m_indexMap;
-        std::vector<std::shared_ptr<ElemIndexMapRec>> m_texturedFaces;
-
-        std::vector<size_t> m_allocatedChunks; // The index is the chunk number and the value is the number of allocated chunks at that index
-
-        // Video card representation
-        MultiVBO m_VBO;
-    };
-
     MultiVboHandler(int primitiveType, int maxKeyIndex);
     ~MultiVboHandler();
 
@@ -151,6 +121,36 @@ public:
     };
     void doGarbageCollection(const std::vector<ChangeRec>& entityKeysInUse);
 private:
+    struct VertexBatch {
+        struct ElemIndexMapRec {
+            inline ElemIndexMapRec(GLuint texId, const std::vector<unsigned int>& elementIndices)
+                : m_texId(texId)
+                , m_elementIndices(elementIndices)
+            {
+            }
+            ElemIndexMapRec(const ElemIndexMapRec& src) = default;
+            GLuint m_texId = 0;
+            std::vector<unsigned int> m_elementIndices;
+        };
+        VertexBatch(int primitiveType);
+        // TODO, in the future it may be beneficial to make this a real class and move some MultiVboHandler methods to here.
+        // for now, this is pure structure with no code.
+
+        // CPU side representation
+        size_t m_nextFreeVertIndex = 0; // This used to make blocks of similar sizes for reuse
+
+        bool m_needsUpdate = true;
+        std::vector<float> m_points, m_normals, m_parameters;
+        std::vector<float> m_colors, m_backColors;
+        std::map<int, std::vector<unsigned int>> m_indexMap;
+        std::vector<std::shared_ptr<ElemIndexMapRec>> m_texturedFaces;
+
+        std::vector<size_t> m_allocatedChunks; // The index is the chunk number and the value is the number of allocated chunks at that index
+
+        // Video card representation
+        MultiVBO m_VBO;
+    };
+
     struct FreeChunkRecord {
         inline FreeChunkRecord(size_t batchIndex, size_t chunkIndex)
             : m_batchIndex(batchIndex)
