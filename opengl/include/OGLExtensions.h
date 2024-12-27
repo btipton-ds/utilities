@@ -18,12 +18,12 @@ namespace OGL
 /*
     This loads all OpenGL extensions up to 4.6 and shader support
 */
-class COglExtensions
+class Extensions
 {
 public:
 
     static bool hasVBOSupport();    //< pretty much a given, but just in case
-    COglExtensions();
+    Extensions();
 #ifdef WIN32
     static PFNGLACTIVESHADERPROGRAMPROC glActiveShaderProgram;
     static PFNGLACTIVETEXTUREPROC glActiveTexture;

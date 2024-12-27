@@ -1,4 +1,4 @@
-// OglShader.cpp: implementation of the COglMesh class.
+// OglShader.cpp: implementation of the Mesh class.
 //
 //////////////////////////////////////////////////////////////////////
 
@@ -29,7 +29,7 @@ using namespace OGL;
 
 #define	RETURN_IF_NOT_FIRST_TIME(a) static bool first=true; if(!first) return a; first = false;
 
-void COglShaderBase::dumpGlErrors(const char* filename, int lineNumber)
+void ShaderBase::dumpGlErrors(const char* filename, int lineNumber)
 {
     GLenum err;
     while ((err = glGetError()) && err != GL_NO_ERROR) {
@@ -94,22 +94,21 @@ ADD_PREF_SERIALIZED(HighQualityEnvFileName, StringT(_T("Patterns\\seaworld.dds")
 
 #endif
 
-
 #define assert_variable_not_found //assert(!"variable not found")
 
-COglArg::COglArg(int val)
+Arg::Arg(int val)
 {
     type = eInt;
     ival = val;
 }
 
-COglArg::COglArg(float val)
+Arg::Arg(float val)
 {
     type = eFloat;
     fval = val;
 }
 
-COglArg::COglArg(const float* val, int numFloats)
+Arg::Arg(const float* val, int numFloats)
 {
     switch(numFloats)
     {
@@ -122,7 +121,7 @@ COglArg::COglArg(const float* val, int numFloats)
     }
 }
 
-void  COglArg::set(int val)
+void  Arg::set(int val)
 {
     if( type != eInt )
     {
@@ -132,7 +131,7 @@ void  COglArg::set(int val)
     ival = val;
 }
 
-void  COglArg::set(float val)
+void  Arg::set(float val)
 {
     if( type != eFloat )
     {
@@ -142,7 +141,7 @@ void  COglArg::set(float val)
     fval = val;
 }
 
-void  COglArg::set(const float* val)
+void  Arg::set(const float* val)
 {
     switch(type)
     {
@@ -155,7 +154,7 @@ void  COglArg::set(const float* val)
     }
 }
 
-int COglArg::getInt()
+int Arg::getInt()
 {
     if( type != eInt )
     {
@@ -165,7 +164,7 @@ int COglArg::getInt()
     return ival;
 }
 
-float COglArg::getFloat()
+float Arg::getFloat()
 {
     if( type != eFloat )
     {
@@ -175,7 +174,7 @@ float COglArg::getFloat()
     return fval;
 }
 
-float* COglArg::getFloatPtr()
+float* Arg::getFloatPtr()
 {
     if( type < eFloat2 || type > eFloat16 )
     {
@@ -186,7 +185,7 @@ float* COglArg::getFloatPtr()
     return fvalArr;
 }
 
-float COglArg::getFloatAt(int idx)
+float Arg::getFloatAt(int idx)
 {
     switch( type )
     {
@@ -200,22 +199,22 @@ float COglArg::getFloatAt(int idx)
     return 0.0f;
 }
 
-void COglArg::allocFloat(const float* val, int numFloats)
+void Arg::allocFloat(const float* val, int numFloats)
 {
     assert(numFloats <= 4);
     memcpy( fvalArr, val, sizeof(float)*numFloats);
 }
 
-COglArg::~COglArg()
+Arg::~Arg()
 {
 }
 
 
-bool COglShaderBase::mEnabled = true; //user override of global shader usage
+bool ShaderBase::mEnabled = true; //user override of global shader usage
 
 #ifdef WIN32
-COglShaderBase::COglShaderBase()
-    : COglExtensions()
+ShaderBase::ShaderBase()
+    : Extensions()
     , m_error(false)
 	, m_textureUnitStates(0)
     , m_defaultsLoaded(false)
@@ -225,7 +224,7 @@ COglShaderBase::COglShaderBase()
 {
 }
 #else
-COglShaderBase::COglShaderBase()
+ShaderBase::ShaderBase()
     : m_error(false)
 	, m_textureUnitStates(0)
     , m_defaultsLoaded(false)
@@ -236,32 +235,32 @@ COglShaderBase::COglShaderBase()
 }
 #endif
 
-COglShaderBase::~COglShaderBase()
+ShaderBase::~ShaderBase()
 {
-    HLOG(_T("~COglShaderBase()"));
+    HLOG(_T("~ShaderBase()"));
 #if TEXTURE_SUPPORT
     clearTextures();
 #endif
 }
 
-bool COglShaderBase::isEnabled()
+bool ShaderBase::isEnabled()
 {
     return mEnabled;
 }
 
-void COglShaderBase::enable(bool set)
+void ShaderBase::enable(bool set)
 {
     mEnabled = set;
 }
 
-void COglShaderBase::setVariablei( const string& name, int  value )
+void ShaderBase::setVariablei( const string& name, int  value )
 {
     if( !m_defaultsLoaded ) 
         loadDefaultVariables();
 
     auto it = m_argumentMap.find( name );
     if( it == m_argumentMap.end() )
-        m_argumentMap.insert(make_pair(name, make_shared<COglArg>(value)));
+        m_argumentMap.insert(make_pair(name, make_shared<Arg>(value)));
     else
         it->second->set(value);
 
@@ -277,7 +276,7 @@ void COglShaderBase::setVariablei( const string& name, int  value )
     }
 }
 
-void COglShaderBase::setVariable( const string& name, float  value )
+void ShaderBase::setVariable( const string& name, float  value )
 {
     if( !m_defaultsLoaded ) 
         loadDefaultVariables();
@@ -286,7 +285,7 @@ void COglShaderBase::setVariable( const string& name, float  value )
 
     it = m_argumentMap.find( name );
     if( it == m_argumentMap.end() )
-        m_argumentMap.insert( ArgMapType::value_type( name, new COglArg( value ) ) );
+        m_argumentMap.insert( ArgMapType::value_type( name, new Arg( value ) ) );
     else
         it->second->set(value);
 
@@ -300,7 +299,7 @@ void COglShaderBase::setVariable( const string& name, float  value )
     }
 }
 
-void COglShaderBase::setVariable( const string& name, const col4f& value )
+void ShaderBase::setVariable( const string& name, const col4f& value )
 {
     if( !m_defaultsLoaded ) 
         loadDefaultVariables();
@@ -309,7 +308,7 @@ void COglShaderBase::setVariable( const string& name, const col4f& value )
 
     it = m_argumentMap.find( name );
     if( it == m_argumentMap.end() )
-        m_argumentMap.insert( ArgMapType::value_type( name, new COglArg( value, 4 ) ) );
+        m_argumentMap.insert( ArgMapType::value_type( name, new Arg( value, 4 ) ) );
     else
         it->second->set(value);
 
@@ -323,7 +322,7 @@ void COglShaderBase::setVariable( const string& name, const col4f& value )
     }
 }
 
-void COglShaderBase::setVariable( const string& name, const m44f&  value )
+void ShaderBase::setVariable( const string& name, const m44f&  value )
 {
     if( !m_defaultsLoaded ) 
         loadDefaultVariables();
@@ -332,7 +331,7 @@ void COglShaderBase::setVariable( const string& name, const m44f&  value )
 
     it = m_argumentMap.find( name );
     if( it == m_argumentMap.end() )
-        m_argumentMap.insert( ArgMapType::value_type( name, new COglArg( value.transposef(), 16 ) ) );
+        m_argumentMap.insert( ArgMapType::value_type( name, new Arg( value.transposef(), 16 ) ) );
     else
         it->second->set( value.transposef() );
 
@@ -347,7 +346,7 @@ void COglShaderBase::setVariable( const string& name, const m44f&  value )
 
 }
 
-void COglShaderBase::setVariable( const string& name, const p4f&   value )
+void ShaderBase::setVariable( const string& name, const p4f&   value )
 {
     if( !m_defaultsLoaded ) 
         loadDefaultVariables();
@@ -356,7 +355,7 @@ void COglShaderBase::setVariable( const string& name, const p4f&   value )
 
     it = m_argumentMap.find( name );
     if( it == m_argumentMap.end() )
-        m_argumentMap.insert( ArgMapType::value_type( name, new COglArg( value, 4 ) ) );
+        m_argumentMap.insert( ArgMapType::value_type( name, new Arg( value, 4 ) ) );
     else
         it->second->set(value);
 
@@ -370,7 +369,7 @@ void COglShaderBase::setVariable( const string& name, const p4f&   value )
     }
 }
 
-void COglShaderBase::setVariable( const string& name, const p3f&   value )
+void ShaderBase::setVariable( const string& name, const p3f&   value )
 {
     if( !m_defaultsLoaded ) 
         loadDefaultVariables();
@@ -379,7 +378,7 @@ void COglShaderBase::setVariable( const string& name, const p3f&   value )
 
     it = m_argumentMap.find( name );
     if( it == m_argumentMap.end() )
-        m_argumentMap.insert( ArgMapType::value_type( name, new COglArg( value, 3 ) ) );
+        m_argumentMap.insert( ArgMapType::value_type( name, new Arg( value, 3 ) ) );
     else
         it->second->set(value);
 
@@ -393,7 +392,7 @@ void COglShaderBase::setVariable( const string& name, const p3f&   value )
     }
 }
 
-void COglShaderBase::setVariable( const string& name, const p2f& value )
+void ShaderBase::setVariable( const string& name, const p2f& value )
 {
     if( !m_defaultsLoaded ) 
         loadDefaultVariables();
@@ -402,7 +401,7 @@ void COglShaderBase::setVariable( const string& name, const p2f& value )
 
     it = m_argumentMap.find( name );
     if( it == m_argumentMap.end() )
-        m_argumentMap.insert( ArgMapType::value_type( name, new COglArg( value, 2 ) ) );
+        m_argumentMap.insert( ArgMapType::value_type( name, new Arg( value, 2 ) ) );
     else
         it->second->set(value);
 
@@ -417,7 +416,7 @@ void COglShaderBase::setVariable( const string& name, const p2f& value )
 }
 
 #if HAS_SHADER_SUBROUTINES
-void COglShaderBase::setFragSubRoutine(const char* name)
+void ShaderBase::setFragSubRoutine(const char* name)
 {
 	GLuint subIdx = glGetSubroutineIndex(programID(), GL_FRAGMENT_SHADER, name);
 	if (subIdx >= 0) {
@@ -425,7 +424,7 @@ void COglShaderBase::setFragSubRoutine(const char* name)
 	}
 }
 
-void COglShaderBase::setVertSubRoutine(const char* name)
+void ShaderBase::setVertSubRoutine(const char* name)
 {
 	GLuint subIdx = glGetSubroutineIndex(programID(), GL_VERTEX_SHADER, name);
 	if (subIdx >= 0) {
@@ -435,17 +434,17 @@ void COglShaderBase::setVertSubRoutine(const char* name)
 #endif
 
 void   clearTextures();
-void COglShaderBase::clearTextures()
+void ShaderBase::clearTextures()
 {
 #if TEXTURE_SUPPORT
     m_TextureMap.clear();
 #endif
 }
 
-bool COglShaderBase::setTexture( const string& textureShaderName, const string& filename, bool flipImage )
+bool ShaderBase::setTexture( const string& textureShaderName, const string& filename, bool flipImage )
 {
 #if TEXTURE_SUPPORT
-    HLOG(Format(_T("COglShaderBase::setTexture %s %s"),textureShaderName,filename));
+    HLOG(Format(_T("ShaderBase::setTexture %s %s"),textureShaderName,filename));
 
     auto iter = m_TextureMap.find( textureShaderName );
     if(iter != m_TextureMap.end() )
@@ -459,7 +458,7 @@ bool COglShaderBase::setTexture( const string& textureShaderName, const string& 
 
 	if( filename.empty() )
 	{
-		m_TextureMap.insert( TextureMapType::value_type( textureShaderName, (COglTexture *)0 ) );
+		m_TextureMap.insert( TextureMapType::value_type( textureShaderName, (Texture *)0 ) );
 		return true;
 	}
 
@@ -494,7 +493,7 @@ bool COglShaderBase::setTexture( const string& textureShaderName, const string& 
     return true;
 }
 
-bool COglShaderBase::hasTexture ( const string& textureShaderName) const
+bool ShaderBase::hasTexture ( const string& textureShaderName) const
 {
 #if TEXTURE_SUPPORT
     TextureMapType::iterator target = m_TextureMap.find( textureShaderName );
@@ -503,10 +502,10 @@ bool COglShaderBase::hasTexture ( const string& textureShaderName) const
     return false;
 }
 
-bool COglShaderBase::setTexture ( const string& textureShaderName, COglTexture* texture, bool takeOwnerShip )
+bool ShaderBase::setTexture ( const string& textureShaderName, Texture* texture, bool takeOwnerShip )
 {
 #if TEXTURE_SUPPORT
-    // HLOG(Format(_T("COglShaderBase::setTexture %s %s"),textureShaderName, takeOwnerShip ? _T("shader will delete") : _T("shader will NOT delete")));
+    // HLOG(Format(_T("ShaderBase::setTexture %s %s"),textureShaderName, takeOwnerShip ? _T("shader will delete") : _T("shader will NOT delete")));
 
     if( !m_defaultsLoaded ) 
         loadDefaultVariables();
@@ -524,7 +523,7 @@ bool COglShaderBase::setTexture ( const string& textureShaderName, COglTexture* 
             }
         }
 
-		m_TextureMap.insert( TextureMapType::value_type( textureShaderName, (COglTexture *)0 ) );
+		m_TextureMap.insert( TextureMapType::value_type( textureShaderName, (Texture *)0 ) );
     }
     else
     {
@@ -557,7 +556,7 @@ bool COglShaderBase::setTexture ( const string& textureShaderName, COglTexture* 
 #endif
 }
 
-COglTexture* COglShaderBase::getTexture( const string& textureShaderName )
+Texture* ShaderBase::getTexture( const string& textureShaderName )
 {
 #if TEXTURE_SUPPORT
     if( !m_defaultsLoaded )
@@ -586,7 +585,7 @@ namespace
 
             glGetIntegerv(GL_NUM_EXTENSIONS, &numExt);
             for (GLint i = 0; i < numExt; i++) {
-                const GLubyte* pName = COglShaderBase::glGetStringi(GL_EXTENSIONS, i);
+                const GLubyte* pName = ShaderBase::glGetStringi(GL_EXTENSIONS, i);
             }
         }
 #endif
@@ -594,7 +593,7 @@ namespace
     }
 }
 
-bool COglShaderBase::hasShaderError(int obj) const
+bool ShaderBase::hasShaderError(int obj) const
 {
 #ifdef GLSL_VERBOSE
     int infologLength = 0;
@@ -618,7 +617,7 @@ bool COglShaderBase::hasShaderError(int obj) const
 	return false;
 }
 
-bool COglShaderBase::hasProgramError(int obj) const
+bool ShaderBase::hasProgramError(int obj) const
 {
 #ifdef GLSL_VERBOSE
     int infologLength = 0;	
@@ -640,7 +639,7 @@ bool COglShaderBase::hasProgramError(int obj) const
 	return false;
 }
 
-string COglShaderBase::getDataDir()
+string ShaderBase::getDataDir()
 {
 #ifdef OPENGLIB_EXPORTS
     return getGUIWrapper()->getExeDirectory().getBuffer();
@@ -699,7 +698,7 @@ static bool doesFileExist( const string& pathFile )
 
 static string getCheckedImagePath(const string& str)
 {
-    string fname = COglShaderBase::getDataDir();
+    string fname = ShaderBase::getDataDir();
 
     if( !fname.empty() )
     {
@@ -714,7 +713,7 @@ static string getCheckedImagePath(const string& str)
     return fname;
 }
 
-void COglShaderBase::loadDefaultVariables()
+void ShaderBase::loadDefaultVariables()
 {
     static bool firstCall = true;
     if (!firstCall)
@@ -815,31 +814,31 @@ void COglShaderBase::loadDefaultVariables()
                     vname = getVariableName( tname + 14 );
 					if( !stiArg )
 					{
-                        COglTexture* pDummy = nullptr;
+                        Texture* pDummy = nullptr;
 						setTexture( vname, pDummy, false);
 					}
                     else if( strstr( stiArg, "GraphicsRGBABuffer") )
                     {
 #if TEXTURE_SUPPORT
-                        setTexture( vname, new COglGraphicsColorBuffer, true );
+                        setTexture( vname, new GraphicsColorBuffer, true );
 #endif
                     }
                     else if( strstr( stiArg, "GraphicsDepthBuffer") )
                     {
 #if TEXTURE_SUPPORT
-                        setTexture( vname, new COglGraphicsDepthBuffer(), true );
+                        setTexture( vname, new GraphicsDepthBuffer(), true );
 #endif
                     }
                     else if( strstr( stiArg, "SystemRGBABuffer") )
                     {
 #if TEXTURE_SUPPORT
-                        setTexture( vname, new COglSystemImageBuffer(GL_BGRA_EXT), true );
+                        setTexture( vname, new SystemImageBuffer(GL_BGRA_EXT), true );
 #endif
                     }
                     else if( strstr( stiArg, "SystemAlphaBuffer") )
                     {
 #if TEXTURE_SUPPORT
-                        setTexture( vname, new COglSystemImageBuffer(GL_ALPHA), true );
+                        setTexture( vname, new SystemImageBuffer(GL_ALPHA), true );
 #endif
                     }
                     else
@@ -914,9 +913,9 @@ void COglShaderBase::loadDefaultVariables()
 
 #define LOG_AND_RETURN(a,b) if(a) { m_error = true; m_log = b; return false;}
 
-bool COglShaderBase::load()
+bool ShaderBase::load()
 {
-    HDTIMELOG("Entering COglShaderBase::load()");
+    HDTIMELOG("Entering ShaderBase::load()");
     CHECK_GLSL_STATE;
 
     // Get Vertex And Fragment Shader Sources
@@ -1009,23 +1008,23 @@ bool COglShaderBase::load()
 
     unBind();
 
-    HDTIMELOG("Succesfully completed COglShaderBase::load()");
+    HDTIMELOG("Succesfully completed ShaderBase::load()");
     return true;
 }
 
- void COglShaderBase::setGeomShaderIOtype( int intype, int outtype)
+ void ShaderBase::setGeomShaderIOtype( int intype, int outtype)
  {
     m_geomShaderInType = intype;
     m_geomShaderOutType = outtype;
  }
 
-bool COglShaderBase::unLoad()
+bool ShaderBase::unLoad()
 {
     CHECK_GLSL_STATE;
     return true;
 }
 
-bool COglShaderBase::bind()
+bool ShaderBase::bind()
 {
     GL_IGNORE_ERROR;    //ignore any rogue errors from other areas of the system
     CHECK_GLSL_STATE;
@@ -1076,7 +1075,7 @@ bool COglShaderBase::bind()
         for( TextureMapType::iterator mp = m_TextureMap.begin(); mp != m_TextureMap.end(); mp++ )
         {
             string textureName  =  mp->first;
-            COglTexture* texture =  mp->second;
+            Texture* texture =  mp->second;
 
             if( !i && (texture && texture->textureMatrix().isIdentity()) )
                 continue;
@@ -1120,7 +1119,7 @@ bool COglShaderBase::bind()
         for( ArgMapType::iterator arg = m_argumentMap.begin(); arg != m_argumentMap.end(); arg++ )
         {
             string argName =  arg->first;
-            COglArg& argVal  = *arg->second;
+            Arg& argVal  = *arg->second;
 
             int argLocation = glGetUniformLocationARB( programID(), argName.c_str()); GL_ASSERT;
 
@@ -1130,13 +1129,13 @@ bool COglShaderBase::bind()
                 string argval;
                 switch(argVal.getType() )
                 {
-                case COglArg::eFloat: argval = Format(" %.1f",argVal.getFloat());break;
-                case COglArg::eFloat3:
+                case Arg::eFloat: argval = Format(" %.1f",argVal.getFloat());break;
+                case Arg::eFloat3:
                     {
                         float* val=argVal.getFloatPtr();
                         argval = Format(" %.1f %.1f %.1f",val[0],val[1],val[2]);break;
                     }
-                case COglArg::eFloat4:
+                case Arg::eFloat4:
                     {
                         float* val=argVal.getFloatPtr();
                         argval = Format(" %.1f %.1f %.1f %.1f",val[0],val[1],val[2],val[3]);break;
@@ -1147,22 +1146,22 @@ bool COglShaderBase::bind()
 
                 switch( argVal.getType() )
                 {
-                case COglArg::eInt: 
+                case Arg::eInt: 
                     glUniform1i( argLocation, argVal.getInt() ); GL_ASSERT;
                     break;
-                case COglArg::eFloat:
+                case Arg::eFloat:
                     glUniform1f( argLocation, argVal.getFloat() );  GL_ASSERT;
                     break;
-                case COglArg::eFloat2: 
+                case Arg::eFloat2: 
                     glUniform2fv(argLocation, 1, argVal.getFloatPtr()); GL_ASSERT;
                     break;
-                case COglArg::eFloat3:
+                case Arg::eFloat3:
                     glUniform3fv(argLocation, 1, argVal.getFloatPtr()); GL_ASSERT;
                     break;
-                case COglArg::eFloat4:
+                case Arg::eFloat4:
                     glUniform4fv(argLocation, 1, argVal.getFloatPtr()); GL_ASSERT;
                     break;
-                case COglArg::eFloat16:
+                case Arg::eFloat16:
                     glUniformMatrix4fv( argLocation, 1, false, argVal.getFloatPtr());    GL_ASSERT;
                     break;
                 default: assert(0);
@@ -1175,7 +1174,7 @@ bool COglShaderBase::bind()
     return m_error;
 }
 
-bool COglShaderBase::getVariable( const string& name, string& type, string& value ) const
+bool ShaderBase::getVariable( const string& name, string& type, string& value ) const
 {
     bool found = false;
 
@@ -1186,28 +1185,28 @@ bool COglShaderBase::getVariable( const string& name, string& type, string& valu
         if( arg != m_argumentMap.end() )
         {
             found = true;
-            COglArg& argVal = *arg->second;
+            Arg& argVal = *arg->second;
             switch( argVal.getType() )
             {
-            case COglArg::eInt: 
+            case Arg::eInt: 
                 assert(!"implement type");
                 break;
-            case COglArg::eFloat:
-                type = "float";  // TBD: should share this string with COglMaterial
+            case Arg::eFloat:
+                type = "float";  // TBD: should share this string with Material
                 ss << argVal.getFloat();
                 break;
-            case COglArg::eFloat2: 
+            case Arg::eFloat2: 
                 assert(!"implement type"); 
                 break;
-            case COglArg::eFloat3:
+            case Arg::eFloat3:
                 assert(!"implement type");
                 break;
-            case COglArg::eFloat4:
-                type = "color";  // TBD: should share this string with COglMaterial
+            case Arg::eFloat4:
+                type = "color";  // TBD: should share this string with Material
                 ss << argVal.getFloatAt(0) << " " << argVal.getFloatAt(1) << " " << argVal.getFloatAt(2) << " " << argVal.getFloatAt(3);
                 break;
-            case COglArg::eFloat16:
-                type = "m44f";  // TBD: should share this string with COglMaterial
+            case Arg::eFloat16:
+                type = "m44f";  // TBD: should share this string with Material
                 for(int i=0; i<16; i++) {
                     ss << argVal.getFloatAt(i);
                     if (i != 15)
@@ -1223,13 +1222,13 @@ bool COglShaderBase::getVariable( const string& name, string& type, string& valu
     return found;
 }
 
-bool COglShaderBase::getVariablei( const string& name, int& value ) const
+bool ShaderBase::getVariablei( const string& name, int& value ) const
 {
     auto arg = m_argumentMap.find( name );
     if( arg != m_argumentMap.end() )
     {
-        COglArg& argVal = *arg->second;
-        assert( argVal.getType() == COglArg::eInt );
+        Arg& argVal = *arg->second;
+        assert( argVal.getType() == Arg::eInt );
         
 		value = argVal.getInt();
         return true;
@@ -1239,13 +1238,13 @@ bool COglShaderBase::getVariablei( const string& name, int& value ) const
     return false;
 }
 
-bool COglShaderBase::getVariable( const string& name, float& value ) const
+bool ShaderBase::getVariable( const string& name, float& value ) const
 {
     auto arg = m_argumentMap.find( name );
     if( arg != m_argumentMap.end() )
     {
-        COglArg& argVal = *arg->second;
-        assert( argVal.getType() == COglArg::eFloat );
+        Arg& argVal = *arg->second;
+        assert( argVal.getType() == Arg::eFloat );
         
         value = argVal.getFloat();
         return true;
@@ -1255,13 +1254,13 @@ bool COglShaderBase::getVariable( const string& name, float& value ) const
     return false;
 }
 
-bool COglShaderBase::getVariable( const string& name, col4f& value ) const
+bool ShaderBase::getVariable( const string& name, col4f& value ) const
 {
     auto arg = m_argumentMap.find( name );
     if( arg != m_argumentMap.end() )
     {
-        COglArg& argVal = *arg->second;
-        assert( argVal.getType() == COglArg::eFloat4 );
+        Arg& argVal = *arg->second;
+        assert( argVal.getType() == Arg::eFloat4 );
 
         float* flt = argVal.getFloatPtr();
         value.set( flt[0], flt[1], flt[2], flt[3] );
@@ -1273,13 +1272,13 @@ bool COglShaderBase::getVariable( const string& name, col4f& value ) const
     return false;
 }
 
-bool COglShaderBase::getVariable( const string& name, m44f&  value ) const
+bool ShaderBase::getVariable( const string& name, m44f&  value ) const
 {
     auto arg = m_argumentMap.find( name );
     if( arg != m_argumentMap.end() )
     {
-        COglArg& argVal = *arg->second;
-        assert( argVal.getType() == COglArg::eFloat16 );
+        Arg& argVal = *arg->second;
+        assert( argVal.getType() == Arg::eFloat16 );
 
         value.set( argVal.getFloatPtr() );
 
@@ -1290,13 +1289,13 @@ bool COglShaderBase::getVariable( const string& name, m44f&  value ) const
     return false;
 }
 
-bool COglShaderBase::getVariable( const string& name, p4f&   value ) const
+bool ShaderBase::getVariable( const string& name, p4f&   value ) const
 {
     auto arg = m_argumentMap.find( name );
     if( arg != m_argumentMap.end() )
     {
-        COglArg& argVal = *arg->second;
-        assert( argVal.getType() == COglArg::eFloat4 );
+        Arg& argVal = *arg->second;
+        assert( argVal.getType() == Arg::eFloat4 );
 
         float* flt = argVal.getFloatPtr();
         value.set( flt[0], flt[1], flt[2], flt[3] );
@@ -1308,13 +1307,13 @@ bool COglShaderBase::getVariable( const string& name, p4f&   value ) const
     return false;
 }
 
-bool COglShaderBase::getVariable( const string& name, p3f&   value ) const
+bool ShaderBase::getVariable( const string& name, p3f&   value ) const
 {
     auto arg = m_argumentMap.find( name );
     if( arg != m_argumentMap.end() )
     {
-        COglArg& argVal = *arg->second;
-        assert( argVal.getType() == COglArg::eFloat3 );
+        Arg& argVal = *arg->second;
+        assert( argVal.getType() == Arg::eFloat3 );
 
         float* flt = argVal.getFloatPtr();
         value.set( flt[0], flt[1], flt[2]);
@@ -1326,13 +1325,13 @@ bool COglShaderBase::getVariable( const string& name, p3f&   value ) const
     return false;
 }
 
-bool COglShaderBase::getVariable( const string& name, p2f&   value ) const
+bool ShaderBase::getVariable( const string& name, p2f&   value ) const
 {
     auto arg = m_argumentMap.find( name );
     if( arg != m_argumentMap.end() )
     {
-        COglArg& argVal = *arg->second;
-        assert( argVal.getType() == COglArg::eFloat2 );        
+        Arg& argVal = *arg->second;
+        assert( argVal.getType() == Arg::eFloat2 );        
 
         float* flt = argVal.getFloatPtr();
         value.set( flt[0], flt[1]);
@@ -1344,7 +1343,7 @@ bool COglShaderBase::getVariable( const string& name, p2f&   value ) const
     return false;
 }
 
-bool COglShaderBase::unBind()
+bool ShaderBase::unBind()
 {    
     CHECK_GLSL_STATE;
     assert(m_bound); // logic error can't unbind an unbound shader
@@ -1365,27 +1364,27 @@ bool COglShaderBase::unBind()
     return true;
 }
 
-int COglShaderBase::programID() const
+int ShaderBase::programID() const
 {
     return _programId;
 }
 
-int COglShaderBase::vertexID() const
+int ShaderBase::vertexID() const
 {
     return _vertexId;
 }
 
-int COglShaderBase::fragmentID() const
+int ShaderBase::fragmentID() const
 {
     return _fragmentId;
 }
 
-int COglShaderBase::geometryID() const
+int ShaderBase::geometryID() const
 {
     return _geometryId;
 }
 
-void COglShader::setIncludeSrcFile(const string& filename)
+void Shader::setIncludeSrcFile(const string& filename)
 {
     ifstream in(filename);
     string src;
@@ -1397,7 +1396,7 @@ void COglShader::setIncludeSrcFile(const string& filename)
     setIncludeSrc(src);
 }
 
-void COglShader::setVertexSrcFile(const string& filename)
+void Shader::setVertexSrcFile(const string& filename)
 {
     ifstream in(filename);
     if (!in.good() || !in.is_open())
@@ -1411,7 +1410,7 @@ void COglShader::setVertexSrcFile(const string& filename)
     setVertexSrc(src);
 }
 
-void COglShader::setFragmentSrcFile(const string& filename)
+void Shader::setFragmentSrcFile(const string& filename)
 {
     ifstream in(filename);
     string src;
@@ -1423,7 +1422,7 @@ void COglShader::setFragmentSrcFile(const string& filename)
     setFragmentSrc(src);
 }
 
-void COglShader::setGeometrySrcFile(const string& filename)
+void Shader::setGeometrySrcFile(const string& filename)
 {
     ifstream in(filename);
     string src;
@@ -1435,55 +1434,55 @@ void COglShader::setGeometrySrcFile(const string& filename)
     setGeometrySrc(src);
 }
 
-void COglShader::setIncludeSrc(const string& src)
+void Shader::setIncludeSrc(const string& src)
 {
     _shaderIncSrc = src;
 }
 
-void COglShader::setVertexSrc(const string& src)
+void Shader::setVertexSrc(const string& src)
 {
     _vertSrc = src;
 }
 
-void COglShader::setFragmentSrc(const string& src)
+void Shader::setFragmentSrc(const string& src)
 {
     _fragSrc = src;
 }
 
-void COglShader::setGeometrySrc(const string& src)
+void Shader::setGeometrySrc(const string& src)
 {
     _geomSrc = src;
 }
 
-const char* COglShader::getShaderIncludeSource() const
+const char* Shader::getShaderIncludeSource() const
 {
     if (!_shaderIncSrc.empty())
         return _shaderIncSrc.data();
     return nullptr;
 }
 
-const char* COglShader::getVertexShaderSource() const
+const char* Shader::getVertexShaderSource() const
 {
     if (!_vertSrc.empty())
         return _vertSrc.data();
     return nullptr;
 }
 
-const char* COglShader::getFragmentShaderSource() const
+const char* Shader::getFragmentShaderSource() const
 {
     if (!_fragSrc.empty())
         return _fragSrc.data();
     return nullptr;
 }
 
-const char* COglShader::getGeometryShaderSource() const
+const char* Shader::getGeometryShaderSource() const
 {
     if (!_geomSrc.empty())
         return _geomSrc.data();
     return nullptr;
 }
 
-void COglShader::initUniform()
+void Shader::initUniform()
 {
 
 }

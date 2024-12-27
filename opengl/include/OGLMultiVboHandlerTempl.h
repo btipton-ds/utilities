@@ -11,7 +11,7 @@
 #include <OGLMultiVboHandler.h>
 
 template<typename PRE_FUNC, typename POST_FUNC, typename PRE_TEX_FUNC, typename POST_TEX_FUNC>
-inline void OGL::COglMultiVboHandler::drawAllKeys(PRE_FUNC preDrawFunc, POST_FUNC postDrawFunc, PRE_TEX_FUNC preDrawTexFunc, POST_TEX_FUNC postDrawTexFunc) const
+inline void OGL::MultiVboHandler::drawAllKeys(PRE_FUNC preDrawFunc, POST_FUNC postDrawFunc, PRE_TEX_FUNC preDrawTexFunc, POST_TEX_FUNC postDrawTexFunc) const
 {
     for (auto batchPtr : m_batches) {
         bindCommonBuffers(batchPtr);
@@ -20,7 +20,7 @@ inline void OGL::COglMultiVboHandler::drawAllKeys(PRE_FUNC preDrawFunc, POST_FUN
             const std::vector<int>& layerKeys = m_layersKeys[layerNum];
             for (int key : layerKeys) {
                 if (m_keysToDraw[key] && (batchPtr->m_indexMap.count(key) != 0)) {
-                    COglMultiVBO::DrawVertexColorMode colorMode = preDrawFunc(key); // Sets up the required gl calls for drawing this key
+                    MultiVBO::DrawVertexColorMode colorMode = preDrawFunc(key); // Sets up the required gl calls for drawing this key
                     drawKeyForBatch(key, batchPtr, colorMode);
                     postDrawFunc(); // Clean up gl properties
                 }

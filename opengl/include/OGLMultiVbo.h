@@ -16,11 +16,11 @@
 
 namespace OGL
 {
-class COglShaderBase;
+class ShaderBase;
 
-class COglMultiVBO : public COglExtensions
+class MultiVBO : public Extensions
 {
-    friend class COglMultiVboHandler;
+    friend class MultiVboHandler;
 public:
     enum DrawVertexColorMode {
         DRAW_COLOR_NONE,
@@ -36,8 +36,8 @@ public:
     // the buffer.
     static bool isValid_unbindsVBO(GLuint& vboID);
 
-    COglMultiVBO(int m_primitiveType);
-    virtual ~COglMultiVBO();
+    MultiVBO(int m_primitiveType);
+    virtual ~MultiVBO();
 
     void dumpToStream(std::ostream& out) const;
 
@@ -59,9 +59,9 @@ public:
     // If drawColors = DRAW_COLOR_NONE, color array buffer is not used
     // If drawColors = DRAW_COLOR, color array buffer is used
     // If drawColors = DRAW_COLOR_BACK, cull face is set to back face and back color array buffer is used
-    virtual bool drawVBO(const COglShaderBase* pShader, int key, DrawVertexColorMode drawColors = DRAW_COLOR_NONE) const;
-    virtual bool drawVBO(const COglShaderBase* pShader, GLsizei numElements, GLuint indexVBOId, DrawVertexColorMode drawColors = DRAW_COLOR_NONE) const;
-    virtual bool drawVBO(const COglShaderBase* pShader, const std::vector<unsigned int>& indices = std::vector<unsigned int>(), DrawVertexColorMode drawColors = DRAW_COLOR_NONE) const;
+    virtual bool drawVBO(const ShaderBase* pShader, int key, DrawVertexColorMode drawColors = DRAW_COLOR_NONE) const;
+    virtual bool drawVBO(const ShaderBase* pShader, GLsizei numElements, GLuint indexVBOId, DrawVertexColorMode drawColors = DRAW_COLOR_NONE) const;
+    virtual bool drawVBO(const ShaderBase* pShader, const std::vector<unsigned int>& indices = std::vector<unsigned int>(), DrawVertexColorMode drawColors = DRAW_COLOR_NONE) const;
 
     bool usingSmoothNormals() { return m_smoothNormals; }
     bool usingRegionalNormals() { return m_regionalNormals; }
@@ -101,7 +101,7 @@ public:
     bool getVBOArray(GLuint vboId, std::vector<unsigned int>& values) const;
 protected:
     bool areVBOsValid(size_t numElements, GLuint elementIdxVboID, DrawVertexColorMode drawColors) const;
-    bool bindCommon(const COglShaderBase* pShader, size_t numElements) const;
+    bool bindCommon(const ShaderBase* pShader, size_t numElements) const;
     void unbindCommon() const;
     template<class T>
     static bool assureVBOValid(const std::vector<T>& vec, GLuint& vboID, int& valid);
@@ -143,12 +143,12 @@ protected:
     std::map<int, ElementVBORec> m_elementVBOIDMap;
 };
 
-inline size_t COglMultiVBO::ElementVBORec::getNumElements() const
+inline size_t MultiVBO::ElementVBORec::getNumElements() const
 {
     return m_mumElements;
 }
 
-inline GLuint COglMultiVBO::ElementVBORec::getVboId() const
+inline GLuint MultiVBO::ElementVBORec::getVboId() const
 {
     return m_elementIdxVboID;
 }

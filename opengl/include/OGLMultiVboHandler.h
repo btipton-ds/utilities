@@ -16,9 +16,9 @@
 // If someone can find a way to hyperlink to a relative file, please do that.
 namespace OGL
 {
-class COglShaderBase;
+class ShaderBase;
 
-class COglMultiVboHandler : public COglExtensions
+class MultiVboHandler : public Extensions
 {
 public:
     struct OGLIndices {
@@ -61,7 +61,7 @@ public:
             std::vector<unsigned int> m_elementIndices;
         };
         VertexBatch(int primitiveType);
-        // TODO, in the future it may be beneficial to make this a real class and move some COglMultiVboHandler methods to here.
+        // TODO, in the future it may be beneficial to make this a real class and move some MultiVboHandler methods to here.
         // for now, this is pure structure with no code.
 
         // CPU side representation
@@ -76,13 +76,13 @@ public:
         std::vector<size_t> m_allocatedChunks; // The index is the chunk number and the value is the number of allocated chunks at that index
 
         // Video card representation
-        COglMultiVBO m_VBO;
+        MultiVBO m_VBO;
     };
 
-    COglMultiVboHandler(int primitiveType, int maxKeyIndex);
-    ~COglMultiVboHandler();
+    MultiVboHandler(int primitiveType, int maxKeyIndex);
+    ~MultiVboHandler();
 
-    void setShader(const COglShaderBase* pShader);
+    void setShader(const ShaderBase* pShader);
 
     // This defines the draw order for keys.
     // Drawing is done in layers, with lowest numbered layer first.
@@ -116,7 +116,7 @@ public:
     void beginSettingElementIndices(size_t layerBitMask);
     void includeElementIndices(int key, const OGLIndices& batchIndices, GLuint texId = 0);
     void endSettingElementIndices();
-    void draw(int key, COglMultiVBO::DrawVertexColorMode drawColors = COglMultiVBO::DRAW_COLOR_NONE) const;
+    void draw(int key, MultiVBO::DrawVertexColorMode drawColors = MultiVBO::DRAW_COLOR_NONE) const;
 
     // For best speed, we need to bind all the common buffers for a batch, then draw every key that batch uses.
     // This requires a loop inversion. We can't store by keys, because some keys are tiny (like highlighted) and others are huge.
@@ -127,8 +127,8 @@ public:
     template<typename PRE_FUNC, typename POST_FUNC, typename PRE_TEX_FUNC, typename POST_TEX_FUNC>
     void drawAllKeys(PRE_FUNC preDrawFunc, POST_FUNC postDrawFunc, PRE_TEX_FUNC preDrawTexFunc, POST_TEX_FUNC postDrawTexFunc) const;
 
-    bool getVert(const COglMultiVboHandler::OGLIndex& glIndicesOut, float coords[3]) const;
-    bool getNormal(const COglMultiVboHandler::OGLIndex& glIndicesOut, float coords[3]) const;
+    bool getVert(const MultiVboHandler::OGLIndex& glIndicesOut, float coords[3]) const;
+    bool getNormal(const MultiVboHandler::OGLIndex& glIndicesOut, float coords[3]) const;
 
     bool getRawData(size_t entityKey, std::vector<float>& points, std::vector<float>& normals, std::vector<float>& parameters) const;
 
@@ -182,7 +182,7 @@ private:
 
     // Supporting methods for drawKeys
     void bindCommonBuffers(std::shared_ptr<VertexBatch> batchPtr) const;
-    void drawKeyForBatch(int key, std::shared_ptr<VertexBatch> batchPtr, COglMultiVBO::DrawVertexColorMode drawColors) const;
+    void drawKeyForBatch(int key, std::shared_ptr<VertexBatch> batchPtr, MultiVBO::DrawVertexColorMode drawColors) const;
     void drawTexturedFaces(std::shared_ptr<VertexBatch> batchPtr) const;
     void unbindCommonBuffers(std::shared_ptr<VertexBatch> batchPtr) const;
     void initLayerToKeyMap(int maxKeyIndex);
@@ -198,24 +198,24 @@ private:
     std::vector<bool> m_keysToDraw;
     bool m_clearAllLayers = true;
     size_t m_layerBitMask = 0;
-    const COglShaderBase* m_pShader = nullptr;
+    const ShaderBase* m_pShader = nullptr;
     std::vector<int> m_keysLayer;
     std::vector<std::vector<int>> m_layersKeys;
     std::vector<std::shared_ptr<VertexBatch>> m_batches;
     std::map<size_t, std::shared_ptr<OGLIndices>> m_entityKeyToOGLIndicesMap;
 };
 
-inline void COglMultiVboHandler::setShader(const COglShaderBase* pShader)
+inline void MultiVboHandler::setShader(const ShaderBase* pShader)
 {
     m_pShader = pShader;
 }
 
-inline bool COglMultiVboHandler::empty() const
+inline bool MultiVboHandler::empty() const
 {
     return m_batches.empty();
 }
 
-inline const COglMultiVboHandler::OGLIndices* COglMultiVboHandler::getOglIndices(size_t entityKey) const
+inline const MultiVboHandler::OGLIndices* MultiVboHandler::getOglIndices(size_t entityKey) const
 {
     auto iter = m_entityKeyToOGLIndicesMap.find(entityKey);
     if (iter != m_entityKeyToOGLIndicesMap.end())
@@ -223,13 +223,13 @@ inline const COglMultiVboHandler::OGLIndices* COglMultiVboHandler::getOglIndices
     return nullptr;
 }
 
-inline COglMultiVboHandler::OGLIndex::OGLIndex(size_t batchIndex, size_t vertIndex)
+inline MultiVboHandler::OGLIndex::OGLIndex(size_t batchIndex, size_t vertIndex)
     : m_batchIndex(batchIndex)
     , m_vertIndex(vertIndex)
 {
 }
 
-inline bool COglMultiVboHandler::OGLIndex::operator < (const OGLIndex& rhs) const
+inline bool MultiVboHandler::OGLIndex::operator < (const OGLIndex& rhs) const
 {
     if (m_batchIndex < rhs.m_batchIndex)
         return true;

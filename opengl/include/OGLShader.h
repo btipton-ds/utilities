@@ -25,15 +25,15 @@
 #include <OGLCol4f.h>
 
 #ifdef _DEBUG
-#define GL_ASSERT COglShaderBase::dumpGlErrors(__FILE__, __LINE__);
+#define GL_ASSERT ShaderBase::dumpGlErrors(__FILE__, __LINE__);
 #else
 #define GL_ASSERT
 #endif // _DEBUG
 
 namespace OGL
 {
-    class COglArg;
-    class COglTexture;
+    class Arg;
+    class Texture;
     class ActiveTextureUnits;
 
 #define TEXTURE_SUPPORT 0
@@ -44,22 +44,22 @@ namespace OGL
     Currently this is set up to load shaders from a resource
      */
 #ifdef WIN32
-    class COglShaderBase : public COglExtensions
+    class ShaderBase : public Extensions
 #else
-    class COglShaderBase
+    class ShaderBase
 #endif
     {
     public:
-        using ArgMapType = std::map<const std::string, std::shared_ptr<COglArg>>;
+        using ArgMapType = std::map<const std::string, std::shared_ptr<Arg>>;
 
         static void dumpGlErrors(const char* filename, int lineNumber);
 
 #if TEXTURE_SUPPORT
-        using TextureMapType = std::map<const std::string, std::shared_ptr<COglTexture>>;
+        using TextureMapType = std::map<const std::string, std::shared_ptr<Texture>>;
 #endif
 
-        COglShaderBase();
-        virtual ~COglShaderBase();
+        ShaderBase();
+        virtual ~ShaderBase();
 
         static bool isEnabled();
         static void enable(bool set = true);
@@ -93,9 +93,9 @@ namespace OGL
 
         bool hasTexture(const std::string& textureShaderName) const;
         bool setTexture(const std::string& textureShaderName, const std::string& filename, bool flipImage = true);
-        bool setTexture(const std::string& textureShaderName, COglTexture* hwBuffer, bool takeOwnerShip);
+        bool setTexture(const std::string& textureShaderName, Texture* hwBuffer, bool takeOwnerShip);
 
-        COglTexture* getTexture(const std::string& textureShaderName);
+        Texture* getTexture(const std::string& textureShaderName);
 
         const std::string getName() const;
 
@@ -161,56 +161,56 @@ namespace OGL
         ActiveTextureUnits* m_textureUnitStates; /// texture units bound to the card, primary use is gl state management
     };
 
-    inline bool COglShaderBase::bound() const {
+    inline bool ShaderBase::bound() const {
         return m_bound;
     }
 
-    inline const std::string COglShaderBase::getName() const
+    inline const std::string ShaderBase::getName() const
     {
         return m_name;
     }
 
-    inline void COglShaderBase::setShaderVertexAttribName(const std::string& name)
+    inline void ShaderBase::setShaderVertexAttribName(const std::string& name)
     {
         _vertAttribName = name;
     }
 
-    inline void COglShaderBase::setShaderNormalAttribName(const std::string& name)
+    inline void ShaderBase::setShaderNormalAttribName(const std::string& name)
     {
         _normalAttribName = name;;
     }
 
-    inline void COglShaderBase::setShaderTexParamAttribName(const std::string& name)
+    inline void ShaderBase::setShaderTexParamAttribName(const std::string& name)
     {
         _texParamAttribName = name;
     }
 
-    inline void COglShaderBase::setShaderColorAttribName(const std::string& name)
+    inline void ShaderBase::setShaderColorAttribName(const std::string& name)
     {
         _colorAttribName = name;
     }
 
-    inline GLuint COglShaderBase::getVertexLoc() const
+    inline GLuint ShaderBase::getVertexLoc() const
     {
         return m_vertLoc;
     }
 
-    inline GLuint COglShaderBase::getNormalLoc() const
+    inline GLuint ShaderBase::getNormalLoc() const
     {
         return m_normLoc;
     }
 
-    inline GLuint COglShaderBase::getTexParamLoc() const
+    inline GLuint ShaderBase::getTexParamLoc() const
     {
         return m_texParamLoc;
     }
 
-    inline GLuint COglShaderBase::getColorLoc() const
+    inline GLuint ShaderBase::getColorLoc() const
     {
         return m_colorLoc;
     }
 
-    class COglShader : public COglShaderBase
+    class Shader : public ShaderBase
     {
     public:
         void setIncludeSrcFile(const std::string& filename);
@@ -237,15 +237,15 @@ namespace OGL
             _geomSrc;
     };
 
-    class COglArg
+    class Arg
     {
     public:
         enum argtype { eInt, eFloat, eFloat2, eFloat3, eFloat4, eFloat16 };
 
-        COglArg(int val);
-        COglArg(float val);
-        COglArg(const float* val, int numFloats = 3);
-        virtual ~COglArg();
+        Arg(int val);
+        Arg(float val);
+        Arg(const float* val, int numFloats = 3);
+        virtual ~Arg();
 
         int    getInt();
         float  getFloat();
@@ -273,7 +273,7 @@ namespace OGL
     // two macros to help roll resource shaders into their own class wrappers
     // macro for header
 #define DERIVED_OGLSHADER(name,str,exportapi) \
-class exportapi name : public COglShader \
+class exportapi name : public Shader \
 {                                    \
 public:                              \
 	name()  { m_Name = str; }        \

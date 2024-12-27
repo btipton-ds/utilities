@@ -38,13 +38,13 @@ Another refinement is to our own vertex mangement using partial VBO writing to r
 using namespace std;
 using namespace OGL;
 
-COglMultiVboHandler::COglMultiVboHandler(int primitiveType, int maxKeyIndex)
+MultiVboHandler::MultiVboHandler(int primitiveType, int maxKeyIndex)
     : m_primitiveType(primitiveType)
 {
     initLayerToKeyMap(maxKeyIndex);
 }
 
-void COglMultiVboHandler::initLayerToKeyMap(int maxKeyIndex)
+void MultiVboHandler::initLayerToKeyMap(int maxKeyIndex)
 {
     m_layersKeys.resize(1);
     for (int i = 0; i < maxKeyIndex; i++) {
@@ -53,12 +53,12 @@ void COglMultiVboHandler::initLayerToKeyMap(int maxKeyIndex)
     }
 }
 
-inline int COglMultiVboHandler::findLayerForKey(int key) const
+inline int MultiVboHandler::findLayerForKey(int key) const
 {
     return m_keysLayer[key];
 }
 
-void COglMultiVboHandler::doGarbageCollection(const std::vector<ChangeRec>& entityKeysInUse)
+void MultiVboHandler::doGarbageCollection(const std::vector<ChangeRec>& entityKeysInUse)
 {
     for (const auto& pair : m_entityKeyToOGLIndicesMap) {
         pair.second->m_inUse = false;
@@ -87,11 +87,11 @@ void COglMultiVboHandler::doGarbageCollection(const std::vector<ChangeRec>& enti
     }
 }
 
-COglMultiVboHandler::~COglMultiVboHandler()
+MultiVboHandler::~MultiVboHandler()
 {
 }
 
-void COglMultiVboHandler::moveKeyToLayer(int key, int layer)
+void MultiVboHandler::moveKeyToLayer(int key, int layer)
 {
     assert(layer > 0); // All keys are in layer zero by default. Placing a key from layer zero to layer zero is not valid.
     int curLayer = m_keysLayer[key];
@@ -106,7 +106,7 @@ void COglMultiVboHandler::moveKeyToLayer(int key, int layer)
     m_layersKeys[layer].push_back(key);
 }
 
-void COglMultiVboHandler::clear()
+void MultiVboHandler::clear()
 {
     for (auto batchPtr : m_batches) {
         batchPtr->m_VBO.releaseVBOs();
@@ -123,21 +123,21 @@ void COglMultiVboHandler::clear()
 
 }
 
-void COglMultiVboHandler::beginFaceTesselation()
+void MultiVboHandler::beginFaceTesselation()
 {
     assert(m_insideBeginEdgeTessellation == false);
     assert(m_insideBeginFaceTessellation == false);
     m_insideBeginFaceTessellation = true;
     // Nothing else required at this time
 }
-const COglMultiVboHandler::OGLIndices* COglMultiVboHandler::setFaceTessellation(size_t entityKey, size_t changeNumber, const vector<float>& points, const vector<float>& normals, const vector<float>& parameters,
+const MultiVboHandler::OGLIndices* MultiVboHandler::setFaceTessellation(size_t entityKey, size_t changeNumber, const vector<float>& points, const vector<float>& normals, const vector<float>& parameters,
     const vector<unsigned int>& vertIndices)
 {
     vector<float> colors;
     return setFaceTessellation(entityKey, changeNumber, points, normals, parameters, colors, vertIndices);
 }
 
-const COglMultiVboHandler::OGLIndices* COglMultiVboHandler::setFaceTessellation(size_t entityKey, size_t changeNumber, const vector<float>& points, const vector<float>& normals,
+const MultiVboHandler::OGLIndices* MultiVboHandler::setFaceTessellation(size_t entityKey, size_t changeNumber, const vector<float>& points, const vector<float>& normals,
     const vector<float>& parameters, const std::vector<float>& colors, const vector<unsigned int>& vertIndices)
 {
     assert(m_insideBeginFaceTessellation);
@@ -160,7 +160,7 @@ const COglMultiVboHandler::OGLIndices* COglMultiVboHandler::setFaceTessellation(
     return pOglIndices.get();
 }
 
-void COglMultiVboHandler::setFaceTessellationInner(size_t batchIndex, size_t vertChunkIndex, const vector<float>& points, const vector<float>& normals, const vector<float>& parameters,
+void MultiVboHandler::setFaceTessellationInner(size_t batchIndex, size_t vertChunkIndex, const vector<float>& points, const vector<float>& normals, const vector<float>& parameters,
     const std::vector<float>& colors, const vector<unsigned int>& triIndices, OGLIndices& glIndicesOut)
 {
     assert(!m_batches.empty() && batchIndex < m_batches.size());
@@ -216,7 +216,7 @@ void COglMultiVboHandler::setFaceTessellationInner(size_t batchIndex, size_t ver
     }
 }
 
-void COglMultiVboHandler::endFaceTesselation(bool smoothNormals)
+void MultiVboHandler::endFaceTesselation(bool smoothNormals)
 {
     assert(m_insideBeginFaceTessellation);
     m_insideBeginFaceTessellation = false;
@@ -229,7 +229,7 @@ void COglMultiVboHandler::endFaceTesselation(bool smoothNormals)
     }
 }
 
-bool COglMultiVboHandler::getVert(const COglMultiVboHandler::OGLIndex& glIndicesOut, float coords[3]) const
+bool MultiVboHandler::getVert(const MultiVboHandler::OGLIndex& glIndicesOut, float coords[3]) const
 {
     if (m_batches.empty() || glIndicesOut.m_batchIndex >= m_batches.size())
         return false;
@@ -247,7 +247,7 @@ bool COglMultiVboHandler::getVert(const COglMultiVboHandler::OGLIndex& glIndices
     return false;
 }
 
-bool COglMultiVboHandler::getNormal(const COglMultiVboHandler::OGLIndex& glIndicesOut, float coords[3]) const
+bool MultiVboHandler::getNormal(const MultiVboHandler::OGLIndex& glIndicesOut, float coords[3]) const
 {
     if (m_batches.empty() || glIndicesOut.m_batchIndex >= m_batches.size())
         return false;
@@ -263,7 +263,7 @@ bool COglMultiVboHandler::getNormal(const COglMultiVboHandler::OGLIndex& glIndic
     return false;
 }
 
-bool COglMultiVBO::getVBOArray(GLuint vboId, vector<float>& values) const
+bool MultiVBO::getVBOArray(GLuint vboId, vector<float>& values) const
 {
     bool result = false;
     if (vboId != 0) {
@@ -280,7 +280,7 @@ bool COglMultiVBO::getVBOArray(GLuint vboId, vector<float>& values) const
     return result;
 }
 
-bool COglMultiVBO::getVBOArray(GLuint vboId, vector<unsigned int>& values) const
+bool MultiVBO::getVBOArray(GLuint vboId, vector<unsigned int>& values) const
 {
     bool result = false;
     if (vboId != 0) {
@@ -298,7 +298,7 @@ bool COglMultiVBO::getVBOArray(GLuint vboId, vector<unsigned int>& values) const
     return result;
 }
 
-bool COglMultiVboHandler::getRawData(size_t entityKey, vector<float>& vertices, vector<float>& normals, vector<float>& parameters) const
+bool MultiVboHandler::getRawData(size_t entityKey, vector<float>& vertices, vector<float>& normals, vector<float>& parameters) const
 {
     vertices.clear();
     normals.clear();
@@ -322,7 +322,7 @@ bool COglMultiVboHandler::getRawData(size_t entityKey, vector<float>& vertices, 
     return result;
 }
 
-bool COglMultiVboHandler::setColorVBO(size_t entityKey, vector<float>& srcColors)
+bool MultiVboHandler::setColorVBO(size_t entityKey, vector<float>& srcColors)
 {
     auto p = m_entityKeyToOGLIndicesMap.find(entityKey);
     if (p == m_entityKeyToOGLIndicesMap.end())
@@ -352,7 +352,7 @@ bool COglMultiVboHandler::setColorVBO(size_t entityKey, vector<float>& srcColors
     return batchPtr->m_VBO.copyColorsToExistingVBO(currentColors);
 }
 
-bool COglMultiVboHandler::setBackColorVBO(size_t entityKey, vector<float>& srcColors)
+bool MultiVboHandler::setBackColorVBO(size_t entityKey, vector<float>& srcColors)
 {
     auto p = m_entityKeyToOGLIndicesMap.find(entityKey);
     if (p == m_entityKeyToOGLIndicesMap.end())
@@ -382,7 +382,7 @@ bool COglMultiVboHandler::setBackColorVBO(size_t entityKey, vector<float>& srcCo
     return batchPtr->m_VBO.copyBackColorsToExistingVBO(currentColors);
 }
 
-void COglMultiVboHandler::getStorageFor(size_t numVertsNeeded, bool needColorStorage, size_t& batchIndex, size_t& vertChunkIndex, size_t& blockSizeInChunks)
+void MultiVboHandler::getStorageFor(size_t numVertsNeeded, bool needColorStorage, size_t& batchIndex, size_t& vertChunkIndex, size_t& blockSizeInChunks)
 {
     bool allocateSpaceForTriangles = isTriangleVBO();
     batchIndex = _SIZE_T_ERROR;
@@ -503,7 +503,7 @@ void COglMultiVboHandler::getStorageFor(size_t numVertsNeeded, bool needColorSto
     batchPtr->m_allocatedChunks[vertChunkIndex] = blockSizeInChunks;
 }
 
-void COglMultiVboHandler::releaseTessellation(size_t entityKey)
+void MultiVboHandler::releaseTessellation(size_t entityKey)
 {
     const auto iter = m_entityKeyToOGLIndicesMap.find(entityKey);
     if (iter == m_entityKeyToOGLIndicesMap.end())
@@ -534,7 +534,7 @@ void COglMultiVboHandler::releaseTessellation(size_t entityKey)
     availBlocks.push_back(FreeChunkRecord(pGlIndices->m_batchIndex, vertChunkIndex));
 }
 
-void COglMultiVboHandler::beginEdgeTesselation()
+void MultiVboHandler::beginEdgeTesselation()
 {
     assert(m_insideBeginEdgeTessellation == false);
     assert(m_insideBeginFaceTessellation == false);
@@ -542,7 +542,7 @@ void COglMultiVboHandler::beginEdgeTesselation()
     // Nothing else required at this time
 }
 
-const COglMultiVboHandler::OGLIndices* COglMultiVboHandler::setEdgeStripTessellation(size_t entityKey, const vector<float>& lineStripPoints)
+const MultiVboHandler::OGLIndices* MultiVboHandler::setEdgeStripTessellation(size_t entityKey, const vector<float>& lineStripPoints)
 {
     assert(m_insideBeginEdgeTessellation);
     size_t numVerts = lineStripPoints.size() / 3;
@@ -559,13 +559,13 @@ const COglMultiVboHandler::OGLIndices* COglMultiVboHandler::setEdgeStripTessella
     return pOglIndices.get();
 }
 
-const COglMultiVboHandler::OGLIndices* COglMultiVboHandler::setEdgeSegTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points, const std::vector<unsigned int>& indices)
+const MultiVboHandler::OGLIndices* MultiVboHandler::setEdgeSegTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points, const std::vector<unsigned int>& indices)
 {
     vector<float> colors;
     return setEdgeSegTessellation(entityKey, changeNumber, points, colors, indices);
 }
 
-const COglMultiVboHandler::OGLIndices* COglMultiVboHandler::setEdgeSegTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points,
+const MultiVboHandler::OGLIndices* MultiVboHandler::setEdgeSegTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points,
     const std::vector<float>& colors, const std::vector<unsigned int>& indices)
 {
     assert(m_insideBeginEdgeTessellation);
@@ -583,7 +583,7 @@ const COglMultiVboHandler::OGLIndices* COglMultiVboHandler::setEdgeSegTessellati
     return pOglIndices.get();
 }
 
-void COglMultiVboHandler::setEdgeStripTessellationInner(size_t batchIndex, size_t vertChunkIndex, const vector<float>& lineStripPts, OGLIndices& glIndicesOut)
+void MultiVboHandler::setEdgeStripTessellationInner(size_t batchIndex, size_t vertChunkIndex, const vector<float>& lineStripPts, OGLIndices& glIndicesOut)
 {
     const size_t numVerts = lineStripPts.size() / 3;
     unsigned int vertBaseIndex = (unsigned int) (vertChunkIndex * vertChunkSize());
@@ -612,7 +612,7 @@ void COglMultiVboHandler::setEdgeStripTessellationInner(size_t batchIndex, size_
     }
 }
 
-void COglMultiVboHandler::setEdgeSegTessellationInner(size_t batchIndex, size_t vertChunkIndex, const std::vector<float>& pts, const std::vector<float>& colors, const std::vector<unsigned int>& indicesIn, OGLIndices& glIndicesOut)
+void MultiVboHandler::setEdgeSegTessellationInner(size_t batchIndex, size_t vertChunkIndex, const std::vector<float>& pts, const std::vector<float>& colors, const std::vector<unsigned int>& indicesIn, OGLIndices& glIndicesOut)
 {
     const size_t numVerts = pts.size() / 3;
     unsigned int vertBaseIndex = (unsigned int) (vertChunkIndex * vertChunkSize());
@@ -655,7 +655,7 @@ void COglMultiVboHandler::setEdgeSegTessellationInner(size_t batchIndex, size_t 
     }
 }
 
-void COglMultiVboHandler::endEdgeTesselation()
+void MultiVboHandler::endEdgeTesselation()
 {
     assert(m_insideBeginEdgeTessellation);
     m_insideBeginEdgeTessellation = false;
@@ -670,7 +670,7 @@ void COglMultiVboHandler::endEdgeTesselation()
     }
 }
 
-bool COglMultiVboHandler::getRawData(size_t entityKey, std::vector<unsigned int>& indices) const
+bool MultiVboHandler::getRawData(size_t entityKey, std::vector<unsigned int>& indices) const
 {
     indices.clear();
 
@@ -689,7 +689,7 @@ bool COglMultiVboHandler::getRawData(size_t entityKey, std::vector<unsigned int>
     return true;
 }
 
-void COglMultiVboHandler::beginSettingElementIndices(size_t layerBitMask)
+void MultiVboHandler::beginSettingElementIndices(size_t layerBitMask)
 {
     if (m_clearAllLayers) {
         m_layerBitMask = _SIZE_T_ERROR;
@@ -722,7 +722,7 @@ void COglMultiVboHandler::beginSettingElementIndices(size_t layerBitMask)
     }
 }
 
-void COglMultiVboHandler::includeElementIndices(int key, const OGLIndices& batchIndices, GLuint texId)
+void MultiVboHandler::includeElementIndices(int key, const OGLIndices& batchIndices, GLuint texId)
 {
     if (m_batches.empty() || batchIndices.m_batchIndex >= m_batches.size())
         return;
@@ -750,7 +750,7 @@ void COglMultiVboHandler::includeElementIndices(int key, const OGLIndices& batch
     }
 }
 
-void COglMultiVboHandler::endSettingElementIndices()
+void MultiVboHandler::endSettingElementIndices()
 {
     for (auto& pBatch : m_batches) {
         for (const auto& pair : pBatch->m_indexMap) {
@@ -759,7 +759,7 @@ void COglMultiVboHandler::endSettingElementIndices()
     }
 }
 
-void COglMultiVboHandler::draw(int key, COglMultiVBO::DrawVertexColorMode drawColors) const
+void MultiVboHandler::draw(int key, MultiVBO::DrawVertexColorMode drawColors) const
 {
     for (size_t idx = 0; idx < m_batches.size(); idx++) {
         const auto& pBatch = m_batches[idx];
@@ -767,28 +767,28 @@ void COglMultiVboHandler::draw(int key, COglMultiVBO::DrawVertexColorMode drawCo
     }
 }
 
-void COglMultiVboHandler::bindCommonBuffers(shared_ptr<VertexBatch> batchPtr) const
+void MultiVboHandler::bindCommonBuffers(shared_ptr<VertexBatch> batchPtr) const
 {
     auto& vbo = batchPtr->m_VBO;
     batchPtr->m_VBO.bindCommon(m_pShader, vbo.m_numVerts);
 }
 
-void COglMultiVboHandler::drawKeyForBatch(int key, shared_ptr<VertexBatch> batchPtr, COglMultiVBO::DrawVertexColorMode drawColors) const
+void MultiVboHandler::drawKeyForBatch(int key, shared_ptr<VertexBatch> batchPtr, MultiVBO::DrawVertexColorMode drawColors) const
 {
     batchPtr->m_VBO.drawVBO(m_pShader, key, drawColors);
 }
 
-void COglMultiVboHandler::drawTexturedFaces(std::shared_ptr<VertexBatch> batchPtr) const
+void MultiVboHandler::drawTexturedFaces(std::shared_ptr<VertexBatch> batchPtr) const
 {
 }
 
-void COglMultiVboHandler::unbindCommonBuffers(shared_ptr<VertexBatch> batchPtr) const
+void MultiVboHandler::unbindCommonBuffers(shared_ptr<VertexBatch> batchPtr) const
 {
     auto& vbo = batchPtr->m_VBO;
     vbo.unbindCommon();
 }
 
-inline size_t COglMultiVboHandler::vertChunkSize() const
+inline size_t MultiVboHandler::vertChunkSize() const
 {
     if (isTriangleVBO())
         return 20; // This is the number of vertices in a chunk, not bytes in a chunk. Bytes of floats in points = vertChunkSize * 3 * 4 = 252 ~= 240 bytes.
@@ -796,19 +796,19 @@ inline size_t COglMultiVboHandler::vertChunkSize() const
         return 10;
 }
 
-inline size_t COglMultiVboHandler::calcVertChunkIndex(size_t vertBaseIndex) const
+inline size_t MultiVboHandler::calcVertChunkIndex(size_t vertBaseIndex) const
 {
     return vertBaseIndex / vertChunkSize();
 }
 
-inline size_t COglMultiVboHandler::calcNumVertChunks(size_t numVerts) const
+inline size_t MultiVboHandler::calcNumVertChunks(size_t numVerts) const
 {
     size_t numChunks = size_t((numVerts + (vertChunkSize() - 1)) / vertChunkSize());
     assert(numVerts <= (numChunks * vertChunkSize()));
     return numChunks;
 }
 
-inline bool COglMultiVboHandler::isTriangleVBO() const
+inline bool MultiVboHandler::isTriangleVBO() const
 {
     return m_primitiveType == GL_TRIANGLES;
 }
@@ -834,13 +834,13 @@ namespace
     }
 }
 
-COglMultiVboHandler::OGLIndices::OGLIndices(size_t batchIndex, const vector<unsigned int>& elementIndices)
+MultiVboHandler::OGLIndices::OGLIndices(size_t batchIndex, const vector<unsigned int>& elementIndices)
     : m_batchIndex(batchIndex)
     , m_elementIndices(elementIndices)
 {
 }
 
-void COglMultiVboHandler::OGLIndices::clear()
+void MultiVboHandler::OGLIndices::clear()
 {
     m_elementIndices.clear();
 
@@ -849,7 +849,7 @@ void COglMultiVboHandler::OGLIndices::clear()
     m_numVertsInBatch = 0;          // Number of entity vertices in the batch
 }
 
-COglMultiVboHandler::VertexBatch::VertexBatch(int primitiveType)
+MultiVboHandler::VertexBatch::VertexBatch(int primitiveType)
     : m_VBO(primitiveType)
 {
 }
