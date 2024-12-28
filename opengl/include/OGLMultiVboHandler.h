@@ -185,10 +185,10 @@ private:
     void setEdgeSegTessellationInner(size_t batchIndex, size_t vertChunkIndex, const std::vector<float>& pts, const std::vector<float>& colors, const std::vector<unsigned int>& indices, Indices& glIndicesOut);
 
     // Supporting methods for drawKeys
-    void bindCommonBuffers(std::shared_ptr<VertexBatch> batchPtr) const;
-    void drawKeyForBatch(int key, std::shared_ptr<VertexBatch> batchPtr, MultiVBO::DrawVertexColorMode drawColors) const;
-    void drawTexturedFaces(std::shared_ptr<VertexBatch> batchPtr) const;
-    void unbindCommonBuffers(std::shared_ptr<VertexBatch> batchPtr) const;
+    void bindCommonBuffers(const std::shared_ptr<VertexBatch>& batchPtr) const;
+    void drawKeyForBatch(int key, const std::shared_ptr<VertexBatch>& batchPtr, MultiVBO::DrawVertexColorMode drawColors) const;
+    void drawTexturedFaces(const std::shared_ptr<VertexBatch>& batchPtr) const;
+    void unbindCommonBuffers(const std::shared_ptr<VertexBatch>& batchPtr) const;
     void initLayerToKeyMap(int maxKeyIndex);
 
     // This should only be called from doGarbageCollection

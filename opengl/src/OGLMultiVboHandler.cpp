@@ -764,22 +764,22 @@ void MultiVboHandler::draw(int key, MultiVBO::DrawVertexColorMode drawColors) co
     }
 }
 
-void MultiVboHandler::bindCommonBuffers(shared_ptr<VertexBatch> batchPtr) const
+void MultiVboHandler::bindCommonBuffers(const shared_ptr<VertexBatch>& batchPtr) const
 {
     auto& vbo = batchPtr->m_VBO;
     batchPtr->m_VBO.bindCommon(m_pShader, vbo.m_numVerts);
 }
 
-void MultiVboHandler::drawKeyForBatch(int key, shared_ptr<VertexBatch> batchPtr, MultiVBO::DrawVertexColorMode drawColors) const
+void MultiVboHandler::drawKeyForBatch(int key, const shared_ptr<VertexBatch>& batchPtr, MultiVBO::DrawVertexColorMode drawColors) const
 {
     batchPtr->m_VBO.drawVBO(m_pShader, key, drawColors);
 }
 
-void MultiVboHandler::drawTexturedFaces(std::shared_ptr<VertexBatch> batchPtr) const
+void MultiVboHandler::drawTexturedFaces(const std::shared_ptr<VertexBatch>& batchPtr) const
 {
 }
 
-void MultiVboHandler::unbindCommonBuffers(shared_ptr<VertexBatch> batchPtr) const
+void MultiVboHandler::unbindCommonBuffers(const shared_ptr<VertexBatch>& batchPtr) const
 {
     auto& vbo = batchPtr->m_VBO;
     vbo.unbindCommon();
