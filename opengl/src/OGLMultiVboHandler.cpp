@@ -149,11 +149,23 @@ void MultiVboHandler::beginFaceTesselation()
 const IndicesPtr MultiVboHandler::setFaceTessellation(size_t entityId, size_t changeNumber, const vector<float>& points, const vector<float>& normals, const vector<float>& parameters,
     const vector<unsigned int>& vertIndices)
 {
+    return setFaceTessellation(entityId, 0, changeNumber, points, normals, parameters, vertIndices);
+}
+
+const IndicesPtr MultiVboHandler::setFaceTessellation(size_t entityId, size_t subPartId, size_t changeNumber, const vector<float>& points, const vector<float>& normals, const vector<float>& parameters,
+    const vector<unsigned int>& vertIndices)
+{
     vector<float> colors;
-    return setFaceTessellation(entityId, changeNumber, points, normals, parameters, colors, vertIndices);
+    return setFaceTessellation(entityId, subPartId, changeNumber, points, normals, parameters, colors, vertIndices);
 }
 
 const IndicesPtr MultiVboHandler::setFaceTessellation(size_t entityId, size_t changeNumber, const vector<float>& points, const vector<float>& normals,
+    const vector<float>& parameters, const std::vector<float>& colors, const vector<unsigned int>& vertIndices)
+{
+    return setFaceTessellation(entityId, 0, changeNumber, points, normals, parameters, colors, vertIndices);
+}
+
+const IndicesPtr MultiVboHandler::setFaceTessellation(size_t entityId, size_t subPartId, size_t changeNumber, const vector<float>& points, const vector<float>& normals,
     const vector<float>& parameters, const std::vector<float>& colors, const vector<unsigned int>& vertIndices)
 {
     assert(m_insideBeginFaceTessellation);
@@ -171,7 +183,7 @@ const IndicesPtr MultiVboHandler::setFaceTessellation(size_t entityId, size_t ch
     pOglIndices->m_chunkIdx = vertChunkIndex;
     pOglIndices->m_numChunks = blockSizeInChunks;
     pOglIndices->m_changeNumber = changeNumber;
-    m_entityIdToIndicesMap[entityId][0] = pOglIndices;
+    m_entityIdToIndicesMap[entityId][subPartId] = pOglIndices;
 
     return pOglIndices;
 }
@@ -567,7 +579,12 @@ void MultiVboHandler::beginEdgeTesselation()
     // Nothing else required at this time
 }
 
-const IndicesPtr MultiVboHandler::setEdgeStripTessellation(size_t entityId, const vector<float>& lineStripPoints)
+const IndicesPtr MultiVboHandler::setEdgeStripTessellation(size_t entityId, const std::vector<float>& lineStripPoints)
+{
+    return (setEdgeStripTessellation(entityId, 0, lineStripPoints));
+}
+
+const IndicesPtr MultiVboHandler::setEdgeStripTessellation(size_t entityId, size_t subPartId, const vector<float>& lineStripPoints)
 {
     assert(m_insideBeginEdgeTessellation);
     size_t numVerts = lineStripPoints.size() / 3;
@@ -579,7 +596,7 @@ const IndicesPtr MultiVboHandler::setEdgeStripTessellation(size_t entityId, cons
     setEdgeStripTessellationInner(batchIndex, vertChunkIndex, lineStripPoints, *pOglIndices);
     pOglIndices->m_chunkIdx = vertChunkIndex;
     pOglIndices->m_numChunks = blockSizeInChunks;
-    m_entityIdToIndicesMap[entityId][0] = pOglIndices;
+    m_entityIdToIndicesMap[entityId][subPartId] = pOglIndices;
 
     return pOglIndices;
 }
@@ -587,10 +604,22 @@ const IndicesPtr MultiVboHandler::setEdgeStripTessellation(size_t entityId, cons
 const IndicesPtr MultiVboHandler::setEdgeSegTessellation(size_t entityId, size_t changeNumber, const std::vector<float>& points, const std::vector<unsigned int>& indices)
 {
     vector<float> colors;
-    return setEdgeSegTessellation(entityId, changeNumber, points, colors, indices);
+    return setEdgeSegTessellation(entityId, 0, changeNumber, points, colors, indices);
+}
+
+const IndicesPtr MultiVboHandler::setEdgeSegTessellation(size_t entityId, size_t subPartId, size_t changeNumber, const std::vector<float>& points, const std::vector<unsigned int>& indices)
+{
+    vector<float> colors;
+    return setEdgeSegTessellation(entityId, subPartId, changeNumber, points, colors, indices);
 }
 
 const IndicesPtr MultiVboHandler::setEdgeSegTessellation(size_t entityId, size_t changeNumber, const std::vector<float>& points,
+    const std::vector<float>& colors, const std::vector<unsigned int>& indices)
+{
+    return setEdgeSegTessellation(entityId, 0, changeNumber, points, colors, indices);
+}
+
+const IndicesPtr MultiVboHandler::setEdgeSegTessellation(size_t entityId, size_t subPartId, size_t changeNumber, const std::vector<float>& points,
     const std::vector<float>& colors, const std::vector<unsigned int>& indices)
 {
     assert(m_insideBeginEdgeTessellation);
@@ -603,7 +632,7 @@ const IndicesPtr MultiVboHandler::setEdgeSegTessellation(size_t entityId, size_t
     pOglIndices->m_chunkIdx = vertChunkIndex;
     pOglIndices->m_numChunks = blockSizeInChunks;
     pOglIndices->m_changeNumber = changeNumber;
-    m_entityIdToIndicesMap[entityId][0] = pOglIndices;
+    m_entityIdToIndicesMap[entityId][subPartId] = pOglIndices;
 
     return pOglIndices;
 }

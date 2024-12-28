@@ -73,14 +73,26 @@ public:
     // vertiIndices is index pairs into points, normals and parameters to form triangles. It's the standard OGL element index structure
     const IndicesPtr setFaceTessellation(size_t entityId, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
         const std::vector<unsigned int>& vertiIndices);
+    const IndicesPtr setFaceTessellation(size_t entityId, size_t subPartId, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
+        const std::vector<unsigned int>& vertiIndices);
+
     const IndicesPtr setFaceTessellation(size_t entityId, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
         const std::vector<float>& colors, const std::vector<unsigned int>& vertiIndices);
+    const IndicesPtr setFaceTessellation(size_t entityId, size_t subPartId, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
+        const std::vector<float>& colors, const std::vector<unsigned int>& vertiIndices);
+
     void endFaceTesselation(bool smoothNormals);
 
     void beginEdgeTesselation();
     const IndicesPtr setEdgeStripTessellation(size_t entityId, const std::vector<float>& lineStripPoints);
+    const IndicesPtr setEdgeStripTessellation(size_t entityId, size_t subPartId, const std::vector<float>& lineStripPoints);
+
     const IndicesPtr setEdgeSegTessellation(size_t entityId, size_t changeNumber, const std::vector<float>& points, const std::vector<unsigned int>& indices);
+    const IndicesPtr setEdgeSegTessellation(size_t entityId, size_t subPartId, size_t changeNumber, const std::vector<float>& points, const std::vector<unsigned int>& indices);
+
     const IndicesPtr setEdgeSegTessellation(size_t entityId, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& colors, const std::vector<unsigned int>& indices);
+    const IndicesPtr setEdgeSegTessellation(size_t entityId, size_t subPartId, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& colors, const std::vector<unsigned int>& indices);
+
     void endEdgeTesselation();
 
     bool getRawData(size_t entityId, std::vector<unsigned int>& indices) const;
