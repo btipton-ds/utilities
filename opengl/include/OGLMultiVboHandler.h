@@ -71,21 +71,21 @@ public:
 
     void beginFaceTesselation();
     // vertiIndices is index pairs into points, normals and parameters to form triangles. It's the standard OGL element index structure
-    const IndicesPtr setFaceTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
+    const IndicesPtr setFaceTessellation(size_t entityId, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
         const std::vector<unsigned int>& vertiIndices);
-    const IndicesPtr setFaceTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
+    const IndicesPtr setFaceTessellation(size_t entityId, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
         const std::vector<float>& colors, const std::vector<unsigned int>& vertiIndices);
     void endFaceTesselation(bool smoothNormals);
 
     void beginEdgeTesselation();
-    const IndicesPtr setEdgeStripTessellation(size_t entityKey, const std::vector<float>& lineStripPoints);
-    const IndicesPtr setEdgeSegTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points, const std::vector<unsigned int>& indices);
-    const IndicesPtr setEdgeSegTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& colors, const std::vector<unsigned int>& indices);
+    const IndicesPtr setEdgeStripTessellation(size_t entityId, const std::vector<float>& lineStripPoints);
+    const IndicesPtr setEdgeSegTessellation(size_t entityId, size_t changeNumber, const std::vector<float>& points, const std::vector<unsigned int>& indices);
+    const IndicesPtr setEdgeSegTessellation(size_t entityId, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& colors, const std::vector<unsigned int>& indices);
     void endEdgeTesselation();
 
-    bool getRawData(size_t entityKey, std::vector<unsigned int>& indices) const;
+    bool getRawData(size_t entityId, std::vector<unsigned int>& indices) const;
 
-    const IndicesPtr getOglIndices(size_t entityKey) const;
+    const IndicesPtr getOglIndices(size_t entityId) const;
 
     void beginSettingElementIndices(size_t layerBitMask);
     void includeElementIndices(int key, const IndicesPtr& batchIndices, GLuint texId = 0);
@@ -104,26 +104,26 @@ public:
     bool getVert(const Index& glIndicesOut, float coords[3]) const;
     bool getNormal(const Index& glIndicesOut, float coords[3]) const;
 
-    bool getRawData(size_t entityKey, std::vector<float>& points, std::vector<float>& normals, std::vector<float>& parameters) const;
+    bool getRawData(size_t entityId, std::vector<float>& points, std::vector<float>& normals, std::vector<float>& parameters) const;
 
-    bool setColorVBO(size_t entityKey, std::vector<float>& colors);
-    bool setBackColorVBO(size_t entityKey, std::vector<float>& colors);
+    bool setColorVBO(size_t entityId, std::vector<float>& colors);
+    bool setBackColorVBO(size_t entityId, std::vector<float>& colors);
 
     int findLayerForKey(int key) const;
 
     // Memory management
     struct ChangeRec
     {
-        inline ChangeRec(size_t entityKey, size_t changeNumber)
-            : m_entityKey(entityKey)
+        inline ChangeRec(size_t entityId, size_t changeNumber)
+            : m_entityId(entityId)
             , m_changeNumber(changeNumber)
         {}
 
         ChangeRec(const ChangeRec&) = default;
-        const size_t m_entityKey;
+        const size_t m_entityId;
         const size_t m_changeNumber;
     };
-    void doGarbageCollection(const std::vector<ChangeRec>& entityKeysInUse);
+    void doGarbageCollection(const std::vector<ChangeRec>& entityIdsInUse);
 private:
     struct VertexBatch {
         struct ElemIndexMapRec {
@@ -192,7 +192,7 @@ private:
     void initLayerToKeyMap(int maxKeyIndex);
 
     // This should only be called from doGarbageCollection
-    void releaseTessellation(size_t entityKey);
+    void releaseTessellations(size_t entityId);
 
     bool m_insideBeginFaceTessellation = false;
     bool m_insideBeginEdgeTessellation = false;
@@ -206,7 +206,7 @@ private:
     std::vector<int> m_keysLayer;
     std::vector<std::vector<int>> m_layersKeys;
     std::vector<std::shared_ptr<VertexBatch>> m_batches;
-    std::map<size_t, std::shared_ptr<Indices>> m_entityKeyToOGLIndicesMap;
+    std::map<size_t, std::map<size_t, std::shared_ptr<Indices>>> m_entityIdToIndicesMap;
 };
 
 inline void MultiVboHandler::setShader(const ShaderBase* pShader)
@@ -219,11 +219,19 @@ inline bool MultiVboHandler::empty() const
     return m_batches.empty();
 }
 
-inline const IndicesPtr MultiVboHandler::getOglIndices(size_t entityKey) const
+inline const IndicesPtr MultiVboHandler::getOglIndices(size_t entityId) const
 {
-    auto iter = m_entityKeyToOGLIndicesMap.find(entityKey);
-    if (iter != m_entityKeyToOGLIndicesMap.end())
-        return iter->second;
+    auto iter = m_entityIdToIndicesMap.find(entityId);
+    if (iter != m_entityIdToIndicesMap.end()) {
+        const auto& subMap = iter->second;
+        if (subMap.size() == 1) {
+            const auto& iter1 = subMap.begin();
+            assert(iter1->first == 0);
+            return iter1->second;
+        } else {
+            // TBI
+        }
+    }
     return nullptr;
 }
 

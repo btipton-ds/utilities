@@ -58,32 +58,47 @@ inline int MultiVboHandler::findLayerForKey(int key) const
     return m_keysLayer[key];
 }
 
-void MultiVboHandler::doGarbageCollection(const std::vector<ChangeRec>& entityKeysInUse)
+void MultiVboHandler::doGarbageCollection(const std::vector<ChangeRec>& entityIdsInUse)
 {
-    for (const auto& pair : m_entityKeyToOGLIndicesMap) {
-        pair.second->m_inUse = false;
+    for (const auto& pair : m_entityIdToIndicesMap) {
+        auto& subMap = pair.second;
+        for (const auto& pair1 : subMap) {
+            pair1.second->m_inUse = false;
+        }
     }
 
-    for (const auto& entityKey : entityKeysInUse) {
-        auto iter = m_entityKeyToOGLIndicesMap.find(entityKey.m_entityKey);
-
-        // Only keep it if it's the same id AND it has not been changed
-        if (iter != m_entityKeyToOGLIndicesMap.end() && iter->second->m_changeNumber == entityKey.m_changeNumber)
-            iter->second->m_inUse = true;
+    for (const auto& changeRec : entityIdsInUse) {
+        auto iter = m_entityIdToIndicesMap.find(changeRec.m_entityId);
+        if (iter != m_entityIdToIndicesMap.end()) {
+            // Only keep it if it's the same id AND it has not been changed
+            auto& subMap = iter->second;
+            for (const auto& pair1 : subMap) {
+                pair1.second->m_inUse = true;
+            }
+        }
     }
 
-    vector<size_t> entityKeysToRelease;
-    for (const auto& pair : m_entityKeyToOGLIndicesMap) {
-        if (!pair.second->m_inUse)
-            entityKeysToRelease.push_back(pair.first);
+    vector<size_t> entityIdsToRelease;
+    for (const auto& pair : m_entityIdToIndicesMap) {
+        auto& subMap = pair.second;
+        bool inUse = false;
+        for (const auto& pair1 : subMap) {
+            if (pair1.second->m_inUse) {
+                inUse = true;
+            }
+        }
+
+        if (inUse) {
+            entityIdsToRelease.push_back(pair.first);
+        }
     }
 
-    while (!entityKeysToRelease.empty()) {
-        size_t entityKey = entityKeysToRelease.back();
-        releaseTessellation(entityKey);
+    while (!entityIdsToRelease.empty()) {
+        size_t entityKey = entityIdsToRelease.back();
+        releaseTessellations(entityKey);
 
-        entityKeysToRelease.pop_back();
-        m_entityKeyToOGLIndicesMap.erase(entityKey);
+        entityIdsToRelease.pop_back();
+        m_entityIdToIndicesMap.erase(entityKey);
     }
 }
 
@@ -115,7 +130,7 @@ void MultiVboHandler::clear()
 
     m_keysToDraw.clear();
     m_chunkSizeToBlocksMap.clear();
-    m_entityKeyToOGLIndicesMap.clear();
+    m_entityIdToIndicesMap.clear();
 
     // Don't clear
     // m_keysLayer;
@@ -131,14 +146,14 @@ void MultiVboHandler::beginFaceTesselation()
     // Nothing else required at this time
 }
 
-const IndicesPtr MultiVboHandler::setFaceTessellation(size_t entityKey, size_t changeNumber, const vector<float>& points, const vector<float>& normals, const vector<float>& parameters,
+const IndicesPtr MultiVboHandler::setFaceTessellation(size_t entityId, size_t changeNumber, const vector<float>& points, const vector<float>& normals, const vector<float>& parameters,
     const vector<unsigned int>& vertIndices)
 {
     vector<float> colors;
-    return setFaceTessellation(entityKey, changeNumber, points, normals, parameters, colors, vertIndices);
+    return setFaceTessellation(entityId, changeNumber, points, normals, parameters, colors, vertIndices);
 }
 
-const IndicesPtr MultiVboHandler::setFaceTessellation(size_t entityKey, size_t changeNumber, const vector<float>& points, const vector<float>& normals,
+const IndicesPtr MultiVboHandler::setFaceTessellation(size_t entityId, size_t changeNumber, const vector<float>& points, const vector<float>& normals,
     const vector<float>& parameters, const std::vector<float>& colors, const vector<unsigned int>& vertIndices)
 {
     assert(m_insideBeginFaceTessellation);
@@ -156,7 +171,7 @@ const IndicesPtr MultiVboHandler::setFaceTessellation(size_t entityKey, size_t c
     pOglIndices->m_chunkIdx = vertChunkIndex;
     pOglIndices->m_numChunks = blockSizeInChunks;
     pOglIndices->m_changeNumber = changeNumber;
-    m_entityKeyToOGLIndicesMap[entityKey] = pOglIndices;
+    m_entityIdToIndicesMap[entityId][0] = pOglIndices;
 
     return pOglIndices;
 }
@@ -299,16 +314,19 @@ bool MultiVBO::getVBOArray(GLuint vboId, vector<unsigned int>& values) const
     return result;
 }
 
-bool MultiVboHandler::getRawData(size_t entityKey, vector<float>& vertices, vector<float>& normals, vector<float>& parameters) const
+bool MultiVboHandler::getRawData(size_t entityId, vector<float>& vertices, vector<float>& normals, vector<float>& parameters) const
 {
     vertices.clear();
     normals.clear();
     parameters.clear();
 
-    auto p = m_entityKeyToOGLIndicesMap.find(entityKey);
-    if (p == m_entityKeyToOGLIndicesMap.end())
+    auto p = m_entityIdToIndicesMap.find(entityId);
+    if (p == m_entityIdToIndicesMap.end())
         return false;
-    const Indices& triIndices = *p->second;
+
+    const auto& iter = p->second.begin();
+    const Indices& triIndices = *iter->second;
+
     if ((triIndices.m_batchIndex == _SIZE_T_ERROR) || (triIndices.m_batchIndex >= m_batches.size()))
         return false;
 
@@ -323,12 +341,14 @@ bool MultiVboHandler::getRawData(size_t entityKey, vector<float>& vertices, vect
     return result;
 }
 
-bool MultiVboHandler::setColorVBO(size_t entityKey, vector<float>& srcColors)
+bool MultiVboHandler::setColorVBO(size_t entityId, vector<float>& srcColors)
 {
-    auto p = m_entityKeyToOGLIndicesMap.find(entityKey);
-    if (p == m_entityKeyToOGLIndicesMap.end())
+    auto p = m_entityIdToIndicesMap.find(entityId);
+    if (p == m_entityIdToIndicesMap.end())
         return false;
-    const Indices& triIndices = *p->second;
+
+    const auto& iter = p->second.begin();
+    const Indices& triIndices = *iter->second;
 
     if (m_batches.empty() || triIndices.m_batchIndex >= m_batches.size() || srcColors.empty())
         return false;
@@ -353,12 +373,14 @@ bool MultiVboHandler::setColorVBO(size_t entityKey, vector<float>& srcColors)
     return batchPtr->m_VBO.copyColorsToExistingVBO(currentColors);
 }
 
-bool MultiVboHandler::setBackColorVBO(size_t entityKey, vector<float>& srcColors)
+bool MultiVboHandler::setBackColorVBO(size_t entityId, vector<float>& srcColors)
 {
-    auto p = m_entityKeyToOGLIndicesMap.find(entityKey);
-    if (p == m_entityKeyToOGLIndicesMap.end())
+    auto p = m_entityIdToIndicesMap.find(entityId);
+    if (p == m_entityIdToIndicesMap.end())
         return false;
-    const Indices& triIndices = *p->second;
+
+    const auto& iter = p->second.begin();
+    const Indices& triIndices = *iter->second;
 
     if (m_batches.empty() || triIndices.m_batchIndex >= m_batches.size())
         return false;
@@ -504,12 +526,14 @@ void MultiVboHandler::getStorageFor(size_t numVertsNeeded, bool needColorStorage
     batchPtr->m_allocatedChunks[vertChunkIndex] = blockSizeInChunks;
 }
 
-void MultiVboHandler::releaseTessellation(size_t entityKey)
+void MultiVboHandler::releaseTessellations(size_t entityId)
 {
-    const auto iter = m_entityKeyToOGLIndicesMap.find(entityKey);
-    if (iter == m_entityKeyToOGLIndicesMap.end())
+    const auto iter = m_entityIdToIndicesMap.find(entityId);
+    if (iter == m_entityIdToIndicesMap.end())
         return;
-    const auto& pGlIndices = iter->second;
+
+    const auto& iter1 = iter->second.begin();
+    const auto& pGlIndices = iter1->second;
 
     if ((pGlIndices->m_numVertsInBatch == 0) || (pGlIndices->m_vertBaseIndex == _SIZE_T_ERROR) || (pGlIndices->m_batchIndex >= m_batches.size()))
         return;
@@ -543,7 +567,7 @@ void MultiVboHandler::beginEdgeTesselation()
     // Nothing else required at this time
 }
 
-const IndicesPtr MultiVboHandler::setEdgeStripTessellation(size_t entityKey, const vector<float>& lineStripPoints)
+const IndicesPtr MultiVboHandler::setEdgeStripTessellation(size_t entityId, const vector<float>& lineStripPoints)
 {
     assert(m_insideBeginEdgeTessellation);
     size_t numVerts = lineStripPoints.size() / 3;
@@ -555,18 +579,18 @@ const IndicesPtr MultiVboHandler::setEdgeStripTessellation(size_t entityKey, con
     setEdgeStripTessellationInner(batchIndex, vertChunkIndex, lineStripPoints, *pOglIndices);
     pOglIndices->m_chunkIdx = vertChunkIndex;
     pOglIndices->m_numChunks = blockSizeInChunks;
-    m_entityKeyToOGLIndicesMap[entityKey] = pOglIndices;
+    m_entityIdToIndicesMap[entityId][0] = pOglIndices;
 
     return pOglIndices;
 }
 
-const IndicesPtr MultiVboHandler::setEdgeSegTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points, const std::vector<unsigned int>& indices)
+const IndicesPtr MultiVboHandler::setEdgeSegTessellation(size_t entityId, size_t changeNumber, const std::vector<float>& points, const std::vector<unsigned int>& indices)
 {
     vector<float> colors;
-    return setEdgeSegTessellation(entityKey, changeNumber, points, colors, indices);
+    return setEdgeSegTessellation(entityId, changeNumber, points, colors, indices);
 }
 
-const IndicesPtr MultiVboHandler::setEdgeSegTessellation(size_t entityKey, size_t changeNumber, const std::vector<float>& points,
+const IndicesPtr MultiVboHandler::setEdgeSegTessellation(size_t entityId, size_t changeNumber, const std::vector<float>& points,
     const std::vector<float>& colors, const std::vector<unsigned int>& indices)
 {
     assert(m_insideBeginEdgeTessellation);
@@ -579,7 +603,7 @@ const IndicesPtr MultiVboHandler::setEdgeSegTessellation(size_t entityKey, size_
     pOglIndices->m_chunkIdx = vertChunkIndex;
     pOglIndices->m_numChunks = blockSizeInChunks;
     pOglIndices->m_changeNumber = changeNumber;
-    m_entityKeyToOGLIndicesMap[entityKey] = pOglIndices;
+    m_entityIdToIndicesMap[entityId][0] = pOglIndices;
 
     return pOglIndices;
 }
@@ -671,15 +695,16 @@ void MultiVboHandler::endEdgeTesselation()
     }
 }
 
-bool MultiVboHandler::getRawData(size_t entityKey, std::vector<unsigned int>& indices) const
+bool MultiVboHandler::getRawData(size_t entityId, std::vector<unsigned int>& indices) const
 {
     indices.clear();
 
-    const auto p = m_entityKeyToOGLIndicesMap.find(entityKey);
-    if (p == m_entityKeyToOGLIndicesMap.end())
+    const auto p = m_entityIdToIndicesMap.find(entityId);
+    if (p == m_entityIdToIndicesMap.end())
         return false;
 
-    const auto& glIndices = *p->second;
+    const auto& iter = p->second.begin();
+    const auto& glIndices = *iter->second;
     if (glIndices.m_batchIndex >= m_batches.size())
         return false;
 
