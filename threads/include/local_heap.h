@@ -78,7 +78,7 @@ public:
 	static void setThreadHeapPtr(local_heap* pHeap);
 	static local_heap* getThreadHeapPtr();
 
-	local_heap(size_t blockSizeChunks, size_t chunkSizeBytes = 32);
+	local_heap(size_t numInitialChunks, size_t chunkSizeBytes = 32);
 	
 	void clear();
 
