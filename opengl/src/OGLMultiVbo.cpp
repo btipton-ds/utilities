@@ -110,6 +110,15 @@ MultiVBO::ElementVBORec::~ElementVBORec()
     }
 }
 
+size_t MultiVBO::numBytes() const
+{
+    size_t result = 0;
+
+    result += m_elementVBOIDMap.size() + sizeof(ElementVBORec);
+
+    return result;
+}
+
 MultiVBO::ElementVBORec& MultiVBO::ElementVBORec::operator = (const ElementVBORec& src)
 {
     if (src.m_isLiveInstance) {

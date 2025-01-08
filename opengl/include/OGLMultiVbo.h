@@ -38,6 +38,7 @@ public:
 
     MultiVBO(int m_primitiveType);
     virtual ~MultiVBO();
+    size_t numBytes() const;
 
     void dumpToStream(std::ostream& out) const;
 

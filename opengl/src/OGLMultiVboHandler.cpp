@@ -900,8 +900,77 @@ void Indices::clear()
     m_numVertsInBatch = 0;          // Number of entity vertices in the batch
 }
 
+size_t Indices::numBytes() const
+{
+    size_t result = sizeof(Indices);
+
+    result += m_elementIndices.capacity() * sizeof(unsigned int);
+
+    return result;
+}
+
+size_t MultiVboHandler::numBytes() const
+{
+    size_t result = sizeof(MultiVboHandler);
+
+    result += sizeof(m_chunkSizeToBlocksMap);
+    result += m_chunkSizeToBlocksMap.size() * sizeof(pair<size_t, std::vector<FreeChunkRecord>>);
+    for (const auto& pair : m_chunkSizeToBlocksMap) {
+        const auto& vec = pair.second;
+        result += vec.capacity() * sizeof(FreeChunkRecord);
+    }
+    result += m_keysToDraw.size() * sizeof(int);
+    result += m_keysLayer.size() * sizeof(int);
+
+    result += m_layersKeys.size() * sizeof(vector<int>);
+    for (const auto& vec : m_layersKeys)
+        result += vec.capacity() * sizeof(int);
+
+    result += m_batches.size() * sizeof(shared_ptr<VertexBatch>);
+    for (const auto& pBatch : m_batches) {
+        result += pBatch->numBytes();
+    }
+
+    for (const auto& pair0 : m_entityIdToIndicesMap) {
+        const auto& map0 = pair0.second;
+        for (const auto& pair1 : map0) {
+            const auto& pIndices = pair1.second;
+            result += pIndices->numBytes();
+        }
+    }
+
+    return result;
+}
+
 MultiVboHandler::VertexBatch::VertexBatch(int primitiveType)
     : m_VBO(primitiveType)
 {
 }
 
+size_t MultiVboHandler::VertexBatch::numBytes() const
+{
+    size_t result = sizeof(VertexBatch);
+
+    result += m_points.capacity() * sizeof(float);
+    result += m_normals.capacity() * sizeof(float);
+    result += m_parameters.capacity() * sizeof(float);
+    result += m_colors.capacity() * sizeof(float);
+    result += m_backColors.capacity() * sizeof(float);
+    result += m_allocatedChunks.capacity() * sizeof(size_t);
+
+    for (const auto& pair : m_indexMap) {
+        result += sizeof(pair);
+        const auto& vec = pair.second;
+        result += vec.capacity() * sizeof(unsigned int);
+    }
+
+    for (const auto& pVec : m_texturedFaces) {
+        const auto& vec = *pVec;
+        result += sizeof(vec);
+        result += vec.m_elementIndices.capacity() * sizeof(unsigned int);
+    }
+
+    result += m_VBO.numBytes();
+
+    return result;
+}

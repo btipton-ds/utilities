@@ -29,6 +29,8 @@ struct Indices {
 
     void clear();
 
+    size_t numBytes() const;
+
     std::vector<unsigned int> m_elementIndices;
 
     size_t m_batchIndex = _SIZE_T_ERROR;   // Pointer to the batch which stores this face's data
@@ -55,6 +57,8 @@ class MultiVboHandler : public Extensions
 public:
     MultiVboHandler(int primitiveType, int maxKeyIndex);
     ~MultiVboHandler();
+
+    size_t numBytes() const;
 
     void setShader(const ShaderBase* pShader);
 
@@ -148,7 +152,10 @@ private:
             GLuint m_texId = 0;
             std::vector<unsigned int> m_elementIndices;
         };
+
         VertexBatch(int primitiveType);
+        size_t numBytes() const;
+
         // TODO, in the future it may be beneficial to make this a real class and move some MultiVboHandler methods to here.
         // for now, this is pure structure with no code.
 
