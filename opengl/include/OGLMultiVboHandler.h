@@ -42,7 +42,6 @@ struct Indices {
 
     // Memory managment members
     bool m_inUse = true; // Used for mark and sweep garbage collection
-    bool m_isProxy = false;
     size_t m_changeNumber = -1;
     size_t m_chunkIdx = _SIZE_T_ERROR; // Index of the first chunk
     size_t m_numChunks = _SIZE_T_ERROR;// Number of chunks

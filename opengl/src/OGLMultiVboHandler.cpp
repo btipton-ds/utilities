@@ -257,7 +257,6 @@ const IndicesPtr MultiVboHandler::setFaceTessellation(size_t entityId, const Ind
     pOglIndices->m_changeNumber = pSrc->m_changeNumber;
     pOglIndices->m_chunkIdx = pSrc->m_chunkIdx;
     pOglIndices->m_numChunks = pSrc->m_numChunks;
-    pOglIndices->m_isProxy = true;
 
     m_entityIdToIndicesMap[entityId][0] = pOglIndices;
 
@@ -747,7 +746,6 @@ const IndicesPtr MultiVboHandler::setEdgeSegTessellation(size_t entityId, const 
     pOglIndices->m_changeNumber = pSrc->m_changeNumber;
     pOglIndices->m_chunkIdx = pSrc->m_chunkIdx;
     pOglIndices->m_numChunks = pSrc->m_numChunks;
-    pOglIndices->m_isProxy = true;
 
     m_entityIdToIndicesMap[entityId][0] = pOglIndices;
 
