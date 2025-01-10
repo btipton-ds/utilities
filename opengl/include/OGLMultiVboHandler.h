@@ -163,6 +163,7 @@ private:
         size_t m_nextFreeVertIndex = 0; // This used to make blocks of similar sizes for reuse
 
         bool m_needsUpdate = true;
+        // These accumulate between begin/end tessellation calls. They should be clear after VBO creation
         std::vector<float> m_points, m_normals, m_parameters;
         std::vector<float> m_colors, m_backColors;
         std::map<int, std::vector<unsigned int>> m_indexMap;

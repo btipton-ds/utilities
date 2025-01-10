@@ -1,6 +1,6 @@
 
 #include <sstream>
-
+#include <iostream>
 #include <assert.h>
 
 #include <OGLMultiVboHandler.h>
@@ -686,11 +686,14 @@ bool MultiVBO::drawVBO(const ShaderBase* pShader, GLsizei numElements, GLuint el
     if (numElements && (m_primitiveType == GL_TRIANGLES || m_primitiveType == GL_QUADS || m_primitiveType == GL_LINES || m_primitiveType == GL_LINE_STRIP))
     {
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementIdxVboID);       GL_ASSERT;
+//        if (m_primitiveType == GL_LINES)
+//            std::cout << "idxId: " << elementIdxVboID << " " << "n lines: " << (numElements / 2) << "\n";
         glDrawElements(m_primitiveType, numElements, GL_UNSIGNED_INT, 0); GL_ASSERT;
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); GL_ASSERT;
     }
     else
     {
+        std::cout << "glType: " << m_primitiveType << ", n line strip : " << (m_numVerts / 2) << "\n";
         glDrawArrays(m_primitiveType, 0, (GLsizei)m_numVerts);      GL_ASSERT;
     }
 
