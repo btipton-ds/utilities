@@ -32,6 +32,9 @@ struct Indices {
     size_t numBytes() const;
 
     std::vector<unsigned int> m_elementIndices;
+    
+    GLuint m_elementVBOId = -1;
+    GLuint m_numElements = -1;
 
     size_t m_batchIndex = _SIZE_T_ERROR;   // Pointer to the batch which stores this face's data
     unsigned int m_vertBaseIndex = -1;    // Index of the entity's first vertex index in the batch
@@ -39,6 +42,7 @@ struct Indices {
 
     // Memory managment members
     bool m_inUse = true; // Used for mark and sweep garbage collection
+    bool m_isProxy = false;
     size_t m_changeNumber = -1;
     size_t m_chunkIdx = _SIZE_T_ERROR; // Index of the first chunk
     size_t m_numChunks = _SIZE_T_ERROR;// Number of chunks
@@ -85,6 +89,8 @@ public:
     const IndicesPtr setFaceTessellation(size_t entityId, size_t subPartId, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
         const std::vector<float>& colors, const std::vector<unsigned int>& vertiIndices);
 
+    const IndicesPtr setFaceTessellation(size_t entityId, const IndicesPtr& pSrc, const std::vector<unsigned int>& elementIndices);
+
     void endFaceTesselation(bool smoothNormals);
 
     void beginEdgeTesselation();
@@ -96,6 +102,8 @@ public:
 
     const IndicesPtr setEdgeSegTessellation(size_t entityId, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& colors, const std::vector<unsigned int>& indices);
     const IndicesPtr setEdgeSegTessellation(size_t entityId, size_t subPartId, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& colors, const std::vector<unsigned int>& indices);
+
+    const IndicesPtr setEdgeSegTessellation(size_t entityId, const IndicesPtr& pSrc, const std::vector<unsigned int>& elementIndices);
 
     void endEdgeTesselation();
 

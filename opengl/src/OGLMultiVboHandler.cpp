@@ -244,6 +244,26 @@ void MultiVboHandler::setFaceTessellationInner(size_t batchIndex, size_t vertChu
     }
 }
 
+const IndicesPtr MultiVboHandler::setFaceTessellation(size_t entityId, const IndicesPtr& pSrc, const vector<unsigned int>& elementIndices)
+{
+    shared_ptr<Indices> pOglIndices = make_shared<Indices>();
+
+    pOglIndices->m_elementIndices = elementIndices;
+
+    pOglIndices->m_batchIndex =  pSrc->m_batchIndex;
+    pOglIndices->m_vertBaseIndex = pSrc->m_vertBaseIndex;
+    pOglIndices->m_numVertsInBatch = pSrc->m_numVertsInBatch;
+    pOglIndices->m_inUse = true;
+    pOglIndices->m_changeNumber = pSrc->m_changeNumber;
+    pOglIndices->m_chunkIdx = pSrc->m_chunkIdx;
+    pOglIndices->m_numChunks = pSrc->m_numChunks;
+    pOglIndices->m_isProxy = true;
+
+    m_entityIdToIndicesMap[entityId][0] = pOglIndices;
+
+    return pOglIndices;
+}
+
 void MultiVboHandler::endFaceTesselation(bool smoothNormals)
 {
     assert(m_insideBeginFaceTessellation);
@@ -712,6 +732,26 @@ void MultiVboHandler::setEdgeSegTessellationInner(size_t batchIndex, size_t vert
     for (size_t i = 0; i < indicesIn.size(); i++) {
         glIndicesOut.m_elementIndices.push_back(vertBaseIndex + indicesIn[i]);
     }
+}
+
+const IndicesPtr MultiVboHandler::setEdgeSegTessellation(size_t entityId, const IndicesPtr& pSrc, const std::vector<unsigned int>& elementIndices)
+{
+    shared_ptr<Indices> pOglIndices = make_shared<Indices>();
+
+    pOglIndices->m_elementIndices = elementIndices;
+
+    pOglIndices->m_batchIndex = pSrc->m_batchIndex;
+    pOglIndices->m_vertBaseIndex = pSrc->m_vertBaseIndex;
+    pOglIndices->m_numVertsInBatch = pSrc->m_numVertsInBatch;
+    pOglIndices->m_inUse = true;
+    pOglIndices->m_changeNumber = pSrc->m_changeNumber;
+    pOglIndices->m_chunkIdx = pSrc->m_chunkIdx;
+    pOglIndices->m_numChunks = pSrc->m_numChunks;
+    pOglIndices->m_isProxy = true;
+
+    m_entityIdToIndicesMap[entityId][0] = pOglIndices;
+
+    return pOglIndices;
 }
 
 void MultiVboHandler::endEdgeTesselation()

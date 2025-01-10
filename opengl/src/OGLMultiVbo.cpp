@@ -86,15 +86,15 @@ MultiVBO::~MultiVBO()
     releaseVBOs();
 }
 
-MultiVBO::ElementVBORec::ElementVBORec()
+ElementVBORec::ElementVBORec()
     : m_mumElements(0)
     , m_elementIdxVboID(0)
 {
     int isValid;
-    createVBO(m_elementIdxVboID, isValid);
+    MultiVBO::createVBO(m_elementIdxVboID, isValid);
 }
 
-MultiVBO::ElementVBORec::ElementVBORec(const ElementVBORec& src)
+ElementVBORec::ElementVBORec(const ElementVBORec& src)
     : m_mumElements(src.m_mumElements)
     , m_elementIdxVboID(src.m_elementIdxVboID)
     , m_isLiveInstance(src.m_isLiveInstance)
@@ -102,11 +102,11 @@ MultiVBO::ElementVBORec::ElementVBORec(const ElementVBORec& src)
     src.m_isLiveInstance = false; // Mark it as copied out of so it won't be destroyed
 }
 
-MultiVBO::ElementVBORec::~ElementVBORec()
+ElementVBORec::~ElementVBORec()
 {
     if (m_isLiveInstance && m_elementIdxVboID != 0) {
         int isValid;
-        releaseVBO(m_elementIdxVboID, isValid);
+        MultiVBO::releaseVBO(m_elementIdxVboID, isValid);
     }
 }
 
@@ -119,7 +119,7 @@ size_t MultiVBO::numBytes() const
     return result;
 }
 
-MultiVBO::ElementVBORec& MultiVBO::ElementVBORec::operator = (const ElementVBORec& src)
+ElementVBORec& ElementVBORec::operator = (const ElementVBORec& src)
 {
     if (src.m_isLiveInstance) {
         m_isLiveInstance = true;
@@ -133,11 +133,11 @@ MultiVBO::ElementVBORec& MultiVBO::ElementVBORec::operator = (const ElementVBORe
     return *this;
 }
 
-void MultiVBO::ElementVBORec::bind(const vector<unsigned int>& indices)
+void ElementVBORec::bind(const std::vector<unsigned int>& indices)
 {
     m_mumElements = indices.size();
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_elementIdxVboID);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);  
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_mumElements * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
@@ -686,14 +686,11 @@ bool MultiVBO::drawVBOIndexVBO(const ShaderBase* pShader, GLsizei numElements, G
     if (numElements && (m_primitiveType == GL_TRIANGLES || m_primitiveType == GL_QUADS || m_primitiveType == GL_LINES || m_primitiveType == GL_LINE_STRIP))
     {
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementIdxVboID);       GL_ASSERT;
-//        if (m_primitiveType == GL_LINES)
-//            std::cout << "idxId: " << elementIdxVboID << " " << "n lines: " << (numElements / 2) << "\n";
         glDrawElements(m_primitiveType, numElements, GL_UNSIGNED_INT, 0); GL_ASSERT;
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); GL_ASSERT;
     }
     else
     {
-        std::cout << "glType: " << m_primitiveType << ", n line strip : " << (m_numVerts / 2) << "\n";
         glDrawArrays(m_primitiveType, 0, (GLsizei)m_numVerts);      GL_ASSERT;
     }
 

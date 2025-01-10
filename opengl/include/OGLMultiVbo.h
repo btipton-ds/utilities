@@ -18,6 +18,24 @@ namespace OGL
 {
 class ShaderBase;
 
+class ElementVBORec : public Extensions {
+public:
+    ElementVBORec();
+    ElementVBORec(const ElementVBORec& src);
+    ~ElementVBORec();
+
+    ElementVBORec& operator = (const ElementVBORec& src);
+
+    void bind(const std::vector<unsigned int>& indices);
+    size_t getNumElements() const;
+    GLuint getVboId() const;
+
+private:
+    mutable bool m_isLiveInstance = true; // This class should be a singlelton, but it gets copied, destroyed etc. This token moves with the VBOID
+    size_t  m_mumElements;   //< Only relevant if indeces were passed in
+    GLuint  m_elementIdxVboID;
+};
+
 class MultiVBO : public Extensions
 {
     friend class MultiVboHandler;
@@ -107,24 +125,6 @@ protected:
     template<class T>
     static bool assureVBOValid(const std::vector<T>& vec, GLuint& vboID, int& valid);
 
-    class ElementVBORec {
-    public:
-        ElementVBORec();
-        ElementVBORec(const ElementVBORec& src);
-        ~ElementVBORec();
-
-        ElementVBORec& operator = (const ElementVBORec& src);
-
-        void bind(const std::vector<unsigned int>& indices);
-        size_t getNumElements() const;
-        GLuint getVboId() const;
-
-    private:
-        mutable bool m_isLiveInstance = true; // This class should be a singlelton, but it gets copied, destroyed etc. This token moves with the VBOID
-        size_t  m_mumElements;   //< Only relevant if indeces were passed in
-        GLuint  m_elementIdxVboID;
-    };
-
     const int m_primitiveType;
 
     size_t m_numVerts;
@@ -144,12 +144,12 @@ protected:
     std::map<int, ElementVBORec> m_elementVBOIDMap;
 };
 
-inline size_t MultiVBO::ElementVBORec::getNumElements() const
+inline size_t ElementVBORec::getNumElements() const
 {
     return m_mumElements;
 }
 
-inline GLuint MultiVBO::ElementVBORec::getVboId() const
+inline GLuint ElementVBORec::getVboId() const
 {
     return m_elementIdxVboID;
 }
