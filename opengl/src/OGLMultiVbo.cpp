@@ -515,7 +515,7 @@ bool MultiVBO::drawVBO(const ShaderBase* pShader, int key, DrawVertexColorMode d
 
         GLuint elementIdxVboID = iter->second.getVboId();
 
-        return drawVBO(pShader, numElements, elementIdxVboID, drawColors);
+        return drawVBOIndexVBO(pShader, numElements, elementIdxVboID, drawColors);
 
     }
 
@@ -628,7 +628,7 @@ inline bool MultiVBO::assureVBOValid(const vector<T>& vec, GLuint& vboID, int& v
     }
 }
 
-bool MultiVBO::drawVBO(const ShaderBase* pShader, GLsizei numElements, GLuint elementIdxVboID, DrawVertexColorMode drawColors) const
+bool MultiVBO::drawVBOIndexVBO(const ShaderBase* pShader, GLsizei numElements, GLuint elementIdxVboID, DrawVertexColorMode drawColors) const
 {
     if (drawColors == DRAW_COLOR_SKIP)
         return true;

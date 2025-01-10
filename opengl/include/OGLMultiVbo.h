@@ -61,7 +61,7 @@ public:
     // If drawColors = DRAW_COLOR, color array buffer is used
     // If drawColors = DRAW_COLOR_BACK, cull face is set to back face and back color array buffer is used
     virtual bool drawVBO(const ShaderBase* pShader, int key, DrawVertexColorMode drawColors = DRAW_COLOR_NONE) const;
-    virtual bool drawVBO(const ShaderBase* pShader, GLsizei numElements, GLuint indexVBOId, DrawVertexColorMode drawColors = DRAW_COLOR_NONE) const;
+    virtual bool drawVBOIndexVBO(const ShaderBase* pShader, GLsizei numElements, GLuint indexVBOId, DrawVertexColorMode drawColors = DRAW_COLOR_NONE) const;
     virtual bool drawVBO(const ShaderBase* pShader, const std::vector<unsigned int>& indices = std::vector<unsigned int>(), DrawVertexColorMode drawColors = DRAW_COLOR_NONE) const;
 
     bool usingSmoothNormals() { return m_smoothNormals; }
