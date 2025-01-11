@@ -35,6 +35,8 @@ uniform UniformBufferObject {
 	mat4 proj;
 	vec3 defColor;
 	float ambient;
+  int useDefColor;
+  int normalShadingOn;
   int twoSideLighting;
   int numLights;
 	vec3 lightDir[8];
@@ -49,16 +51,20 @@ void main() {
   float C_PI = radians(180);
   float intensity = 0.0;
 
-  for (int i = 0; i < numLights; i++) {
-    float dp = dot(lightDir[i], fragNormal);
+  if (normalShadingOn != 0) {
+    for (int i = 0; i < numLights; i++) {
+      float dp = dot(lightDir[i], fragNormal);
 
-    if (twoSideLighting != 0)
-      dp = abs(dp);
+      if (twoSideLighting != 0)
+        dp = abs(dp);
 
-    if (dp > 0)
-      intensity += dp;
+      if (dp > 0)
+        intensity += dp;
+    }
+  } else {
+    intensity = 1.0;
   }
-
+  
   intensity = min(intensity, 1.0);
 
   intensity = ambient + (1.0 - ambient) * intensity;

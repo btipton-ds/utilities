@@ -35,6 +35,8 @@ uniform UniformBufferObject {
 	mat4 proj;
 	vec3 defColor;
 	float ambient;
+  int useDefColor;
+  int normalShadingOn;
   int twoSideLighting;
   int numLights;
 	vec3 lightDir[8];
@@ -51,10 +53,10 @@ void main() {
     gl_Position = proj * modelView * vec4(inPosition, 1.0);
     vec3 blackColor = vec3(0.0, 0.0, 0.0);
 	
-	if (defColor == blackColor) {
-		fragColor = inColor;
-	} else
+	if (useDefColor != 0)
 		fragColor = defColor;
+	else
+		fragColor = inColor;
 
     fragNormal = normalize((modelView * vec4(inNormal, 0.0)).xyz);
 }
