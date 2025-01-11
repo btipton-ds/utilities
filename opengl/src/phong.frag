@@ -30,11 +30,18 @@ This file is part of the VulkanQuickStart Project.
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
+uniform UniformBufferObject {
+	mat4 modelView;
+	mat4 proj;
+	vec3 defColor;
+	float ambient;
+  int numLights;
+	vec3 lightDir[8];
+  int twoSideLighting;
+};
+
 layout(location = 0) in vec3 fragColor;
 layout(location = 1) in vec3 fragNormal;
-layout(location = 2) flat in float fragAmbient;
-layout(location = 3) flat in int fragNumLights;
-layout(location = 4) flat in vec3 fragLights[8];
 
 layout(location = 0) out vec4 outColor;
 
@@ -42,9 +49,8 @@ void main() {
   float C_PI = radians(180);
   float intensity = 0.0;
 
-	
-  for (int i = 0; i < fragNumLights; i++) {
-    float dp = dot(fragLights[i], fragNormal);
+  for (int i = 0; i < numLights; i++) {
+    float dp = dot(lightDir[i], fragNormal);
 
     if (dp > 0)
       intensity += dp;
@@ -52,7 +58,6 @@ void main() {
 
   intensity = min(intensity, 1.0);
 
-  float ambient = fragAmbient;
   intensity = ambient + (1.0 - ambient) * intensity;
 
   outColor = intensity * vec4(fragColor, 1);
