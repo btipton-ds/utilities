@@ -35,9 +35,9 @@ uniform UniformBufferObject {
 	mat4 proj;
 	vec3 defColor;
 	float ambient;
+  int twoSideLighting;
   int numLights;
 	vec3 lightDir[8];
-  int twoSideLighting;
 };
 
 layout(location = 0) in vec3 inPosition;

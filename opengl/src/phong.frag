@@ -35,9 +35,9 @@ uniform UniformBufferObject {
 	mat4 proj;
 	vec3 defColor;
 	float ambient;
+  int twoSideLighting;
   int numLights;
 	vec3 lightDir[8];
-  int twoSideLighting;
 };
 
 layout(location = 0) in vec3 fragColor;
@@ -51,6 +51,9 @@ void main() {
 
   for (int i = 0; i < numLights; i++) {
     float dp = dot(lightDir[i], fragNormal);
+
+    if (twoSideLighting != 0)
+      dp = abs(dp);
 
     if (dp > 0)
       intensity += dp;
