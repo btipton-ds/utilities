@@ -39,39 +39,21 @@ layout(location = 4) flat in vec3 fragLights[8];
 layout(location = 0) out vec4 outColor;
 
 void main() {
-	float C_PI = radians(180);
-    float intensity = 0.0;
+  float C_PI = radians(180);
+  float intensity = 0.0;
 
-	float az0 = 45 / 180 * C_PI;
-	float el0 = 30 / 180 * C_PI;
-	float az1 = -45 / 180 * C_PI;
-	float el1 = 30 / 180 * C_PI;
-
-	float cosAz0 = cos(az0);
-	float sinAz0 = sin(az0);
-	float cosEl0 = cos(el0);
-	float sinEl0 = sin(el0);
-
-	float cosAz1 = cos(az1);
-	float sinAz1 = sin(az1);
-	float cosEl1 = cos(el1);
-	float sinEl1 = sin(el1);
-
-	vec3 lights[2] = {
-		vec3(cosEl0 * sinAz0, sinEl0, cosEl0 * cosAz0),
-		vec3(cosEl1 * sinAz1, sinEl1, cosEl1 * cosAz1),
-	};
 	
-    for (int i = 0; i < fragNumLights; i++) {
-        float dp = abs(dot(lights[i], fragNormal));
-		if (dp > 0)
-			intensity += dp;
-    }
+  for (int i = 0; i < fragNumLights; i++) {
+    float dp = dot(fragLights[i], fragNormal);
 
-    intensity = min(intensity, 1.0);
+    if (dp > 0)
+      intensity += dp;
+  }
 
-    float ambient = fragAmbient;
-    intensity = ambient + (1.0 - ambient) * intensity;
+  intensity = min(intensity, 1.0);
 
-    outColor = intensity * vec4(fragColor, 1);
+  float ambient = fragAmbient;
+  intensity = ambient + (1.0 - ambient) * intensity;
+
+  outColor = intensity * vec4(fragColor, 1);
 }
