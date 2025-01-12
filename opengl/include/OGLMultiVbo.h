@@ -14,11 +14,31 @@
 //
 // If someone can find a way to hyperlink to a relative file, please do that.
 
-class COglShaderBase;
-
-class COglMultiVBO : public COglExtensions
+namespace OGL
 {
-    friend class COglMultiVboHandler;
+class ShaderBase;
+
+class ElementVBORec : public Extensions {
+public:
+    ElementVBORec();
+    ElementVBORec(const ElementVBORec& src);
+    ~ElementVBORec();
+
+    ElementVBORec& operator = (const ElementVBORec& src);
+
+    void bind(const std::vector<unsigned int>& indices);
+    size_t getNumElements() const;
+    GLuint getVboId() const;
+
+private:
+    mutable bool m_isLiveInstance = true; // This class should be a singlelton, but it gets copied, destroyed etc. This token moves with the VBOID
+    size_t  m_mumElements;   //< Only relevant if indeces were passed in
+    GLuint  m_elementIdxVboID;
+};
+
+class MultiVBO : public Extensions
+{
+    friend class MultiVboHandler;
 public:
     enum DrawVertexColorMode {
         DRAW_COLOR_NONE,
@@ -34,13 +54,14 @@ public:
     // the buffer.
     static bool isValid_unbindsVBO(GLuint& vboID);
 
-    COglMultiVBO(int m_primitiveType);
-    virtual ~COglMultiVBO();
+    MultiVBO(int m_primitiveType);
+    virtual ~MultiVBO();
+    size_t numBytes() const;
 
     void dumpToStream(std::ostream& out) const;
 
     virtual bool copyToVBO(const std::vector<float>& verts, const std::vector<float>& normals, bool smoothNrmls, const std::vector<float>& textureCoords, int dataID = 0);    ///replaces whatever was there before, normal size == vertex size && tex size is 2/3 of vertex size or has no size
-    virtual bool copyToVBO(const std::vector<float>& verts, const std::vector<float>& normals, bool smoothNrmls, const std::vector<float>& textureCoords, 
+    virtual bool copyToVBO(const std::vector<float>& verts, const std::vector<float>& normals, bool smoothNrmls, const std::vector<float>& textureCoords,
         const std::vector<float>& colors, int dataID = 0);    ///replaces whatever was there before, normal size == vertex size && tex size is 2/3 of vertex size or has no size
     virtual bool copyToVBO(const std::vector<float>& verts, const std::vector<float>& colors, int dataID = 0);    ///replaces whatever was there before, normal size == vertex size && tex size is 2/3 of vertex size or has no size
     virtual bool copyToVBO(const std::vector<float>& verts, int dataID = 0);    ///replaces whatever was there before, normal size == vertex size && tex size is 2/3 of vertex size or has no size
@@ -57,9 +78,9 @@ public:
     // If drawColors = DRAW_COLOR_NONE, color array buffer is not used
     // If drawColors = DRAW_COLOR, color array buffer is used
     // If drawColors = DRAW_COLOR_BACK, cull face is set to back face and back color array buffer is used
-    virtual bool drawVBO(const COglShaderBase* pShader, int key, DrawVertexColorMode drawColors = DRAW_COLOR_NONE) const;
-    virtual bool drawVBO(const COglShaderBase* pShader, GLsizei numElements, GLuint indexVBOId, DrawVertexColorMode drawColors = DRAW_COLOR_NONE) const;
-    virtual bool drawVBO(const COglShaderBase* pShader, const std::vector<unsigned int>& indices = std::vector<unsigned int>(), DrawVertexColorMode drawColors = DRAW_COLOR_NONE) const;
+    virtual bool drawVBO(const ShaderBase* pShader, int key, DrawVertexColorMode drawColors = DRAW_COLOR_NONE) const;
+    virtual bool drawVBOIndexVBO(const ShaderBase* pShader, GLsizei numElements, GLuint indexVBOId, DrawVertexColorMode drawColors = DRAW_COLOR_NONE) const;
+    virtual bool drawVBO(const ShaderBase* pShader, const std::vector<unsigned int>& indices = std::vector<unsigned int>(), DrawVertexColorMode drawColors = DRAW_COLOR_NONE) const;
 
     bool usingSmoothNormals() { return m_smoothNormals; }
     bool usingRegionalNormals() { return m_regionalNormals; }
@@ -99,28 +120,10 @@ public:
     bool getVBOArray(GLuint vboId, std::vector<unsigned int>& values) const;
 protected:
     bool areVBOsValid(size_t numElements, GLuint elementIdxVboID, DrawVertexColorMode drawColors) const;
-    bool bindCommon(const COglShaderBase* pShader, size_t numElements) const;
+    bool bindCommon(const ShaderBase* pShader, size_t numElements) const;
     void unbindCommon() const;
     template<class T>
     static bool assureVBOValid(const std::vector<T>& vec, GLuint& vboID, int& valid);
-
-    class ElementVBORec {
-    public:
-        ElementVBORec();
-        ElementVBORec(const ElementVBORec& src);
-        ~ElementVBORec();
-
-        ElementVBORec& operator = (const ElementVBORec& src);
-
-        void bind(const std::vector<unsigned int>& indices);
-        size_t getNumElements() const;
-        GLuint getVboId() const;
-
-    private:
-        mutable bool m_isLiveInstance = true; // This class should be a singlelton, but it gets copied, destroyed etc. This token moves with the VBOID
-        size_t  m_mumElements;   //< Only relevant if indeces were passed in
-        GLuint  m_elementIdxVboID;
-    };
 
     const int m_primitiveType;
 
@@ -141,12 +144,14 @@ protected:
     std::map<int, ElementVBORec> m_elementVBOIDMap;
 };
 
-inline size_t COglMultiVBO::ElementVBORec::getNumElements() const
+inline size_t ElementVBORec::getNumElements() const
 {
     return m_mumElements;
 }
 
-inline GLuint COglMultiVBO::ElementVBORec::getVboId() const
+inline GLuint ElementVBORec::getVboId() const
 {
     return m_elementIdxVboID;
+}
+
 }

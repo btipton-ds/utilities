@@ -163,31 +163,31 @@ inline MultiCore::set<T>& SET_DECL::operator = (const set& rhs)
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 inline typename SET_DECL::const_iterator SET_DECL::begin() const noexcept
+inline typename SET_DECL::const_iterator SET_DECL::begin() const noexcept
 {
 	return vector<T>::begin();
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 inline typename SET_DECL::const_iterator SET_DECL::end() const noexcept
+inline typename SET_DECL::const_iterator SET_DECL::end() const noexcept
 {
 	return vector<T>::end();
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 inline typename SET_DECL::const_reverse_iterator SET_DECL::rbegin() const noexcept
+inline typename SET_DECL::const_reverse_iterator SET_DECL::rbegin() const noexcept
 {
 	return vector<T>::rbegin();
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 inline typename SET_DECL::const_reverse_iterator SET_DECL::rend() const noexcept
+inline typename SET_DECL::const_reverse_iterator SET_DECL::rend() const noexcept
 {
 	return vector<T>::rend();
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 inline typename SET_DECL::const_iterator SET_DECL::find(const T& val) const noexcept
+inline typename SET_DECL::const_iterator SET_DECL::find(const T& val) const noexcept
 {
 	const_iterator next;
 	return find(val, next);
@@ -206,7 +206,7 @@ inline size_t SET_DECL::count(const T& val) const
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 typename SET_DECL::const_iterator SET_DECL::find(const T& val, const_iterator& next) const noexcept
+typename SET_DECL::const_iterator SET_DECL::find(const T& val, const_iterator& next) const noexcept
 {
 	next = end();
 	size_t min = 0;

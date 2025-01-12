@@ -25,253 +25,255 @@
 #include <OGLCol4f.h>
 
 #ifdef _DEBUG
-#define GL_ASSERT COglShaderBase::dumpGlErrors(__FILE__, __LINE__);
+#define GL_ASSERT ::OGL::ShaderBase::dumpGlErrors(__FILE__, __LINE__);
 #else
 #define GL_ASSERT
 #endif // _DEBUG
 
-class COglArg;
-class COglTexture;
-class ActiveTextureUnits;
+namespace OGL
+{
+    class Arg;
+    class Texture;
+    class ActiveTextureUnits;
 
 #define TEXTURE_SUPPORT 0
 
-/** Class that encapsulates glsl shader functionality
-This is a base class to store a shader program
-A shader program consists of a vertex and a fragment component
-Currently this is set up to load shaders from a resource
- */
- #ifdef WIN32
-class COglShaderBase : public COglExtensions
+    /** Class that encapsulates glsl shader functionality
+    This is a base class to store a shader program
+    A shader program consists of a vertex and a fragment component
+    Currently this is set up to load shaders from a resource
+     */
+#ifdef WIN32
+    class ShaderBase : public Extensions
 #else
-class COglShaderBase
+    class ShaderBase
 #endif
-{
-public:
-    using ArgMapType = std::map<const std::string, std::shared_ptr<COglArg>>;
+    {
+    public:
+        using ArgMapType = std::map<const std::string, std::shared_ptr<Arg>>;
 
-    static void dumpGlErrors(const char* filename, int lineNumber);
+        static void dumpGlErrors(const char* filename, int lineNumber);
 
 #if TEXTURE_SUPPORT
-    using TextureMapType = std::map<const std::string, std::shared_ptr<COglTexture>>;
+        using TextureMapType = std::map<const std::string, std::shared_ptr<Texture>>;
 #endif
 
-    COglShaderBase();
-	virtual ~COglShaderBase();
+        ShaderBase();
+        virtual ~ShaderBase();
 
-    static bool isEnabled();
-    static void enable(bool set=true);
-    static std::string getDataDir();
+        static bool isEnabled();
+        static void enable(bool set = true);
+        static std::string getDataDir();
 
-    virtual int shaderResID() { return 0; }
-    void setShaderVertexAttribName(const std::string& name);
-    void setShaderNormalAttribName(const std::string& name);
-    void setShaderTexParamAttribName(const std::string& name);
-    void setShaderColorAttribName(const std::string& name);
+        virtual int shaderResID() { return 0; }
+        void setShaderVertexAttribName(const std::string& name);
+        void setShaderNormalAttribName(const std::string& name);
+        void setShaderTexParamAttribName(const std::string& name);
+        void setShaderColorAttribName(const std::string& name);
 
 
-    bool bind(); // Sets uniforms on bind
-    bool unBind();
-    bool bound() const;
+        bool bind(); // Sets uniforms on bind
+        bool unBind();
+        bool bound() const;
 
-    void loadDefaultVariables(); ///< Loads defaults (resets to default) variables defined in the shader file
+        void loadDefaultVariables(); ///< Loads defaults (resets to default) variables defined in the shader file
 
-    void setVariablei( const std::string& name, int  value );
-    void setVariable( const std::string& name, float  value );
-    void setVariable( const std::string& name, const col4f& value );
-    void setVariable( const std::string& name, const m44f&  value );
-    void setVariable( const std::string& name, const p4f&   value );
-    void setVariable( const std::string& name, const p3f&   value );
-    void setVariable( const std::string& name, const p2f&   value );
+        void setVariablei(const std::string& name, int  value);
+        void setVariable(const std::string& name, float  value);
+        void setVariable(const std::string& name, const col4f& value);
+        void setVariable(const std::string& name, const m44f& value);
+        void setVariable(const std::string& name, const p4f& value);
+        void setVariable(const std::string& name, const p3f& value);
+        void setVariable(const std::string& name, const p2f& value);
 
 #if HAS_SHADER_SUBROUTINES
-	void setVertSubRoutine(const char* name);
-	void setFragSubRoutine(const char* name);
+        void setVertSubRoutine(const char* name);
+        void setFragSubRoutine(const char* name);
 #endif
 
-    bool hasTexture ( const std::string& textureShaderName) const;
-    bool setTexture ( const std::string& textureShaderName, const std::string& filename, bool flipImage = true );
-    bool setTexture ( const std::string& textureShaderName, COglTexture* hwBuffer, bool takeOwnerShip );
-    
-    COglTexture* getTexture( const std::string& textureShaderName );
+        bool hasTexture(const std::string& textureShaderName) const;
+        bool setTexture(const std::string& textureShaderName, const std::string& filename, bool flipImage = true);
+        bool setTexture(const std::string& textureShaderName, Texture* hwBuffer, bool takeOwnerShip);
 
-    const std::string getName() const;
+        Texture* getTexture(const std::string& textureShaderName);
 
-    bool getVariable( const std::string& name, std::string& type, std::string& value ) const;
-    bool getVariablei( const std::string& name, int& value ) const;
-    bool getVariable( const std::string& name, float& value ) const;
-    bool getVariable( const std::string& name, col4f& value ) const;
-    bool getVariable( const std::string& name, m44f&  value ) const;
-    bool getVariable( const std::string& name, p4f&   value ) const;
-    bool getVariable( const std::string& name, p3f&   value ) const;
-    bool getVariable( const std::string& name, p2f&   value ) const;
+        const std::string getName() const;
 
-    void setGeomShaderIOtype( int intype, int outtype);
-	bool load();
+        bool getVariable(const std::string& name, std::string& type, std::string& value) const;
+        bool getVariablei(const std::string& name, int& value) const;
+        bool getVariable(const std::string& name, float& value) const;
+        bool getVariable(const std::string& name, col4f& value) const;
+        bool getVariable(const std::string& name, m44f& value) const;
+        bool getVariable(const std::string& name, p4f& value) const;
+        bool getVariable(const std::string& name, p3f& value) const;
+        bool getVariable(const std::string& name, p2f& value) const;
 
-    int programID() const;
-    int vertexID() const;
-    int fragmentID() const;
-    int geometryID() const;
+        void setGeomShaderIOtype(int intype, int outtype);
+        bool load();
 
-    GLuint getVertexLoc() const;
-    GLuint getNormalLoc() const;
-    GLuint getTexParamLoc() const;
-    GLuint getColorLoc() const;
+        int programID() const;
+        int vertexID() const;
+        int fragmentID() const;
+        int geometryID() const;
 
-protected:
-	virtual void initUniform() = 0;
-    bool unLoad();
+        GLuint getVertexLoc() const;
+        GLuint getNormalLoc() const;
+        GLuint getTexParamLoc() const;
+        GLuint getColorLoc() const;
 
-    bool hasShaderError (int shaderID) const;
-	bool hasProgramError(int programID) const;
+    protected:
+        virtual void initUniform() = 0;
+        bool unLoad();
 
-    bool    m_error;
-    std::string m_log, m_name;
+        bool hasShaderError(int shaderID) const;
+        bool hasProgramError(int programID) const;
 
-private:
-    friend UINT __cdecl LoadShaderBackgroundThread( LPVOID pParam );
+        bool    m_error;
+        std::string m_log, m_name;
 
-    virtual const char* getShaderIncludeSource() const = 0;
-    virtual const char* getVertexShaderSource() const = 0;
-    virtual const char* getFragmentShaderSource() const = 0;
-    virtual const char* getGeometryShaderSource() const = 0;
+    private:
+        friend UINT __cdecl LoadShaderBackgroundThread(LPVOID pParam);
 
-    int m_geomShaderInType;  /// if we have a geometry shader we're required to setup the in and out type here
-    int m_geomShaderOutType; /// if we have a geometry shader we're required to setup the in and out type here
+        virtual const char* getShaderIncludeSource() const = 0;
+        virtual const char* getVertexShaderSource() const = 0;
+        virtual const char* getFragmentShaderSource() const = 0;
+        virtual const char* getGeometryShaderSource() const = 0;
+
+        int m_geomShaderInType;  /// if we have a geometry shader we're required to setup the in and out type here
+        int m_geomShaderOutType; /// if we have a geometry shader we're required to setup the in and out type here
 
 #if TEXTURE_SUPPORT
-    TextureMapType  m_TextureMap;  /// map of images keyed to shader inputs
+        TextureMapType  m_TextureMap;  /// map of images keyed to shader inputs
 #endif
-    void   clearTextures();
+        void   clearTextures();
 
-    static bool mEnabled;
-    bool m_defaultsLoaded;
-    bool m_bound;
+        static bool mEnabled;
+        bool m_defaultsLoaded;
+        bool m_bound;
 
-    GLuint m_vertLoc = -1, m_normLoc = -1, m_texParamLoc = -1, m_colorLoc = -1;
-    std::string _vertAttribName, _normalAttribName, _texParamAttribName, _colorAttribName;
+        GLuint m_vertLoc = -1, m_normLoc = -1, m_texParamLoc = -1, m_colorLoc = -1;
+        std::string _vertAttribName, _normalAttribName, _texParamAttribName, _colorAttribName;
 
-    int _programId = 0, _vertexId = 0, _fragmentId = 0, _geometryId = 0;
+        int _programId = 0, _vertexId = 0, _fragmentId = 0, _geometryId = 0;
 
-    ArgMapType  m_argumentMap; /// map of arguments matched to shader inputs
+        ArgMapType  m_argumentMap; /// map of arguments matched to shader inputs
 
-    ActiveTextureUnits* m_textureUnitStates; /// texture units bound to the card, primary use is gl state management
-};
-
-inline bool COglShaderBase::bound() const { 
-    return m_bound; 
-}
-
-inline const std::string COglShaderBase::getName() const
-{
-    return m_name;
-}
-
-inline void COglShaderBase::setShaderVertexAttribName(const std::string& name)
-{
-    _vertAttribName = name;
-}
-
-inline void COglShaderBase::setShaderNormalAttribName(const std::string& name)
-{
-    _normalAttribName = name;;
-}
-
-inline void COglShaderBase::setShaderTexParamAttribName(const std::string& name)
-{
-    _texParamAttribName = name;
-}
-
-inline void COglShaderBase::setShaderColorAttribName(const std::string& name)
-{
-    _colorAttribName = name;
-}
-
-inline GLuint COglShaderBase::getVertexLoc() const
-{
-    return m_vertLoc;
-}
-
-inline GLuint COglShaderBase::getNormalLoc() const
-{
-    return m_normLoc;
-}
-
-inline GLuint COglShaderBase::getTexParamLoc() const
-{
-    return m_texParamLoc;
-}
-
-inline GLuint COglShaderBase::getColorLoc() const
-{
-    return m_colorLoc;
-}
-
-class COglShader : public COglShaderBase
-{
-public:
-    void setIncludeSrcFile(const std::string& filename);
-    void setVertexSrcFile(const std::string& filename);
-    void setFragmentSrcFile(const std::string& filename);
-    void setGeometrySrcFile(const std::string& filename);
-
-    void setIncludeSrc(const std::string& src);
-    void setVertexSrc(const std::string& src);
-    void setFragmentSrc(const std::string& src);
-    void setGeometrySrc(const std::string& src);
-
-    void initUniform() override;
-
-    const char* getShaderIncludeSource() const override;
-    const char* getVertexShaderSource() const override;
-    const char* getFragmentShaderSource() const override;
-    const char* getGeometryShaderSource() const override;
-private:
-    std::string 
-        _shaderIncSrc,
-        _vertSrc,
-        _fragSrc,
-        _geomSrc;
-};
-
-class COglArg
-{
-public:
-    enum argtype { eInt, eFloat, eFloat2, eFloat3, eFloat4, eFloat16 };
-
-    COglArg(int val);
-    COglArg(float val);
-    COglArg(const float* val, int numFloats=3);
-    virtual ~COglArg();
-
-    int    getInt();
-    float  getFloat();
-    float  getFloatAt(int idx); 
-    float* getFloatPtr(); 
-
-    void  set(int val);
-    void  set(float val);
-    void  set(const float* val); ///num floats determined by type
-
-    argtype getType() { return type; }
-
-private:
-    void allocFloat(const float* val, int numFloats);
-    argtype type;
-
-    union
-    {
-        int    ival;
-        float  fval;
-        float  fvalArr[16]; // Size of a 4x4 matrix
+        ActiveTextureUnits* m_textureUnitStates; /// texture units bound to the card, primary use is gl state management
     };
-};
 
-// two macros to help roll resource shaders into their own class wrappers
-// macro for header
+    inline bool ShaderBase::bound() const {
+        return m_bound;
+    }
+
+    inline const std::string ShaderBase::getName() const
+    {
+        return m_name;
+    }
+
+    inline void ShaderBase::setShaderVertexAttribName(const std::string& name)
+    {
+        _vertAttribName = name;
+    }
+
+    inline void ShaderBase::setShaderNormalAttribName(const std::string& name)
+    {
+        _normalAttribName = name;;
+    }
+
+    inline void ShaderBase::setShaderTexParamAttribName(const std::string& name)
+    {
+        _texParamAttribName = name;
+    }
+
+    inline void ShaderBase::setShaderColorAttribName(const std::string& name)
+    {
+        _colorAttribName = name;
+    }
+
+    inline GLuint ShaderBase::getVertexLoc() const
+    {
+        return m_vertLoc;
+    }
+
+    inline GLuint ShaderBase::getNormalLoc() const
+    {
+        return m_normLoc;
+    }
+
+    inline GLuint ShaderBase::getTexParamLoc() const
+    {
+        return m_texParamLoc;
+    }
+
+    inline GLuint ShaderBase::getColorLoc() const
+    {
+        return m_colorLoc;
+    }
+
+    class Shader : public ShaderBase
+    {
+    public:
+        void setIncludeSrcFile(const std::string& filename);
+        void setVertexSrcFile(const std::string& filename);
+        void setFragmentSrcFile(const std::string& filename);
+        void setGeometrySrcFile(const std::string& filename);
+
+        void setIncludeSrc(const std::string& src);
+        void setVertexSrc(const std::string& src);
+        void setFragmentSrc(const std::string& src);
+        void setGeometrySrc(const std::string& src);
+
+        void initUniform() override;
+
+        const char* getShaderIncludeSource() const override;
+        const char* getVertexShaderSource() const override;
+        const char* getFragmentShaderSource() const override;
+        const char* getGeometryShaderSource() const override;
+    private:
+        std::string
+            _shaderIncSrc,
+            _vertSrc,
+            _fragSrc,
+            _geomSrc;
+    };
+
+    class Arg
+    {
+    public:
+        enum argtype { eInt, eFloat, eFloat2, eFloat3, eFloat4, eFloat16 };
+
+        Arg(int val);
+        Arg(float val);
+        Arg(const float* val, int numFloats = 3);
+        virtual ~Arg();
+
+        int    getInt();
+        float  getFloat();
+        float  getFloatAt(int idx);
+        float* getFloatPtr();
+
+        void  set(int val);
+        void  set(float val);
+        void  set(const float* val); ///num floats determined by type
+
+        argtype getType() { return type; }
+
+    private:
+        void allocFloat(const float* val, int numFloats);
+        argtype type;
+
+        union
+        {
+            int    ival;
+            float  fval;
+            float  fvalArr[16]; // Size of a 4x4 matrix
+        };
+    };
+
+    // two macros to help roll resource shaders into their own class wrappers
+    // macro for header
 #define DERIVED_OGLSHADER(name,str,exportapi) \
-class exportapi name : public COglShader \
+class exportapi name : public Shader \
 {                                    \
 public:                              \
 	name()  { m_Name = str; }        \
@@ -377,3 +379,4 @@ char* name::getShaderIncludeSource(){                             \
     if(m_Error) AfxMessageBox(m_Log);                       \
     return isource;}                                        \
 int name::shaderResID() { return residFrag; }
+}

@@ -26,6 +26,8 @@ This file is part of the DistFieldHexMesh application/library.
 	Dark Sky Innovative Solutions http://darkskyinnovation.com/
 */
 
+#include "defines.h"
+
 #include <memory>
 #include <vector>
 #include <list>
@@ -76,7 +78,7 @@ public:
 	static void setThreadHeapPtr(local_heap* pHeap);
 	static local_heap* getThreadHeapPtr();
 
-	local_heap(size_t blockSizeChunks, size_t chunkSizeBytes = 32);
+	local_heap(size_t numInitialChunks, size_t chunkSizeBytes = 32);
 	
 	void clear();
 

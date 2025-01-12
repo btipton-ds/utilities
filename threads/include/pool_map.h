@@ -98,7 +98,7 @@ private:
 	class _iterator
 	{
 	public:
-		friend class MultiCore::map;
+		friend class MultiCore::map<KEY, T>;
 
 		using iterator_category = std::random_access_iterator_tag;
 		using difference_type = std::ptrdiff_t;
@@ -171,22 +171,22 @@ public:
 	map& operator = (const map& rhs);
 	bool contains(const KEY& val) const;
 
-	_NODISCARD _CONSTEXPR20 iterator begin() noexcept;
-	_NODISCARD _CONSTEXPR20 iterator end() noexcept;
-	_NODISCARD _CONSTEXPR20 const_iterator begin() const noexcept;
-	_NODISCARD _CONSTEXPR20 const_iterator end() const noexcept;
+	iterator begin() noexcept;
+	iterator end() noexcept;
+	const_iterator begin() const noexcept;
+	const_iterator end() const noexcept;
 
-	_NODISCARD _CONSTEXPR20 reverse_iterator rbegin() noexcept;
-	_NODISCARD _CONSTEXPR20 reverse_iterator rend() noexcept;
-	_NODISCARD _CONSTEXPR20 const_reverse_iterator rbegin() const noexcept;
-	_NODISCARD _CONSTEXPR20 const_reverse_iterator rend() const noexcept;
+	reverse_iterator rbegin() noexcept;
+	reverse_iterator rend() noexcept;
+	const_reverse_iterator rbegin() const noexcept;
+	const_reverse_iterator rend() const noexcept;
 
-	_NODISCARD _CONSTEXPR20 iterator find(const KEY& val) noexcept;
-	_NODISCARD _CONSTEXPR20 const_iterator find(const KEY& val) const noexcept;
+	iterator find(const KEY& val) noexcept;
+	const_iterator find(const KEY& val) const noexcept;
 
 protected:
-	_NODISCARD _CONSTEXPR20 iterator find(const KEY& val, const_iterator& next) noexcept;
-	_NODISCARD _CONSTEXPR20 const_iterator find(const KEY& val, const_iterator& next) const noexcept;
+	iterator find(const KEY& val, const_iterator& next) noexcept;
+	const_iterator find(const KEY& val, const_iterator& next) const noexcept;
 
 private:
 	DataPair* allocEntry(const DataPair& pair);

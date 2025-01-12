@@ -46,7 +46,7 @@ template <int IterType>
 class _iterator
 	{
 	public:
-		friend class MultiCore::vector;
+		friend class MultiCore::vector<T>;
 
 		using iterator_category = std::random_access_iterator_tag;
 		using difference_type = std::ptrdiff_t;
@@ -122,15 +122,15 @@ public:
 	vector& operator = (const MultiCore::vector<T>& rhs);
 //	vector& operator = (const std::vector<T>& rhs);
 
-	_NODISCARD _CONSTEXPR20 const_iterator begin() const noexcept;
-	_NODISCARD _CONSTEXPR20 iterator begin() noexcept;
-	_NODISCARD _CONSTEXPR20 const_iterator end() const noexcept;
-	_NODISCARD _CONSTEXPR20 iterator end() noexcept;
+	const_iterator begin() const noexcept;
+	iterator begin() noexcept;
+	const_iterator end() const noexcept;
+	iterator end() noexcept;
 
-	_NODISCARD _CONSTEXPR20 const_reverse_iterator rbegin() const noexcept;
-	_NODISCARD _CONSTEXPR20 reverse_iterator rbegin() noexcept;
-	_NODISCARD _CONSTEXPR20 const_reverse_iterator rend() const noexcept;
-	_NODISCARD _CONSTEXPR20 reverse_iterator rend() noexcept;
+	const_reverse_iterator rbegin() const noexcept;
+	reverse_iterator rbegin() noexcept;
+	const_reverse_iterator rend() const noexcept;
+	reverse_iterator rend() noexcept;
 
 	const T* data() const;
 	T* data();

@@ -81,7 +81,10 @@ TEMPL_DECL
 VECTOR_DECL::operator std::vector<T>() const
 {
 	std::vector<T> result;
-	result.insert(result.end(), begin(), end());
+	result.resize(size());
+	for (size_t i = 0; i < size(); i++)
+		result[i] = (T) operator[](i);
+//	result.insert(result.end(), begin(), end());
 	return result;
 }
 
@@ -285,49 +288,49 @@ MultiCore::vector<T>& VECTOR_DECL::operator = (const std::vector<T>& rhs)
 #endif
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 typename VECTOR_DECL::const_iterator VECTOR_DECL::begin() const noexcept
+typename VECTOR_DECL::const_iterator VECTOR_DECL::begin() const noexcept
 {
 	return const_iterator(this, _pData);
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 typename VECTOR_DECL::iterator VECTOR_DECL::begin() noexcept
+typename VECTOR_DECL::iterator VECTOR_DECL::begin() noexcept
 {
 	return iterator(this, _pData);
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 typename VECTOR_DECL::const_iterator VECTOR_DECL::end() const noexcept
+typename VECTOR_DECL::const_iterator VECTOR_DECL::end() const noexcept
 {
 	return const_iterator(this, _pData + _size);
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 typename VECTOR_DECL::iterator VECTOR_DECL::end() noexcept
+typename VECTOR_DECL::iterator VECTOR_DECL::end() noexcept
 {
 	return iterator(this, _pData + _size);
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 typename VECTOR_DECL::const_reverse_iterator VECTOR_DECL::rbegin() const noexcept
+typename VECTOR_DECL::const_reverse_iterator VECTOR_DECL::rbegin() const noexcept
 {
 	return const_reverse_iterator(this, _pData + _size - 1);
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 typename VECTOR_DECL::reverse_iterator VECTOR_DECL::rbegin() noexcept
+typename VECTOR_DECL::reverse_iterator VECTOR_DECL::rbegin() noexcept
 {
 	return reverse_iterator(this, _pData + _size - 1);
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 typename VECTOR_DECL::const_reverse_iterator VECTOR_DECL::rend() const noexcept
+typename VECTOR_DECL::const_reverse_iterator VECTOR_DECL::rend() const noexcept
 {
 	return const_reverse_iterator(this, _pData - 1);
 }
 
 TEMPL_DECL
-_NODISCARD _CONSTEXPR20 typename VECTOR_DECL::reverse_iterator VECTOR_DECL::rend() noexcept
+typename VECTOR_DECL::reverse_iterator VECTOR_DECL::rend() noexcept
 {
 	return reverse_iterator(this, _pData - 1);
 }

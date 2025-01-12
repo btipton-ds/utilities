@@ -29,6 +29,7 @@ This file is part of the DistFieldHexMesh application/library.
 #include <assert.h>
 #include <algorithm>
 #include <local_heap.h>
+#include <cmath>
 
 namespace
 {
@@ -48,8 +49,8 @@ void ::MultiCore::local_heap::setThreadHeapPtr(::MultiCore::local_heap* pHeap)
 	return s_pHeap;
 }
 
-::MultiCore::local_heap::local_heap(size_t blockSizeChunks, size_t chunkSizeBytes)
-	: _blockSizeChunks(blockSizeChunks)
+::MultiCore::local_heap::local_heap(size_t numInitialChunks, size_t chunkSizeBytes)
+	: _blockSizeChunks(numInitialChunks != 0 ? numInitialChunks * (chunkSizeBytes + sizeof(BlockHeader)) : chunkSizeBytes + sizeof(BlockHeader))
 	, _chunkSizeBytes(chunkSizeBytes + sizeof(BlockHeader))
 {
 	for (size_t i = 0; i < NUM_AVAIL_SIZE; i++)

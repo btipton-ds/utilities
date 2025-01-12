@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <set>
 #include <memory>
 
 #ifdef WIN32
@@ -14,73 +15,55 @@
 // OGLMultiVboHandler.html
 //
 // If someone can find a way to hyperlink to a relative file, please do that.
-class COglShaderBase;
+namespace OGL
+{
+class ShaderBase;
 
-class COglMultiVboHandler : public COglExtensions
+struct Indices;
+using IndicesPtr = std::shared_ptr<Indices>;
+
+struct Indices {
+    Indices() = default;
+    Indices(const Indices&) = default;
+    Indices(size_t batchIndex, const std::vector<unsigned int>& elementIndices);
+
+    void clear();
+
+    size_t numBytes() const;
+
+    std::vector<unsigned int> m_elementIndices;
+    
+    GLuint m_elementVBOId = -1;
+    GLuint m_numElements = -1;
+
+    size_t m_batchIndex = _SIZE_T_ERROR;   // Pointer to the batch which stores this face's data
+    unsigned int m_vertBaseIndex = -1;    // Index of the entity's first vertex index in the batch
+    size_t m_numVertsInBatch = 0;          // Number of entity vertices in the batch
+
+    // Memory managment members
+    bool m_inUse = true; // Used for mark and sweep garbage collection
+    size_t m_changeNumber = -1;
+    size_t m_chunkIdx = _SIZE_T_ERROR; // Index of the first chunk
+    size_t m_numChunks = _SIZE_T_ERROR;// Number of chunks
+};
+
+struct Index {
+    Index(const Index&) = default;
+    Index(size_t batchIndex = 0, size_t vertIndex = 0);
+    bool operator < (const Index& rhs) const;
+
+    size_t m_batchIndex = 0, m_vertIndex = 0;
+};
+
+class MultiVboHandler : public Extensions
 {
 public:
-    struct OGLIndices {
-        OGLIndices() = default;
-        OGLIndices(const OGLIndices&) = default;
-        OGLIndices(size_t batchIndex, const std::vector<unsigned int>& elementIndices);
+    MultiVboHandler(int primitiveType, int maxKeyIndex);
+    ~MultiVboHandler();
 
-        void clear();
+    size_t numBytes() const;
 
-        std::vector<unsigned int> m_elementIndices;
-
-        size_t m_batchIndex = _SIZE_T_ERROR;   // Pointer to the batch which stores this face's data
-        unsigned int m_vertBaseIndex = -1;    // Index of the entity's first vertex index in the batch
-        size_t m_numVertsInBatch = 0;          // Number of entity vertices in the batch
-
-        // Memory managment members
-        bool m_inUse = true; // Used for mark and sweep garbage collection
-        int m_changeNumber = -1;
-        size_t m_chunkIdx = _SIZE_T_ERROR; // Index of the first chunk
-        size_t m_numChunks = _SIZE_T_ERROR;// Number of chunks
-    };
-
-    struct OGLIndex {
-        OGLIndex(const OGLIndex&) = default;
-        OGLIndex(size_t batchIndex = 0, size_t vertIndex = 0);
-        bool operator < (const OGLIndex& rhs) const;
-
-        size_t m_batchIndex = 0, m_vertIndex = 0;
-    };
-
-    struct VertexBatch {
-        struct ElemIndexMapRec {
-            inline ElemIndexMapRec(GLuint texId, const std::vector<unsigned int>& elementIndices)
-                : m_texId(texId)
-                , m_elementIndices(elementIndices)
-            {
-            }
-            ElemIndexMapRec(const ElemIndexMapRec& src) = default;
-            GLuint m_texId = 0;
-            std::vector<unsigned int> m_elementIndices;
-        };
-        VertexBatch(int primitiveType);
-        // TODO, in the future it may be beneficial to make this a real class and move some COglMultiVboHandler methods to here.
-        // for now, this is pure structure with no code.
-
-        // CPU side representation
-        size_t m_nextFreeVertIndex = 0; // This used to make blocks of similar sizes for reuse
-
-        bool m_needsUpdate = true;
-        std::vector<float> m_points, m_normals, m_parameters;
-        std::vector<float> m_colors, m_backColors;
-        std::map<int, std::vector<unsigned int>> m_indexMap;
-        std::vector<std::shared_ptr<ElemIndexMapRec>> m_texturedFaces;
-
-        std::vector<size_t> m_allocatedChunks; // The index is the chunk number and the value is the number of allocated chunks at that index
-
-        // Video card representation
-        COglMultiVBO m_VBO;
-    };
-
-    COglMultiVboHandler(int primitiveType, int maxKeyIndex);
-    ~COglMultiVboHandler();
-
-    void setShader(const COglShaderBase* pShader);
+    void setShader(const ShaderBase* pShader);
 
     // This defines the draw order for keys.
     // Drawing is done in layers, with lowest numbered layer first.
@@ -95,26 +78,42 @@ public:
 
     void beginFaceTesselation();
     // vertiIndices is index pairs into points, normals and parameters to form triangles. It's the standard OGL element index structure
-    const OGLIndices* setFaceTessellation(long entityKey, int changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
+    const IndicesPtr setFaceTessellation(size_t entityId, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
         const std::vector<unsigned int>& vertiIndices);
-    const OGLIndices* setFaceTessellation(long entityKey, int changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
+    const IndicesPtr setFaceTessellation(size_t entityId, size_t subPartId, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
+        const std::vector<unsigned int>& vertiIndices);
+
+    const IndicesPtr setFaceTessellation(size_t entityId, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
         const std::vector<float>& colors, const std::vector<unsigned int>& vertiIndices);
+    const IndicesPtr setFaceTessellation(size_t entityId, size_t subPartId, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
+        const std::vector<float>& colors, const std::vector<unsigned int>& vertiIndices);
+
+    const IndicesPtr setFaceTessellation(size_t entityId, const IndicesPtr& pSrc, const std::vector<unsigned int>& elementIndices);
+
     void endFaceTesselation(bool smoothNormals);
 
     void beginEdgeTesselation();
-    const OGLIndices* setEdgeStripTessellation(long entityKey, const std::vector<float>& lineStripPoints);
-    const OGLIndices* setEdgeSegTessellation(long entityKey, int changeNumber, const std::vector<float>& points, const std::vector<unsigned int>& indices);
-    const OGLIndices* setEdgeSegTessellation(long entityKey, int changeNumber, const std::vector<float>& points, const std::vector<float>& colors, const std::vector<unsigned int>& indices);
+    const IndicesPtr setEdgeStripTessellation(size_t entityId, const std::vector<float>& lineStripPoints);
+    const IndicesPtr setEdgeStripTessellation(size_t entityId, size_t subPartId, const std::vector<float>& lineStripPoints);
+
+    const IndicesPtr setEdgeSegTessellation(size_t entityId, size_t changeNumber, const std::vector<float>& points, const std::vector<unsigned int>& indices);
+    const IndicesPtr setEdgeSegTessellation(size_t entityId, size_t subPartId, size_t changeNumber, const std::vector<float>& points, const std::vector<unsigned int>& indices);
+
+    const IndicesPtr setEdgeSegTessellation(size_t entityId, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& colors, const std::vector<unsigned int>& indices);
+    const IndicesPtr setEdgeSegTessellation(size_t entityId, size_t subPartId, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& colors, const std::vector<unsigned int>& indices);
+
+    const IndicesPtr setEdgeSegTessellation(size_t entityId, const IndicesPtr& pSrc, const std::vector<unsigned int>& elementIndices);
+
     void endEdgeTesselation();
 
-    bool getRawData(long entityKey, std::vector<unsigned int>& indices) const;
+    bool getRawData(size_t entityId, std::vector<unsigned int>& indices) const;
 
-    const OGLIndices* getOglIndices(long entityKey) const;
+    const IndicesPtr getOglIndices(size_t entityId) const;
 
     void beginSettingElementIndices(size_t layerBitMask);
-    void includeElementIndices(int key, const OGLIndices& batchIndices, GLuint texId = 0);
+    void includeElementIndices(int key, const IndicesPtr& batchIndices, GLuint texId = 0);
     void endSettingElementIndices();
-    void draw(int key, COglMultiVBO::DrawVertexColorMode drawColors = COglMultiVBO::DRAW_COLOR_NONE) const;
+    void draw(int key, MultiVBO::DrawVertexColorMode drawColors = MultiVBO::DRAW_COLOR_NONE) const;
 
     // For best speed, we need to bind all the common buffers for a batch, then draw every key that batch uses.
     // This requires a loop inversion. We can't store by keys, because some keys are tiny (like highlighted) and others are huge.
@@ -125,30 +124,64 @@ public:
     template<typename PRE_FUNC, typename POST_FUNC, typename PRE_TEX_FUNC, typename POST_TEX_FUNC>
     void drawAllKeys(PRE_FUNC preDrawFunc, POST_FUNC postDrawFunc, PRE_TEX_FUNC preDrawTexFunc, POST_TEX_FUNC postDrawTexFunc) const;
 
-    bool getVert(const COglMultiVboHandler::OGLIndex& glIndicesOut, float coords[3]) const;
-    bool getNormal(const COglMultiVboHandler::OGLIndex& glIndicesOut, float coords[3]) const;
+    bool getVert(const Index& glIndicesOut, float coords[3]) const;
+    bool getNormal(const Index& glIndicesOut, float coords[3]) const;
 
-    bool getRawData(long entityKey, std::vector<float>& points, std::vector<float>& normals, std::vector<float>& parameters) const;
+    bool getRawData(size_t entityId, std::vector<float>& points, std::vector<float>& normals, std::vector<float>& parameters) const;
 
-    bool setColorVBO(long entityKey, std::vector<float>& colors);
-    bool setBackColorVBO(long entityKey, std::vector<float>& colors);
+    bool setColorVBO(size_t entityId, std::vector<float>& colors);
+    bool setBackColorVBO(size_t entityId, std::vector<float>& colors);
 
     int findLayerForKey(int key) const;
 
-// Memory management
-    struct ChangeRec 
+    // Memory management
+    struct ChangeRec
     {
-        inline ChangeRec(long entityKey, int changeNumber)
-            : m_entityKey(entityKey)
+        inline ChangeRec(size_t entityId, size_t changeNumber)
+            : m_entityId(entityId)
             , m_changeNumber(changeNumber)
         {}
 
         ChangeRec(const ChangeRec&) = default;
-        const long m_entityKey;
-        const int m_changeNumber;
+        const size_t m_entityId;
+        const size_t m_changeNumber;
     };
-    void doGarbageCollection(const std::vector<ChangeRec>& entityKeysInUse);
+    void doGarbageCollection(const std::vector<ChangeRec>& entityIdsInUse);
 private:
+    struct VertexBatch {
+        struct ElemIndexMapRec {
+            inline ElemIndexMapRec(GLuint texId, const std::vector<unsigned int>& elementIndices)
+                : m_texId(texId)
+                , m_elementIndices(elementIndices)
+            {
+            }
+            ElemIndexMapRec(const ElemIndexMapRec& src) = default;
+            GLuint m_texId = 0;
+            std::vector<unsigned int> m_elementIndices;
+        };
+
+        VertexBatch(int primitiveType);
+        size_t numBytes() const;
+
+        // TODO, in the future it may be beneficial to make this a real class and move some MultiVboHandler methods to here.
+        // for now, this is pure structure with no code.
+
+        // CPU side representation
+        size_t m_nextFreeVertIndex = 0; // This used to make blocks of similar sizes for reuse
+
+        bool m_needsUpdate = true;
+        // These accumulate between begin/end tessellation calls. They should be clear after VBO creation
+        std::vector<float> m_points, m_normals, m_parameters;
+        std::vector<float> m_colors, m_backColors;
+        std::map<int, std::vector<unsigned int>> m_indexMap;
+        std::vector<std::shared_ptr<ElemIndexMapRec>> m_texturedFaces;
+
+        std::vector<size_t> m_allocatedChunks; // The index is the chunk number and the value is the number of allocated chunks at that index
+
+        // Video card representation
+        MultiVBO m_VBO;
+    };
+
     struct FreeChunkRecord {
         inline FreeChunkRecord(size_t batchIndex, size_t chunkIndex)
             : m_batchIndex(batchIndex)
@@ -173,61 +206,69 @@ private:
     void getStorageFor(size_t numVertsNeeded, bool needColorStorage, size_t& batchIndex, size_t& chunkIndex, size_t& blockSizeInChunks);
 
     void setFaceTessellationInner(size_t batchIndex, size_t chunkIndex, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
-        const std::vector<float>& colors, const std::vector<unsigned int>& triIndices, OGLIndices& glIndicesOut);
+        const std::vector<float>& colors, const std::vector<unsigned int>& triIndices, Indices& glIndicesOut);
 
-    void setEdgeStripTessellationInner(size_t batchIndex, size_t vertChunkIndex, const std::vector<float>& lineStripPts, OGLIndices& glIndicesOut);
-    void setEdgeSegTessellationInner(size_t batchIndex, size_t vertChunkIndex, const std::vector<float>& pts, const std::vector<float>& colors, const std::vector<unsigned int>& indices, OGLIndices& glIndicesOut);
+    void setEdgeStripTessellationInner(size_t batchIndex, size_t vertChunkIndex, const std::vector<float>& lineStripPts, Indices& glIndicesOut);
+    void setEdgeSegTessellationInner(size_t batchIndex, size_t vertChunkIndex, const std::vector<float>& pts, const std::vector<float>& colors, const std::vector<unsigned int>& indices, Indices& glIndicesOut);
 
     // Supporting methods for drawKeys
-    void bindCommonBuffers(std::shared_ptr<VertexBatch> batchPtr) const;
-    void drawKeyForBatch(int key, std::shared_ptr<VertexBatch> batchPtr, COglMultiVBO::DrawVertexColorMode drawColors) const;
-    void drawTexturedFaces(std::shared_ptr<VertexBatch> batchPtr) const;
-    void unbindCommonBuffers(std::shared_ptr<VertexBatch> batchPtr) const;
+    void bindCommonBuffers(const std::shared_ptr<VertexBatch>& batchPtr) const;
+    void drawKeyForBatch(int key, const std::shared_ptr<VertexBatch>& batchPtr, MultiVBO::DrawVertexColorMode drawColors) const;
+    void drawTexturedFaces(const std::shared_ptr<VertexBatch>& batchPtr) const;
+    void unbindCommonBuffers(const std::shared_ptr<VertexBatch>& batchPtr) const;
     void initLayerToKeyMap(int maxKeyIndex);
 
     // This should only be called from doGarbageCollection
-    void releaseTessellation(long entityKey);
+    void releaseTessellations(size_t entityId);
 
     bool m_insideBeginFaceTessellation = false;
     bool m_insideBeginEdgeTessellation = false;
 
     const int m_primitiveType;
     ChunkSizeBlockMap m_chunkSizeToBlocksMap; // The map key is the size of the chunk. The map value is the batchIndex and starting blockNum of the block
-    std::vector<bool> m_keysToDraw;
+    std::set<int> m_keysToDraw;
     bool m_clearAllLayers = true;
     size_t m_layerBitMask = 0;
-    const COglShaderBase* m_pShader = nullptr;
+    const ShaderBase* m_pShader = nullptr;
     std::vector<int> m_keysLayer;
     std::vector<std::vector<int>> m_layersKeys;
     std::vector<std::shared_ptr<VertexBatch>> m_batches;
-    std::map<long, std::shared_ptr<OGLIndices>> m_entityKeyToOGLIndicesMap;
+    std::map<size_t, std::map<size_t, std::shared_ptr<Indices>>> m_entityIdToIndicesMap;
 };
 
-inline void COglMultiVboHandler::setShader(const COglShaderBase* pShader)
+inline void MultiVboHandler::setShader(const ShaderBase* pShader)
 {
     m_pShader = pShader;
 }
 
-inline bool COglMultiVboHandler::empty() const
+inline bool MultiVboHandler::empty() const
 {
     return m_batches.empty();
 }
 
-inline const COglMultiVboHandler::OGLIndices* COglMultiVboHandler::getOglIndices(long entityKey) const
+inline const IndicesPtr MultiVboHandler::getOglIndices(size_t entityId) const
 {
-    auto iter = m_entityKeyToOGLIndicesMap.find(entityKey);
-    if (iter != m_entityKeyToOGLIndicesMap.end())
-        return iter->second.get();
+    auto iter = m_entityIdToIndicesMap.find(entityId);
+    if (iter != m_entityIdToIndicesMap.end()) {
+        const auto& subMap = iter->second;
+        if (subMap.size() == 1) {
+            const auto& iter1 = subMap.begin();
+            assert(iter1->first == 0);
+            return iter1->second;
+        } else {
+            // TBI
+        }
+    }
     return nullptr;
 }
 
-inline COglMultiVboHandler::OGLIndex::OGLIndex(size_t batchIndex, size_t vertIndex)
+inline Index::Index(size_t batchIndex, size_t vertIndex)
     : m_batchIndex(batchIndex)
     , m_vertIndex(vertIndex)
 {
 }
 
-inline bool COglMultiVboHandler::OGLIndex::operator < (const OGLIndex& rhs) const
+inline bool Index::operator < (const Index& rhs) const
 {
     if (m_batchIndex < rhs.m_batchIndex)
         return true;
@@ -237,3 +278,4 @@ inline bool COglMultiVboHandler::OGLIndex::operator < (const OGLIndex& rhs) cons
     return m_vertIndex < rhs.m_vertIndex;
 }
 
+}

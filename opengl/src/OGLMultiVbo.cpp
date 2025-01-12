@@ -1,6 +1,6 @@
 
 #include <sstream>
-
+#include <iostream>
 #include <assert.h>
 
 #include <OGLMultiVboHandler.h>
@@ -44,12 +44,13 @@ Another refinement is to our own vertex mangement using partial VBO writing to r
 */
 
 using namespace std;
+using namespace OGL;
 
 #ifndef HLOG
 #define HLOG(msg)
 #endif
 
-COglMultiVBO::COglMultiVBO(int m_primitiveType)
+MultiVBO::MultiVBO(int m_primitiveType)
     : m_numVerts(0)
     , m_vertexVboID(0)
     , m_normalVboID(0)
@@ -68,16 +69,16 @@ COglMultiVBO::COglMultiVBO(int m_primitiveType)
 
 }
 
-COglMultiVBO::~COglMultiVBO()
+MultiVBO::~MultiVBO()
 {
-    HLOG(_T("~COglMultiVBO()"));
+    HLOG(_T("~MultiVBO()"));
 
 #ifdef WIN32
     if (!wglGetCurrentContext())
     {
         assert(!"Bad gl context");
         // Can crash in glIsBuffer if the current context is bad.
-        HLOG(_T("SKIPPED ~COglMultiVBO() Ogl cleanup... there is no gl context"));
+        HLOG(_T("SKIPPED ~MultiVBO() Ogl cleanup... there is no gl context"));
         return;
     }
 #endif
@@ -85,15 +86,15 @@ COglMultiVBO::~COglMultiVBO()
     releaseVBOs();
 }
 
-COglMultiVBO::ElementVBORec::ElementVBORec()
+ElementVBORec::ElementVBORec()
     : m_mumElements(0)
     , m_elementIdxVboID(0)
 {
     int isValid;
-    createVBO(m_elementIdxVboID, isValid);
+    MultiVBO::createVBO(m_elementIdxVboID, isValid);
 }
 
-COglMultiVBO::ElementVBORec::ElementVBORec(const ElementVBORec& src)
+ElementVBORec::ElementVBORec(const ElementVBORec& src)
     : m_mumElements(src.m_mumElements)
     , m_elementIdxVboID(src.m_elementIdxVboID)
     , m_isLiveInstance(src.m_isLiveInstance)
@@ -101,15 +102,24 @@ COglMultiVBO::ElementVBORec::ElementVBORec(const ElementVBORec& src)
     src.m_isLiveInstance = false; // Mark it as copied out of so it won't be destroyed
 }
 
-COglMultiVBO::ElementVBORec::~ElementVBORec()
+ElementVBORec::~ElementVBORec()
 {
     if (m_isLiveInstance && m_elementIdxVboID != 0) {
         int isValid;
-        releaseVBO(m_elementIdxVboID, isValid);
+        MultiVBO::releaseVBO(m_elementIdxVboID, isValid);
     }
 }
 
-COglMultiVBO::ElementVBORec& COglMultiVBO::ElementVBORec::operator = (const ElementVBORec& src)
+size_t MultiVBO::numBytes() const
+{
+    size_t result = 0;
+
+    result += m_elementVBOIDMap.size() + sizeof(ElementVBORec);
+
+    return result;
+}
+
+ElementVBORec& ElementVBORec::operator = (const ElementVBORec& src)
 {
     if (src.m_isLiveInstance) {
         m_isLiveInstance = true;
@@ -123,17 +133,17 @@ COglMultiVBO::ElementVBORec& COglMultiVBO::ElementVBORec::operator = (const Elem
     return *this;
 }
 
-void COglMultiVBO::ElementVBORec::bind(const vector<unsigned int>& indices)
+void ElementVBORec::bind(const std::vector<unsigned int>& indices)
 {
     m_mumElements = indices.size();
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_elementIdxVboID);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);  
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_mumElements * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 }
 
-void COglMultiVBO::releaseKeysElementVBO(int key)
+void MultiVBO::releaseKeysElementVBO(int key)
 {
     auto iter = m_elementVBOIDMap.find(key);
     if (iter != m_elementVBOIDMap.end()) {
@@ -141,9 +151,9 @@ void COglMultiVBO::releaseKeysElementVBO(int key)
     }
 }
 
-void COglMultiVBO::releaseVBOs()
+void MultiVBO::releaseVBOs()
 {
-    HLOG(_T("COglMultiVBO::releaseVBOs()"));
+    HLOG(_T("MultiVBO::releaseVBOs()"));
     releaseVBO(m_vertexVboID, m_valid);
     releaseVBO(m_normalVboID, m_valid);
     releaseVBO(m_textureVboID, m_valid);
@@ -156,13 +166,13 @@ void COglMultiVBO::releaseVBOs()
     m_valid = VBO_VALID_UNKNOWN;
 }
 
-bool COglMultiVBO::canFitInVboSpace(int numTriangles)
+bool MultiVBO::canFitInVboSpace(int numTriangles)
 {
     //TBD
     return true;
 }
 
-bool COglMultiVBO::isInitialized() const
+bool MultiVBO::isInitialized() const
 {
 #ifdef WIN32
     if (!hasVBOSupport() || !wglGetCurrentContext())
@@ -172,7 +182,7 @@ bool COglMultiVBO::isInitialized() const
     return glIsBuffer(m_vertexVboID) && glIsBuffer(m_normalVboID);
 }
 
-bool COglMultiVBO::createVBO(GLuint& vboID, int& valid)
+bool MultiVBO::createVBO(GLuint& vboID, int& valid)
 {
 #ifdef WIN32
     if (!hasVBOSupport() || !wglGetCurrentContext())
@@ -195,15 +205,15 @@ bool COglMultiVBO::createVBO(GLuint& vboID, int& valid)
     return vboID != 0;// glIsBuffer(vboID);
 }
 
-void COglMultiVBO::releaseVBO(GLuint& vboID, int& valid)
+void MultiVBO::releaseVBO(GLuint& vboID, int& valid)
 {
     valid = false;
 
 #ifdef WIN32
-    HLOG(_T("COglMultiVBO::releaseVBO"));
+    HLOG(_T("MultiVBO::releaseVBO"));
     if (!hasVBOSupport() || !wglGetCurrentContext())
     {
-        HLOG(_T("Skipping COglMultiVBO::releaseVBO()"));
+        HLOG(_T("Skipping MultiVBO::releaseVBO()"));
         return;
     }
 #endif
@@ -213,10 +223,10 @@ void COglMultiVBO::releaseVBO(GLuint& vboID, int& valid)
         if (isValid_unbindsVBO(vboID)) {
             glDeleteBuffers(1, &vboID); 
 
-            HLOG(Format(_T("COglMultiVBO::releaseVBO: deleted buffer %d"), vboID));
+            HLOG(Format(_T("MultiVBO::releaseVBO: deleted buffer %d"), vboID));
         }
         else {
-            HLOG(Format(_T("COglMultiVBO::releaseVBO: %d is not a valid buffer"), vboID));
+            HLOG(Format(_T("MultiVBO::releaseVBO: %d is not a valid buffer"), vboID));
             assert(!"vboID != 0 BUT glIsBuffer(vboID) returned false. This should not be possible and is a serious fault.");
             // However, it's not serious enough to justify terminating the app and losing work.
         }
@@ -224,7 +234,7 @@ void COglMultiVBO::releaseVBO(GLuint& vboID, int& valid)
     vboID = 0;
 }
 
-bool COglMultiVBO::isValid_unbindsVBO(GLuint& vboID)
+bool MultiVBO::isValid_unbindsVBO(GLuint& vboID)
 {
     if (vboID) {
         glBindBuffer(GL_ARRAY_BUFFER, vboID);
@@ -236,14 +246,14 @@ bool COglMultiVBO::isValid_unbindsVBO(GLuint& vboID)
     return false;
 }
 
-bool COglMultiVBO::copyToVBO(const vector<float>& verts, const vector<float>& colors, int dataID)
+bool MultiVBO::copyToVBO(const vector<float>& verts, const vector<float>& colors, int dataID)
 {
     m_valid = VBO_VALID_UNKNOWN;
     vector<float> norms, tex;
     return copyToVBO(verts, norms, false, tex, colors, dataID);
 }
 
-bool COglMultiVBO::copyToVBO(const vector<float>& verts, int dataID)
+bool MultiVBO::copyToVBO(const vector<float>& verts, int dataID)
 {
     m_valid = VBO_VALID_UNKNOWN;
     vector<float> norms, tex;
@@ -251,14 +261,14 @@ bool COglMultiVBO::copyToVBO(const vector<float>& verts, int dataID)
     return copyToVBO(verts, norms, true, tex, colors, dataID);
 }
 
-bool COglMultiVBO::copyToVBO(const vector<float>& verts, const vector<float>& normals, bool smoothNrmls, const vector<float>& textureCoords, int dataID)
+bool MultiVBO::copyToVBO(const vector<float>& verts, const vector<float>& normals, bool smoothNrmls, const vector<float>& textureCoords, int dataID)
 {
     m_valid = VBO_VALID_UNKNOWN;
     vector<float> colors;
     return copyToVBO(verts, normals, smoothNrmls, textureCoords, colors, dataID);
 }
 
-bool COglMultiVBO::copyToVBO(const vector<float>& verts, const vector<float>& normals, bool smoothNrmls, const vector<float>& textureCoords, const vector<float>& colors, int id)
+bool MultiVBO::copyToVBO(const vector<float>& verts, const vector<float>& normals, bool smoothNrmls, const vector<float>& textureCoords, const vector<float>& colors, int id)
 {
     m_valid = VBO_VALID_UNKNOWN;
 #ifdef WIN32
@@ -319,7 +329,7 @@ bool COglMultiVBO::copyToVBO(const vector<float>& verts, const vector<float>& no
     return true;
 }
 
-bool COglMultiVBO::copyVertecesToExistingVBO(const vector<float>& verts)
+bool MultiVBO::copyVertecesToExistingVBO(const vector<float>& verts)
 {
     m_valid = VBO_VALID_UNKNOWN;
     size_t numFloats = verts.size();
@@ -343,7 +353,7 @@ bool COglMultiVBO::copyVertecesToExistingVBO(const vector<float>& verts)
     return true;
 }
 
-bool COglMultiVBO::copyNormalsToExistingVBO(const vector<float>& normals, bool smooth)
+bool MultiVBO::copyNormalsToExistingVBO(const vector<float>& normals, bool smooth)
 {
     m_valid = VBO_VALID_UNKNOWN;
     size_t numFloats = normals.size();
@@ -368,7 +378,7 @@ bool COglMultiVBO::copyNormalsToExistingVBO(const vector<float>& normals, bool s
     return true;
 }
 
-bool COglMultiVBO::reverseNormals()
+bool MultiVBO::reverseNormals()
 {
     m_valid = VBO_VALID_UNKNOWN;
     glBindBuffer(GL_ARRAY_BUFFER, m_normalVboID);
@@ -387,7 +397,7 @@ bool COglMultiVBO::reverseNormals()
     return true;
 }
 
-bool COglMultiVBO::copyColorsToExistingVBO(const vector<float>& colors)
+bool MultiVBO::copyColorsToExistingVBO(const vector<float>& colors)
 {
     m_valid = VBO_VALID_UNKNOWN;
     if (m_numVerts != colors.size())
@@ -409,7 +419,7 @@ bool COglMultiVBO::copyColorsToExistingVBO(const vector<float>& colors)
     return true;
 }
 
-bool COglMultiVBO::copyBackColorsToExistingVBO(const vector<float>& backColors)
+bool MultiVBO::copyBackColorsToExistingVBO(const vector<float>& backColors)
 {
     m_valid = VBO_VALID_UNKNOWN;
     if (m_numVerts != backColors.size())
@@ -431,7 +441,7 @@ bool COglMultiVBO::copyBackColorsToExistingVBO(const vector<float>& backColors)
     return true;
 }
 
-void COglMultiVBO::setUseSmoothNormal(bool set)
+void MultiVBO::setUseSmoothNormal(bool set)
 {
     m_valid = VBO_VALID_UNKNOWN;
     if (!m_normalVboID || !glIsBuffer(m_normalVboID))
@@ -444,7 +454,7 @@ void COglMultiVBO::setUseSmoothNormal(bool set)
     m_smoothNormals = set;
 }
 
-void COglMultiVBO::setUseRegionalNormal(bool set)
+void MultiVBO::setUseRegionalNormal(bool set)
 {
     m_valid = VBO_VALID_UNKNOWN;
     if (!m_normalVboID || !glIsBuffer(m_normalVboID))
@@ -464,7 +474,7 @@ void COglMultiVBO::setUseRegionalNormal(bool set)
     }
 }
 
-bool COglMultiVBO::setIndexVBO(int key, const vector<unsigned int>& indices)
+bool MultiVBO::setIndexVBO(int key, const vector<unsigned int>& indices)
 {
 #ifdef WIN32
     if (!hasVBOSupport() || !wglGetCurrentContext())
@@ -487,13 +497,13 @@ bool COglMultiVBO::setIndexVBO(int key, const vector<unsigned int>& indices)
     return true;
 }
 
-bool COglMultiVBO::clearIndexVBO()
+bool MultiVBO::clearIndexVBO()
 {
     m_elementVBOIDMap.clear();
     return true;
 }
 
-bool COglMultiVBO::drawVBO(const COglShaderBase* pShader, int key, DrawVertexColorMode drawColors) const
+bool MultiVBO::drawVBO(const ShaderBase* pShader, int key, DrawVertexColorMode drawColors) const
 {
     auto iter = m_elementVBOIDMap.find(key);
     if (iter != m_elementVBOIDMap.end()) {
@@ -505,14 +515,14 @@ bool COglMultiVBO::drawVBO(const COglShaderBase* pShader, int key, DrawVertexCol
 
         GLuint elementIdxVboID = iter->second.getVboId();
 
-        return drawVBO(pShader, numElements, elementIdxVboID, drawColors);
+        return drawVBOIndexVBO(pShader, numElements, elementIdxVboID, drawColors);
 
     }
 
     return false;
 }
 
-bool COglMultiVBO::areVBOsValid(size_t numElements, GLuint elementIdxVboID, DrawVertexColorMode drawColors) const
+bool MultiVBO::areVBOsValid(size_t numElements, GLuint elementIdxVboID, DrawVertexColorMode drawColors) const
 {
 #ifdef WIN32
     if (!hasVBOSupport() || !wglGetCurrentContext())
@@ -557,7 +567,7 @@ bool COglMultiVBO::areVBOsValid(size_t numElements, GLuint elementIdxVboID, Draw
     return true;
 }
 
-bool COglMultiVBO::bindCommon(const COglShaderBase* pShader, size_t numElements) const
+bool MultiVBO::bindCommon(const ShaderBase* pShader, size_t numElements) const
 {
     //bind the verteces
     glBindBuffer(GL_ARRAY_BUFFER, m_vertexVboID);       GL_ASSERT;
@@ -582,7 +592,7 @@ bool COglMultiVBO::bindCommon(const COglShaderBase* pShader, size_t numElements)
     return true;
 }
 
-void COglMultiVBO::unbindCommon() const
+void MultiVBO::unbindCommon() const
 {
     // revert state
     glDisableClientState(GL_VERTEX_ARRAY);            GL_ASSERT;
@@ -598,7 +608,7 @@ void COglMultiVBO::unbindCommon() const
 }
 
 template<class T>
-inline bool COglMultiVBO::assureVBOValid(const vector<T>& vec, GLuint& vboID, int& valid)
+inline bool MultiVBO::assureVBOValid(const vector<T>& vec, GLuint& vboID, int& valid)
 {
     if (vboID) {
         if (vec.empty()) {
@@ -618,7 +628,7 @@ inline bool COglMultiVBO::assureVBOValid(const vector<T>& vec, GLuint& vboID, in
     }
 }
 
-bool COglMultiVBO::drawVBO(const COglShaderBase* pShader, GLsizei numElements, GLuint elementIdxVboID, DrawVertexColorMode drawColors) const
+bool MultiVBO::drawVBOIndexVBO(const ShaderBase* pShader, GLsizei numElements, GLuint elementIdxVboID, DrawVertexColorMode drawColors) const
 {
     if (drawColors == DRAW_COLOR_SKIP)
         return true;
@@ -631,7 +641,7 @@ bool COglMultiVBO::drawVBO(const COglShaderBase* pShader, GLsizei numElements, G
 
     // Enable vertex and normal arrays
     if (!areVBOsValid(numElements, elementIdxVboID, drawColors) || !bindCommon(pShader, numElements)) {
-        assert(!"COglMultiVBO not valid");
+        assert(!"MultiVBO not valid");
         areVBOsValid(numElements, elementIdxVboID, drawColors); GL_ASSERT;
         bindCommon(pShader, numElements); GL_ASSERT;
         return false;
@@ -698,7 +708,7 @@ bool COglMultiVBO::drawVBO(const COglShaderBase* pShader, GLsizei numElements, G
     return true;
 }
 
-bool COglMultiVBO::drawVBO(const COglShaderBase* pShader, const vector<unsigned int>& indices, DrawVertexColorMode drawColors) const
+bool MultiVBO::drawVBO(const ShaderBase* pShader, const vector<unsigned int>& indices, DrawVertexColorMode drawColors) const
 {
     assert(m_valid != VBO_VALID_FALSE);
     if (m_valid == VBO_VALID_FALSE)

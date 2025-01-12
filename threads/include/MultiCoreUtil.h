@@ -44,13 +44,13 @@
 
 #pragma once
 
+#include "defines.h"
 #include <vector>
 #include <algorithm>
 #include <mutex>
 #include <thread>
+#include <condition_variable>
 #include <functional>
-
-#define STD ::std
 
 namespace MultiCore {
 
@@ -58,7 +58,7 @@ namespace MultiCore {
 	{
 		static int numCores = -1;
 		if (numCores == -1) {
-			numCores = STD::thread::hardware_concurrency();
+			numCores = _STD thread::hardware_concurrency();
 		}
 		return numCores;
 	}
@@ -68,10 +68,10 @@ namespace MultiCore {
 	{
 		if (multiCore) {
 			size_t numCores = getNumCores();
-			STD::vector<STD::thread> threads;
+			_STD vector<_STD thread> threads;
 			threads.reserve(numCores);
 			for (size_t i = 0; i < numCores; i++) {
-				threads.push_back(STD::move(STD::thread(fLambda, i, numCores)));
+				threads.push_back(_STD move(_STD thread(fLambda, i, numCores)));
 			}
 
 			for (size_t i = 0; i < threads.size(); i++) {
@@ -84,13 +84,13 @@ namespace MultiCore {
 	}
 
 	template<class L>
-	void runLambda(L fLambda, STD::vector<size_t>& indexPool, bool multiCore)
+	void runLambda(L fLambda, _STD vector<size_t>& indexPool, bool multiCore)
 	{
 		if (multiCore) {
-			STD::mutex indexPoolMutex;
+			_STD mutex indexPoolMutex;
 
 			size_t numThreads = getNumCores();
-			STD::vector<STD::thread> threads;
+			_STD vector<_STD thread> threads;
 			threads.reserve(numThreads);
 			for (size_t i = 0; i < numThreads; i++) {
 				auto outerLambda = [fLambda, &indexPool, &indexPoolMutex]() {
@@ -98,7 +98,7 @@ namespace MultiCore {
 					while (index != -1) {
 						index = -1;
 						{
-							STD::lock_guard<STD::mutex> lock(indexPoolMutex); // Tested that mutex overhead is minimal.
+							_STD lock_guard<_STD mutex> lock(indexPoolMutex); // Tested that mutex overhead is minimal.
 							if (!indexPool.empty()) {
 								index = indexPool.back();
 								indexPool.pop_back();
@@ -113,7 +113,7 @@ namespace MultiCore {
 					}
 				};
 
-				threads.push_back(move(STD::thread(outerLambda)));
+				threads.push_back(move(_STD thread(outerLambda)));
 			}
 
 			for (size_t i = 0; i < threads.size(); i++) {
@@ -133,7 +133,7 @@ namespace MultiCore {
 	{
 		if (multiCore) {
 			size_t numThreads = getNumCores();
-			STD::vector<STD::thread> threads;
+			_STD vector<_STD thread> threads;
 			threads.reserve(numThreads);
 			for (size_t threadNum = 0; threadNum < numThreads; threadNum++) {
 				auto outerLambda = [fLambda, numIndices, threadNum, numThreads]() {
@@ -143,7 +143,7 @@ namespace MultiCore {
 					}
 				};
 
-				threads.push_back(move(STD::thread(outerLambda)));
+				threads.push_back(move(_STD thread(outerLambda)));
 			}
 
 			for (size_t i = 0; i < threads.size(); i++) {
@@ -165,7 +165,7 @@ private:
 		AT_TERMINATED,
 	};
 public:
-	using FuncType = STD::function<void(size_t threadNum, size_t idx)>;
+	using FuncType = _STD function<void(size_t threadNum, size_t idx)>;
 
 	ThreadPool(size_t numThreads = -1);
 
@@ -203,11 +203,11 @@ private:
 
 	mutable FuncType* _pFunc = nullptr;
 
-	mutable std::condition_variable _cv;
-	mutable STD::mutex _stageMutex;
-	mutable STD::vector<Stage> _stage;
+	mutable _STD condition_variable _cv;
+	mutable _STD mutex _stageMutex;
+	mutable _STD vector<Stage> _stage;
 
-	STD::vector<STD::thread> _threads;
+	_STD vector<_STD thread> _threads;
 };
 
 inline size_t ThreadPool::getNumThreads() const

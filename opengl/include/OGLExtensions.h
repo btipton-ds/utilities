@@ -13,15 +13,17 @@
 
 #define HAS_SHADER_SUBROUTINES 1
 
+namespace OGL
+{
 /*
     This loads all OpenGL extensions up to 4.6 and shader support
 */
-class COglExtensions
+class Extensions
 {
 public:
 
     static bool hasVBOSupport();    //< pretty much a given, but just in case
-    COglExtensions();
+    Extensions();
 #ifdef WIN32
     static PFNGLACTIVESHADERPROGRAMPROC glActiveShaderProgram;
     static PFNGLACTIVETEXTUREPROC glActiveTexture;
@@ -235,17 +237,17 @@ public:
     static PFNGLGETNAMEDFRAMEBUFFERATTACHMENTPARAMETERIVPROC glGetNamedFramebufferAttachmentParameteriv;
     static PFNGLGETNAMEDFRAMEBUFFERPARAMETERIVPROC glGetNamedFramebufferParameteriv;
     static PFNGLGETNAMEDRENDERBUFFERPARAMETERIVPROC glGetNamedRenderbufferParameteriv;
-//    static PFNGLGETNCOLORTABLEPROC glGetnColorTable;
+    //    static PFNGLGETNCOLORTABLEPROC glGetnColorTable;
     static PFNGLGETNCOMPRESSEDTEXIMAGEPROC glGetnCompressedTexImage;
-//    static PFNGLGETNCONVOLUTIONFILTERPROC glGetnConvolutionFilter;
-//    static PFNGLGETNHISTOGRAMPROC glGetnHistogram;
-//    static PFNGLGETNMAPDVPROC glGetnMapdv;
-//    static PFNGLGETNMAPFVPROC glGetnMapfv;
-//    static PFNGLGETNMAPIVPROC glGetnMapiv;
-//    static PFNGLGETNMINMAXPROC glGetnMinmax;
-//    static PFNGLGETNPIXELMAPFVPROC glGetnPixelMapfv;
-//    static PFNGLGETNPIXELMAPUIVPROC glGetnPixelMapuiv;
-//    static PFNGLGETNPIXELMAPUSVPROC glGetnPixelMapusv;
+    //    static PFNGLGETNCONVOLUTIONFILTERPROC glGetnConvolutionFilter;
+    //    static PFNGLGETNHISTOGRAMPROC glGetnHistogram;
+    //    static PFNGLGETNMAPDVPROC glGetnMapdv;
+    //    static PFNGLGETNMAPFVPROC glGetnMapfv;
+    //    static PFNGLGETNMAPIVPROC glGetnMapiv;
+    //    static PFNGLGETNMINMAXPROC glGetnMinmax;
+    //    static PFNGLGETNPIXELMAPFVPROC glGetnPixelMapfv;
+    //    static PFNGLGETNPIXELMAPUIVPROC glGetnPixelMapuiv;
+    //    static PFNGLGETNPIXELMAPUSVPROC glGetnPixelMapusv;
     static PFNGLGETNPOLYGONSTIPPLEPROC glGetnPolygonStipple;
     static PFNGLGETNSEPARABLEFILTERPROC glGetnSeparableFilter;
     static PFNGLGETNTEXIMAGEPROC glGetnTexImage;
@@ -361,7 +363,7 @@ public:
     static PFNGLMINSAMPLESHADINGPROC glMinSampleShading;
     static PFNGLMULTIDRAWARRAYSPROC glMultiDrawArrays;
     static PFNGLMULTIDRAWARRAYSINDIRECTPROC glMultiDrawArraysIndirect;
-//    static PFNGLMULTIDRAWARRAYSINDIRECTCOUNTPROC glMultiDrawArraysIndirectCount;
+    //    static PFNGLMULTIDRAWARRAYSINDIRECTCOUNTPROC glMultiDrawArraysIndirectCount;
     static PFNGLMULTIDRAWELEMENTSPROC glMultiDrawElements;
     static PFNGLMULTIDRAWELEMENTSBASEVERTEXPROC glMultiDrawElementsBaseVertex;
     static PFNGLMULTIDRAWELEMENTSINDIRECTPROC glMultiDrawElementsIndirect;
@@ -771,3 +773,4 @@ public:
 #endif
 };
 
+}

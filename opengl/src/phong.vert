@@ -33,9 +33,12 @@ This file is part of the VulkanQuickStart Project.
 uniform UniformBufferObject {
 	mat4 modelView;
 	mat4 proj;
-	vec3 defColor;
+	vec4 defColor;
 	float ambient;
-    int numLights;
+  int useDefColor;
+  int normalShadingOn;
+  int twoSideLighting;
+  int numLights;
 	vec3 lightDir[8];
 };
 
@@ -43,24 +46,17 @@ layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec3 inColor;
 
-layout(location = 0) out vec3 fragColor;
+layout(location = 0) out vec4 fragColor;
 layout(location = 1) out vec3 fragNormal;
-layout(location = 2) out float fragAmbient;
-layout(location = 3) out int fragNumLights;
-layout(location = 4) out vec3 fragLights[8];
 
 void main() {
-    fragAmbient = ambient;
-    fragNumLights = numLights;
-    fragLights = lightDir;
-
     gl_Position = proj * modelView * vec4(inPosition, 1.0);
-	vec3 blackColor = vec3(0.0, 0.0, 0.0);
+    vec3 blackColor = vec3(0.0, 0.0, 0.0);
 	
-	if (defColor == blackColor) {
-		fragColor = inColor;
-	} else
+	if (useDefColor != 0)
 		fragColor = defColor;
+	else
+		fragColor = vec4(inColor, 1);
 
     fragNormal = normalize((modelView * vec4(inNormal, 0.0)).xyz);
 }
