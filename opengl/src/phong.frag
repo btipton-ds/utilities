@@ -33,7 +33,7 @@ This file is part of the VulkanQuickStart Project.
 uniform UniformBufferObject {
 	mat4 modelView;
 	mat4 proj;
-	vec3 defColor;
+	vec4 defColor;
 	float ambient;
   int useDefColor;
   int normalShadingOn;
@@ -42,7 +42,7 @@ uniform UniformBufferObject {
 	vec3 lightDir[8];
 };
 
-layout(location = 0) in vec3 fragColor;
+layout(location = 0) in vec4 fragColor;
 layout(location = 1) in vec3 fragNormal;
 
 layout(location = 0) out vec4 outColor;
@@ -69,5 +69,9 @@ void main() {
 
   intensity = ambient + (1.0 - ambient) * intensity;
 
-  outColor = intensity * vec4(fragColor, 1);
+  float alpha = fragColor[3];
+
+  outColor = intensity * fragColor;
+
+  outColor[3] = alpha;
 }
