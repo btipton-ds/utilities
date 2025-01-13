@@ -58,7 +58,7 @@ struct Index {
 class MultiVboHandler : public Extensions
 {
 public:
-    MultiVboHandler(int primitiveType, int maxKeyIndex);
+    MultiVboHandler(int primitiveType, size_t maxKeyIndex);
     ~MultiVboHandler();
 
     size_t numBytes() const;
