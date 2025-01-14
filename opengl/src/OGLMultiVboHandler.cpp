@@ -38,7 +38,7 @@ Another refinement is to our own vertex mangement using partial VBO writing to r
 using namespace std;
 using namespace OGL;
 
-MultiVboHandler::MultiVboHandler(int primitiveType, size_t maxKeyIndex)
+MultiVboHandler::MultiVboHandler(int primitiveType, int maxKeyIndex)
     : m_primitiveType(primitiveType)
 {
     initLayerToKeyMap(maxKeyIndex);
