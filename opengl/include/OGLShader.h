@@ -24,11 +24,14 @@
 
 #include <OGLCol4f.h>
 
+#ifndef GL_ASSERT
 #ifdef _DEBUG
 #define GL_ASSERT ::OGL::ShaderBase::dumpGlErrors(__FILE__, __LINE__);
 #else
 #define GL_ASSERT
 #endif // _DEBUG
+#endif // !GL_ASSERT
+
 
 namespace OGL
 {
