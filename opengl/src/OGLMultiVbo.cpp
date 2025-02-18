@@ -569,13 +569,13 @@ bool MultiVBO::areVBOsValid(size_t numElements, GLuint elementIdxVboID, DrawVert
 
 bool MultiVBO::bindCommon(const ShaderBase* pShader, size_t numElements) const
 {
-    //bind the verteces
+    //bind the vertces
     glBindBuffer(GL_ARRAY_BUFFER, m_vertexVboID);       GL_ASSERT;
     glEnableVertexAttribArray(pShader->getVertexLoc()); GL_ASSERT;
     glVertexAttribPointer(pShader->getVertexLoc(), 3, GL_FLOAT, 0, 0, 0); GL_ASSERT;
 
     //bind the normals
-    if (m_normalVboID)
+    if (m_normalVboID && pShader->getNormalLoc() != -1)
     {
         glBindBuffer(GL_ARRAY_BUFFER, m_normalVboID);      GL_ASSERT;
         glEnableVertexAttribArray(pShader->getNormalLoc()); GL_ASSERT;
