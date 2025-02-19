@@ -273,10 +273,10 @@ void MultiVboHandler::endFaceTesselation(bool smoothNormals)
             pBatch->m_VBO.copyToVBO(pBatch->m_points, pBatch->m_normals, smoothNormals, pBatch->m_parameters, pBatch->m_colors);
             pBatch->m_needsUpdate = false;
 
-            pBatch->m_points.clear();
-            pBatch->m_normals.clear();
-            pBatch->m_parameters.clear();
-            pBatch->m_colors.clear();
+            pBatch->m_points = {};
+            pBatch->m_normals = {};
+            pBatch->m_parameters = {};
+            pBatch->m_colors = {};
         }
     }
 }
@@ -763,8 +763,8 @@ void MultiVboHandler::endEdgeTesselation()
             if (!pBatch->m_points.empty()) {
                 pBatch->m_VBO.copyToVBO(pBatch->m_points, pBatch->m_colors);
 
-                pBatch->m_points.clear();
-                pBatch->m_colors.clear();
+                pBatch->m_points = {};
+                pBatch->m_colors = {};
             }
         }
     }

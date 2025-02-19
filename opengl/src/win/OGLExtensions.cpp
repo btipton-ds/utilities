@@ -1,9 +1,11 @@
 #include <OGLExtensions.h>
+#include <iostream>
 #include <assert.h>
 
 #ifdef WIN32
 #include <tchar.h>
 
+using namespace std;
 using namespace OGL;
 
 #define GET_EXT_POINTER(name, type) name = (type)wglGetProcAddress(#name)
@@ -759,6 +761,37 @@ PFNGLWINDOWPOS3SVPROC    Extensions::glWindowPos3sv = 0;
 #else
 #endif // WIN32
 
+void Extensions::dumpGlErrors(const char* filename, int lineNumber)
+{
+    GLenum err;
+    while ((err = glGetError()) && err != GL_NO_ERROR) {
+        cout << "glErr (" << filename << ":" << lineNumber << "): ";
+        switch (err) {
+        case GL_INVALID_ENUM:
+            cout << "GL_INVALID_ENUM\n"; break;
+        case GL_INVALID_VALUE:
+            cout << "GL_INVALID_VALUE\n"; break;
+        case GL_INVALID_OPERATION:
+            cout << "GL_INVALID_OPERATION\n"; break;
+        case GL_STACK_OVERFLOW:
+            cout << "GL_STACK_OVERFLOW\n"; break;
+        case GL_STACK_UNDERFLOW:
+            cout << "GL_STACK_UNDERFLOW\n"; break;
+        case GL_OUT_OF_MEMORY:
+            cout << "GL_OUT_OF_MEMORY\n"; break;
+        case GL_INVALID_FRAMEBUFFER_OPERATION:
+            cout << "GL_INVALID_FRAMEBUFFER_OPERATION\n"; break;
+        case GL_CONTEXT_LOST:
+            cout << "GL_CONTEXT_LOST\n"; break;
+        case GL_TABLE_TOO_LARGE:
+            cout << "GL_TABLE_TOO_LARGE\n"; break;
+        default:
+            cout << " Unknown err(" << err << ")\n"; break;
+        }
+
+        assert(!"glError");
+    }
+}
 
 Extensions::Extensions()
 {

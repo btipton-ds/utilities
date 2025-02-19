@@ -21,6 +21,7 @@ namespace OGL
 class Extensions
 {
 public:
+    static void dumpGlErrors(const char* filename, int lineNumber);
 
     static bool hasVBOSupport();    //< pretty much a given, but just in case
     Extensions();
@@ -772,5 +773,15 @@ public:
     static PFNGLWINDOWPOS3SVPROC glWindowPos3sv;
 #endif
 };
+
+#ifndef GL_ASSERT
+#ifdef _DEBUG
+#define GL_ASSERT Extensions::dumpGlErrors(__FILE__, __LINE__);
+#else
+#define GL_ASSERT 
+#endif // _DEBUG
+#endif // !GL_ASSERT
+
+
 
 }

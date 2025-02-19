@@ -41,41 +41,21 @@ uniform UniformBufferObject {
 	vec3 lightDir[8];
 };
 
-uniform int numDepths;
-uniform sampler2DArray oitColorBuffs;
-uniform sampler2DArray oitZBuffs;
+layout(location = 0) in vec3 inPosition;
+layout(location = 1) in vec3 inNormal;
+layout(location = 2) in vec3 inColor;
 
-layout(location = 0) in vec4 fragColor;
-layout(location = 1) in vec3 fragNormal;
-
-layout(location = 0) out vec4 outColor;
+layout(location = 0) out vec4 fragColor;
+layout(location = 1) out vec3 fragNormal;
 
 void main() {
-  float C_PI = radians(180);
-  float intensity = 0.0;
+    gl_Position = proj * modelView * vec4(inPosition, 1.0);
+    vec3 blackColor = vec3(0.0, 0.0, 0.0);
+	
+	if (useDefColor != 0)
+		fragColor = defColor;
+	else
+		fragColor = vec4(inColor, 1);
 
-  if (normalShadingOn != 0) {
-    for (int i = 0; i < numLights; i++) {
-      float dp = dot(lightDir[i], fragNormal);
-
-      if (twoSideLighting != 0)
-        dp = abs(dp);
-
-      if (dp > 0)
-        intensity += dp;
-    }
-  } else {
-    intensity = 1.0;
-  }
-  
-  intensity = min(intensity, 1.0);
-
-  intensity = ambient + (1.0 - ambient) * intensity;
-
-  float alpha = fragColor[3];
-
-  for (int i = 0; i < numDepths; i++)
-    outColor = intensity * fragColor + texture(oitColorBuffs, vec3(ivec2(gl_FragCoord.xy), i));
-
-  outColor[3] = alpha;
+    fragNormal = normalize((modelView * vec4(inNormal, 0.0)).xyz);
 }

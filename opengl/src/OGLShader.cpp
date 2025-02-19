@@ -850,24 +850,45 @@ void ShaderBase::loadDefaultVariables()
 							setTexture( string(vname), 0 ); // need to make sure the texture is present and gets a slot for ATI
                     }
                 }
-                else if( tname = strstr( source, "sampler2D" ) )
+                else if (tname = strstr(source, "sampler2DArray"))
                 {
                     // we may be using pow2 image buffers in the future
                     // also we should verify the po2ness of the file and trigger a resize if needed
-                    vname = getVariableName( tname + 9 );
+                    vname = getVariableName(tname + 14);
 
-					if( !stiArg )
-					{
-						setTexture( string(vname), 0 );
-					}
-					else
-					{
-						string path = getCheckedImagePath( stiArg );
-						if( path.length() )
-							setTexture( string(vname), path );
-						else
-							setTexture( string(vname), 0 ); // need to make sure the texture is present and gets a slot for ATI
-					}
+                    if (!stiArg)
+                    {
+                        string filename;
+                        setTexture(vname, filename);
+                    }
+                    else
+                    {
+                        string path = getCheckedImagePath(stiArg);
+                        if (path.length())
+                            setTexture(string(vname), path);
+                        else
+                            setTexture(string(vname), 0); // need to make sure the texture is present and gets a slot for ATI
+                    }
+                }
+                else if (tname = strstr(source, "sampler2D"))
+                {
+                    // we may be using pow2 image buffers in the future
+                    // also we should verify the po2ness of the file and trigger a resize if needed
+                    vname = getVariableName(tname + 9);
+
+                    if (!stiArg)
+                    {
+                        string filename;
+                        setTexture(vname, filename);
+                    }
+                    else
+                    {
+                        string path = getCheckedImagePath(stiArg);
+                        if (path.length())
+                            setTexture(string(vname), path);
+                        else
+                            setTexture(string(vname), 0); // need to make sure the texture is present and gets a slot for ATI
+                    }
                 }
                 else if( tname = strstr( source, "samplerCube" ) )
                 {
