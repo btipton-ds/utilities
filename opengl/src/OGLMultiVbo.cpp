@@ -647,7 +647,7 @@ bool MultiVBO::drawVBOIndexVBO(const ShaderBase* pShader, GLsizei numElements, G
         return false;
     }
 
-    if (m_colorVboID && drawColors == DRAW_COLOR) {
+    if (m_colorVboID && drawColors == DRAW_COLOR && pShader->getColorLoc() != -1) {
         glEnable(GL_COLOR_MATERIAL); GL_ASSERT;
         glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE); GL_ASSERT;
         glEnableClientState(GL_COLOR_ARRAY); GL_ASSERT;
