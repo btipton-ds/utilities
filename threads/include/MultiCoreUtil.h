@@ -165,7 +165,7 @@ private:
 		AT_TERMINATED,
 	};
 public:
-	using FuncType = _STD function<void(size_t threadNum, size_t idx)>;
+	using FuncType = _STD function<bool (size_t threadNum, size_t idx)>;
 
 	ThreadPool(size_t numThreads = -1);
 

@@ -181,8 +181,10 @@ void ThreadPool::run(size_t threadNum) {
 		}
 
 		if (_pFunc) {
-			for (size_t i = threadNum; i < _numSteps; i += _numThreads)
-				(*_pFunc)(threadNum, i);
+			for (size_t i = threadNum; i < _numSteps; i += _numThreads) {
+				if (!(*_pFunc)(threadNum, i))
+					break;
+			}
 		}
 
 		{
