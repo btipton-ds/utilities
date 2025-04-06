@@ -165,6 +165,9 @@ private:
 		AT_TERMINATED,
 	};
 public:
+	static ThreadPool& getSubThreadPool();
+	static void deleteSubThreadPool();
+
 	using FuncType = _STD function<bool (size_t threadNum, size_t idx)>;
 
 	ThreadPool(size_t numThreads = -1);
