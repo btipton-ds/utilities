@@ -165,9 +165,6 @@ private:
 		AT_TERMINATED,
 	};
 public:
-	static ThreadPool& getSubThreadPool();
-	static void deleteSubThreadPool();
-
 	using FuncType = _STD function<bool (size_t threadNum, size_t idx)>;
 
 	ThreadPool(size_t numThreads = -1);
@@ -177,9 +174,9 @@ public:
 	inline size_t getNumThreads() const;
 
 	template<class L>
-	inline void run(size_t numSteps, const L& f, bool multiCore);
+	void run(size_t numSteps, const L& f, bool multiCore);
 	template<class L>
-	inline void run(size_t numSteps, const L& f, bool multiCore) const;
+	void run(size_t numSteps, const L& f, bool multiCore) const;
 
 private:
 	void start();

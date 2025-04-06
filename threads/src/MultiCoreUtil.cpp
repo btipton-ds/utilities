@@ -60,22 +60,6 @@
 using namespace std;
 using namespace MultiCore;
 
-namespace {
-thread_local shared_ptr<ThreadPool> g_pThreadPool;
-}
-
-ThreadPool& ThreadPool::getSubThreadPool()
-{
-	if (!g_pThreadPool)
-		g_pThreadPool = make_shared<ThreadPool>(getNumCores());
-	return *g_pThreadPool;
-}
-
-void ThreadPool::deleteSubThreadPool()
-{
-	g_pThreadPool = nullptr;
-}
-
 ThreadPool::ThreadPool(size_t numThreads)
 	: _numThreads(numThreads == -1 ? getNumCores() : numThreads)
 {
