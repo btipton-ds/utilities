@@ -145,6 +145,7 @@ void ThreadPool::setStage(Stage st, size_t threadNum) const
 
 size_t ThreadPool::numThreadsAvailable() const
 {
+	_STD unique_lock lk(_stageMutex);
 	return _numAllocatedThreads - _numInUse;
 }
 

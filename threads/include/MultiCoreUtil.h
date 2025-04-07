@@ -231,7 +231,7 @@ inline size_t ThreadPool::getNumThreads() const
 
 template<class L>
 inline void ThreadPool::run(size_t numSteps, const L& f, bool multiCore) {
-	if (multiCore && numSteps > getNumCores() / 4) {
+	if (multiCore) {
 		// In primary thread
 		FuncType wrapper(f);
 		runFunc_private(_numThreads, numSteps, &wrapper);
@@ -243,7 +243,7 @@ inline void ThreadPool::run(size_t numSteps, const L& f, bool multiCore) {
 
 template<class L>
 inline void ThreadPool::run(size_t numSteps, const L& f, bool multiCore) const {
-	if (multiCore && numSteps > getNumCores() / 4) {
+	if (multiCore) {
 		// In primary thread
 		FuncType wrapper(f);
 		runFunc_private(_numThreads, numSteps, &wrapper);
