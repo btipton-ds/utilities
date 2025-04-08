@@ -236,8 +236,10 @@ inline void ThreadPool::run(size_t numSteps, const L& f, bool multiCore) {
 		FuncType wrapper(f);
 		runFunc_private(_numThreads, numSteps, &wrapper);
 	} else {
-		for (size_t i = 0; i < numSteps; i++)
-			f(0, i);
+		for (size_t i = 0; i < numSteps; i++) {
+			if (!f(0, i))
+				break;
+		}
 	}
 }
 
@@ -248,8 +250,10 @@ inline void ThreadPool::run(size_t numSteps, const L& f, bool multiCore) const {
 		FuncType wrapper(f);
 		runFunc_private(_numThreads, numSteps, &wrapper);
 	} else {
-		for (size_t i = 0; i < numSteps; i++)
-			f(0, i);
+		for (size_t i = 0; i < numSteps; i++) {
+			if (!f(0, i))
+				break;
+		}
 	}
 }
 
