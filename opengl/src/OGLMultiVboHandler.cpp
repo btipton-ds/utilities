@@ -236,11 +236,9 @@ void MultiVboHandler::setFaceTessellationInner(size_t batchIndex, size_t vertChu
         }
     }
 
-    set<unsigned int> vertexIndexSet;
     for (size_t i = 0; i < triIndices.size(); i++) {
         unsigned int vertIndex = vertBaseIndex + triIndices[i];
         glIndicesOut.m_elementIndices.push_back(vertIndex);
-        vertexIndexSet.insert(vertIndex);
     }
 }
 
