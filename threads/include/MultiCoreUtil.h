@@ -85,6 +85,25 @@ namespace MultiCore {
 	}
 
 	template<class L>
+	void runLambda(size_t numCores, L fLambda, bool multiCore)
+	{
+		if (multiCore) {
+			_STD vector<_STD thread> threads;
+			threads.reserve(numCores);
+			for (size_t i = 0; i < numCores; i++) {
+				threads.push_back(_STD move(_STD thread(fLambda, i, numCores)));
+			}
+
+			for (size_t i = 0; i < threads.size(); i++) {
+				threads[i].join();
+			}
+		}
+		else {
+			fLambda(0, 1);
+		}
+	}
+
+	template<class L>
 	void runLambda(L fLambda, _STD vector<size_t>& indexPool, bool multiCore)
 	{
 		if (multiCore) {
@@ -182,6 +201,12 @@ public:
 	template<class L>
 	void run(size_t numSteps, const L& f, bool multiCore) const;
 
+	template<class L>
+	void run(size_t numThreads, size_t numSteps, const L& f, bool multiCore);
+
+	template<class L>
+	void run(size_t numThreads, size_t numSteps, const L& f, bool multiCore) const;
+
 private:
 	void start();
 
@@ -250,6 +275,36 @@ inline void ThreadPool::run(size_t numSteps, const L& f, bool multiCore) const {
 		FuncType wrapper(f);
 		runFunc_private(_numThreads, numSteps, &wrapper);
 	} else {
+		for (size_t i = 0; i < numSteps; i++) {
+			if (!f(0, i))
+				break;
+		}
+	}
+}
+
+template<class L>
+inline void ThreadPool::run(size_t numThreads, size_t numSteps, const L& f, bool multiCore) {
+	if (multiCore) {
+		// In primary thread
+		FuncType wrapper(f);
+		runFunc_private(numThreads, numSteps, &wrapper);
+	}
+	else {
+		for (size_t i = 0; i < numSteps; i++) {
+			if (!f(0, i))
+				break;
+		}
+	}
+}
+
+template<class L>
+inline void ThreadPool::run(size_t numThreads, size_t numSteps, const L& f, bool multiCore) const {
+	if (multiCore) {
+		// In primary thread
+		FuncType wrapper(f);
+		runFunc_private(numThreads, numSteps, &wrapper);
+	}
+	else {
 		for (size_t i = 0; i < numSteps; i++) {
 			if (!f(0, i))
 				break;
