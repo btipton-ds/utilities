@@ -76,16 +76,29 @@ rgbaColor HSVToRGB(float h, float s, float v) {
     return rgbaColor(r + m, g + m, b + m, 1);
 }
 
-rgbaColor curvatureToColor(double cur)
+rgbaColor curvatureToColor(double curvature)
 {
-    const float maxRadius = 0.5f; // meter
-    const float minRadius = 0.001f; // meter
-    float radius = (float)(1 / cur);
-    float t = (radius - minRadius) / (maxRadius - minRadius);
+    const float maxRadius = 1.0f; // meter
+    const float minRadius = 0.0001f; // meter
+    const float logBase = log(5.0f);
+    const float maxLogRadius = log(maxRadius) / logBase;
+    const float minLogRadius = log(minRadius) / logBase;
+
+    if (curvature < 0 || curvature > 1 / minRadius)
+        return rgbaColor(1, 0, 0);
+    else if (curvature < 1.0e-4)
+        return rgbaColor(0, 0, 0);
+
+
+    float radius = 1 / (float)curvature;
+    float logRadius = log(radius) / logBase;
+    float t = (logRadius - minLogRadius) / (maxLogRadius - minLogRadius);
     if (t < 0)
         t = 0;
     else if (t > 1)
         t = 1;
+
+//    t = pow(t, 0.5);
 
     t = 1 - t;
     float hue = 2 / 3.0f - 2 / 3.0f * t;
