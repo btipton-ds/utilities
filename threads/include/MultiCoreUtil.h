@@ -208,6 +208,25 @@ public:
 	void run(size_t numThreads, size_t numSteps, const L& f, bool multiCore) const;
 
 private:
+	class Thread {
+	public:
+		template<class FUNC>
+		inline Thread(FUNC f, ThreadPool* pPool, size_t i)
+			: _thread(f, pPool, i)
+		{ }
+
+		inline void join() {
+			_thread.join();
+		}
+		bool _assigned = false;
+		Stage _stage = AT_NOT_CREATED;
+		FuncType* _threadFunc = nullptr;
+		mutable size_t _numThreadsForThisFunc = 0;
+		mutable size_t _numSteps = 0;
+		mutable size_t _startIndex = -1;
+	private:
+		_STD thread _thread;
+	};
 	void start();
 
 	void stop();
@@ -235,13 +254,9 @@ private:
 
 	mutable _STD condition_variable _cv;
 	mutable _STD mutex _stageMutex;
-	mutable _STD vector<bool> _assigned;
-	mutable _STD vector<Stage> _stage;
-	mutable _STD vector<FuncType*> _threadFuncs;
-	mutable _STD vector<size_t> _numThreadsForThisFunc, _numSteps, _startIndex;
 
-	static thread_local _STD set<size_t> _ourThreadIndices;
-	_STD vector<_STD thread> _allocatedThreads;
+	static thread_local _STD set<Thread*> _ourThreads;
+	_STD vector<Thread*> _allocatedThreads;
 };
 
 inline size_t ThreadPool::getNumAllocatedThreads() const

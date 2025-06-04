@@ -60,7 +60,7 @@
 using namespace std;
 using namespace MultiCore;
 
-thread_local _STD set<size_t> ThreadPool::_ourThreadIndices;
+thread_local _STD set<ThreadPool::Thread*> ThreadPool::_ourThreads;
 
 ThreadPool::ThreadPool(size_t numThreads, size_t numAllocatedThreads)
 	: _numThreads(numThreads)
@@ -68,12 +68,6 @@ ThreadPool::ThreadPool(size_t numThreads, size_t numAllocatedThreads)
 {
 	// In primary thread
 	_numInUse = 0;
-	_assigned.resize(_numAllocatedThreads, false);
-	_stage.resize(_numAllocatedThreads, AT_NOT_CREATED);
-	_threadFuncs.resize(_numAllocatedThreads, nullptr);
-	_numThreadsForThisFunc.resize(_numAllocatedThreads, 0);
-	_numSteps.resize(_numAllocatedThreads, 0);
-	_startIndex.resize(_numAllocatedThreads, -1);
 	start();
 }
 
@@ -88,7 +82,7 @@ void ThreadPool::start() {
 	// In primary thread
 
 	for (size_t i = 0; i < _numAllocatedThreads; i++) {
-		_allocatedThreads.push_back(move(_STD thread(runStat, this, i)));
+		_allocatedThreads.push_back(new Thread(runStat, this, i));
 	}
 }
 
@@ -104,15 +98,17 @@ void ThreadPool::stop()
 		});
 	}
 
-	for (auto& t : _allocatedThreads)
-		t.join();
+	for (auto& t : _allocatedThreads) {
+		t->join();
+		delete t;
+	}
 	_allocatedThreads.clear();
 }
 
 bool ThreadPool::atStage(Stage st) const
 {
-	for (size_t i : _ourThreadIndices) {
-		if (_stage[i] != st)
+	for (auto p : _ourThreads) {
+		if (p->_stage != st)
 			return false;
 	}
 	_cv.notify_all();
@@ -121,8 +117,8 @@ bool ThreadPool::atStage(Stage st) const
 
 bool ThreadPool::atStage(Stage st0, Stage st1) const
 {
-	for (size_t i : _ourThreadIndices) {
-		if (_stage[i] != st0 && _stage[i] != st1)
+	for (auto p : _ourThreads) {
+		if (p->_stage != st0 && p->_stage != st1)
 			return false;
 	}
 	_cv.notify_all();
@@ -131,15 +127,15 @@ bool ThreadPool::atStage(Stage st0, Stage st1) const
 
 void ThreadPool::setStageForAll(Stage st) const
 {
-	for (size_t i : _ourThreadIndices) {
-		_stage[i] = st;
+	for (auto p : _ourThreads) {
+		p->_stage = st;
 	}
 	_cv.notify_all();
 }
 
 void ThreadPool::setStage(Stage st, size_t threadNum) const
 {
-	_stage[threadNum] = st;
+	_allocatedThreads[threadNum]->_stage = st;
 	_cv.notify_all();
 }
 
@@ -151,31 +147,32 @@ size_t ThreadPool::numThreadsAvailable() const
 
 bool ThreadPool::acquireThreads(size_t numRequested, size_t numSteps, FuncType* f) const
 {
-	_ourThreadIndices.clear();
+	_ourThreads.clear();
 
 	size_t numRequired = numRequested / 8;
 	if (numRequired < 1)
 		numRequired = 1;
 	for (size_t i = 0; i < _numAllocatedThreads; i++) {
-		if (!_assigned[i]) {
-			_ourThreadIndices.insert(i);
-			if (_ourThreadIndices.size() == numRequested)
+		if (!_allocatedThreads[i]->_assigned) {
+			_ourThreads.insert(_allocatedThreads[i]);
+			if (_ourThreads.size() == numRequested)
 				break;
 		}
 	}
-	if (_ourThreadIndices.size() >= numRequired) {
+	if (_ourThreads.size() >= numRequired) {
 		size_t startIdx = 0;
-		for (size_t i : _ourThreadIndices) {
+		for (auto p : _ourThreads) {
 			_numInUse++;
-			_assigned[i] = true;
-			_threadFuncs[i] = f;
-			_numThreadsForThisFunc[i] = _ourThreadIndices.size();
-			_numSteps[i] = numSteps;
-			_startIndex[i] = startIdx++;
+
+			p->_assigned = true;
+			p->_threadFunc = f;
+			p->_numThreadsForThisFunc = _ourThreads.size();
+			p->_numSteps = numSteps;
+			p->_startIndex = startIdx++;
 		}
 		return true;
 	} else {
-		_ourThreadIndices.clear();
+		_ourThreads.clear();
 		return false;
 	}
 
@@ -184,14 +181,15 @@ bool ThreadPool::acquireThreads(size_t numRequested, size_t numSteps, FuncType* 
 void ThreadPool::releaseThread(size_t threadNum) const
 {
 	_numInUse--;
-	_assigned[threadNum] = false;
 
-	_threadFuncs[threadNum] = nullptr;
-	_numThreadsForThisFunc[threadNum] = 0;
-	_numSteps[threadNum] = 0;
-	_startIndex[threadNum] = -1;
+	auto p = _allocatedThreads[threadNum];
+	p->_threadFunc = nullptr;
+	p->_assigned = false;
+	p->_numThreadsForThisFunc = 0;
+	p->_numSteps = 0;
+	p->_startIndex = -1;
 
-	_ourThreadIndices.erase(threadNum);
+	_ourThreads.erase(p);
 
 	_cv.notify_all();
 }
@@ -199,15 +197,14 @@ void ThreadPool::releaseThread(size_t threadNum) const
 void ThreadPool::runFunc_private(size_t numThreads, size_t numSteps, FuncType* f) const
 {
 	// In primary thread
-//	_cv.notify_all();
-#if 1
+	// _cv.notify_all();
 	{
 		_STD unique_lock lk(_stageMutex);
 		_cv.wait(lk, [this, numSteps, f, numThreads]()->bool {
 			return acquireThreads(numThreads, numSteps, f);
 		});
 	}
-#endif
+
 	{
 		_STD unique_lock lk(_stageMutex);
 		_cv.wait(lk, [this]()->bool {
@@ -230,15 +227,14 @@ void ThreadPool::runFunc_private(size_t numThreads, size_t numSteps, FuncType* f
 
 		_cv.notify_all();
 	}
-#if 1
+
 	{
 		_STD unique_lock lk(_stageMutex);
 		_cv.wait(lk, [this]()->bool {
-			_ourThreadIndices.clear();
+			_ourThreads.clear();
 			return true;
 		});
 	}
-#endif
 }
 
 void ThreadPool::runStat(ThreadPool* pSelf, size_t threadNum) {
@@ -255,17 +251,15 @@ void ThreadPool::run(size_t threadNum) {
 		{
 			_STD unique_lock lk(_stageMutex);
 			_cv.wait(lk, [this, threadNum]()->bool {
-				return (_stage[threadNum] == AT_RUNNING) || !_running;
+				return (_allocatedThreads[threadNum]->_stage == AT_RUNNING) || !_running;
 			});
 		}
 
-		auto pFunc = _threadFuncs[threadNum];
+		const auto p = _allocatedThreads[threadNum];
+		auto pFunc = p->_threadFunc;
 		if (pFunc) {
-			size_t numThreads = _numThreadsForThisFunc[threadNum];
-			size_t numSteps = _numSteps[threadNum];
-			size_t startIdx = _startIndex[threadNum];
-			for (size_t i = startIdx; i < numSteps; i += numThreads) {
-				if (!(*pFunc)(startIdx, i))
+			for (size_t i = p->_startIndex; i < p->_numSteps; i += p->_numThreadsForThisFunc) {
+				if (!(*pFunc)(p->_startIndex, i))
 					break;
 			}
 		}
