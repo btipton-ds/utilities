@@ -60,14 +60,13 @@
 using namespace std;
 using namespace MultiCore;
 
-thread_local _STD set<ThreadPool::Thread*> ThreadPool::_ourThreads;
+thread_local _STD vector<ThreadPool::Thread*> ThreadPool::_ourThreads;
 
 ThreadPool::ThreadPool(size_t numThreads, size_t numAllocatedThreads)
 	: _numThreads(numThreads)
 	, _numAllocatedThreads(numAllocatedThreads)
 {
 	// In primary thread
-	_numInUse = 0;
 	start();
 }
 
@@ -83,6 +82,7 @@ void ThreadPool::start() {
 
 	for (size_t i = 0; i < _numAllocatedThreads; i++) {
 		_allocatedThreads.push_back(new Thread(runStat, this, i));
+		_availThreads.push_back(_allocatedThreads.back());
 	}
 }
 
@@ -103,6 +103,7 @@ void ThreadPool::stop()
 		delete t;
 	}
 	_allocatedThreads.clear();
+	_availThreads.clear();
 }
 
 bool ThreadPool::atStage(Stage st) const
@@ -142,27 +143,28 @@ void ThreadPool::setStage(Stage st, size_t threadNum) const
 size_t ThreadPool::numThreadsAvailable() const
 {
 	_STD unique_lock lk(_stageMutex);
-	return _numAllocatedThreads - _numInUse;
+	return _availThreads.size();
 }
 
 bool ThreadPool::acquireThreads(size_t numRequested, size_t numSteps, FuncType* f) const
 {
 	_ourThreads.clear();
 
-	size_t numRequired = numRequested / 8;
-	if (numRequired < 1)
-		numRequired = 1;
-	for (size_t i = 0; i < _numAllocatedThreads; i++) {
-		if (!_allocatedThreads[i]->_assigned) {
-			_ourThreads.insert(_allocatedThreads[i]);
-			if (_ourThreads.size() == numRequested)
-				break;
+	size_t num = 0;
+	{
+		lock_guard lg(_stackMutex);
+		num = std::min(numRequested, _availThreads.size());
+		for (size_t i = 0; i < num; i++) {
+			auto p = _availThreads.back();
+			_availThreads.pop_back();
+			_ourThreads.push_back(p);
 		}
 	}
-	if (_ourThreads.size() >= numRequired) {
+
+	if (num > 0) {
 		size_t startIdx = 0;
-		for (auto p : _ourThreads) {
-			_numInUse++;
+		for (size_t i = 0; i < num; i++) {
+			auto p = _ourThreads[i];
 
 			p->_assigned = true;
 			p->_threadFunc = f;
@@ -172,7 +174,6 @@ bool ThreadPool::acquireThreads(size_t numRequested, size_t numSteps, FuncType* 
 		}
 		return true;
 	} else {
-		_ourThreads.clear();
 		return false;
 	}
 
@@ -180,8 +181,6 @@ bool ThreadPool::acquireThreads(size_t numRequested, size_t numSteps, FuncType* 
 
 void ThreadPool::releaseThread(size_t threadNum) const
 {
-	_numInUse--;
-
 	auto p = _allocatedThreads[threadNum];
 	p->_threadFunc = nullptr;
 	p->_assigned = false;
@@ -189,7 +188,10 @@ void ThreadPool::releaseThread(size_t threadNum) const
 	p->_numSteps = 0;
 	p->_startIndex = -1;
 
-	_ourThreads.erase(p);
+	{
+		lock_guard lg(_stackMutex);
+		_availThreads.push_back(p);
+	}
 
 	_cv.notify_all();
 }

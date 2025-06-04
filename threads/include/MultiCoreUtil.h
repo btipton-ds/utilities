@@ -250,13 +250,13 @@ private:
 
 	bool _running = true;
 	const size_t _numThreads, _numAllocatedThreads;
-	mutable size_t _numInUse;
 
 	mutable _STD condition_variable _cv;
-	mutable _STD mutex _stageMutex;
+	mutable _STD mutex _stageMutex, _stackMutex;
 
-	static thread_local _STD set<Thread*> _ourThreads;
+	static thread_local _STD vector<Thread*> _ourThreads;
 	_STD vector<Thread*> _allocatedThreads;
+	mutable _STD vector<Thread*> _availThreads;
 };
 
 inline size_t ThreadPool::getNumAllocatedThreads() const
