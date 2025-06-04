@@ -81,7 +81,7 @@ void ThreadPool::start() {
 	// In primary thread
 
 	for (size_t i = 0; i < _numAllocatedThreads; i++) {
-		_allocatedThreads.push_back(new Thread(runStat, this, i));
+		_allocatedThreads.push_back(new Thread(runStat, this));
 		_availThreads.push_back(_allocatedThreads.back());
 	}
 }
@@ -134,9 +134,9 @@ void ThreadPool::setStageForAll(Stage st) const
 	_cv.notify_all();
 }
 
-void ThreadPool::setStage(Stage st, size_t threadNum) const
+void ThreadPool::setStage(Stage st, Thread* pThread) const
 {
-	_allocatedThreads[threadNum]->_stage = st;
+	pThread->_stage = st;
 	_cv.notify_all();
 }
 
@@ -179,9 +179,9 @@ bool ThreadPool::acquireThreads(size_t numRequested, size_t numSteps, FuncType* 
 
 }
 
-void ThreadPool::releaseThread(size_t threadNum) const
+void ThreadPool::releaseThread(Thread* pThread) const
 {
-	auto p = _allocatedThreads[threadNum];
+	auto p = pThread;
 	p->_threadFunc = nullptr;
 	p->_assigned = false;
 	p->_numThreadsForThisFunc = 0;
@@ -239,29 +239,28 @@ void ThreadPool::runFunc_private(size_t numThreads, size_t numSteps, FuncType* f
 	}
 }
 
-void ThreadPool::runStat(ThreadPool* pSelf, size_t threadNum) {
-	pSelf->run(threadNum);
+void ThreadPool::runStat(ThreadPool* pSelf, Thread* pThread) {
+	pSelf->run(pThread);
 }
 
-void ThreadPool::run(size_t threadNum) {
+void ThreadPool::run(Thread* pThread) {
 	{
 		_STD unique_lock lk(_stageMutex);
-		setStage(AT_STOPPED, threadNum);
+		setStage(AT_STOPPED, pThread);
 	}
 	// In worker thread
 	while (_running) {
 		{
 			_STD unique_lock lk(_stageMutex);
-			_cv.wait(lk, [this, threadNum]()->bool {
-				return (_allocatedThreads[threadNum]->_stage == AT_RUNNING) || !_running;
+			_cv.wait(lk, [this, pThread]()->bool {
+				return (pThread->_stage == AT_RUNNING) || !_running;
 			});
 		}
 
-		const auto p = _allocatedThreads[threadNum];
-		auto pFunc = p->_threadFunc;
+		auto pFunc = pThread->_threadFunc;
 		if (pFunc) {
-			for (size_t i = p->_startIndex; i < p->_numSteps; i += p->_numThreadsForThisFunc) {
-				if (!(*pFunc)(p->_startIndex, i))
+			for (size_t i = pThread->_startIndex; i < pThread->_numSteps; i += pThread->_numThreadsForThisFunc) {
+				if (!(*pFunc)(pThread->_startIndex, i))
 					break;
 			}
 		}
@@ -270,10 +269,10 @@ void ThreadPool::run(size_t threadNum) {
 			_STD unique_lock lk(_stageMutex);
 			// This the reason shared threads exist.
 			// When this function completes, put this thread back in the pool so it can be reassigned.
-			releaseThread(threadNum);
-			setStage(AT_STOPPED, threadNum);
+			releaseThread(pThread);
+			setStage(AT_STOPPED, pThread);
 		}
 	}
 	_STD unique_lock lk(_stageMutex);
-	setStage(AT_TERMINATED, threadNum);
+	setStage(AT_TERMINATED, pThread);
 }

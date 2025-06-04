@@ -211,8 +211,8 @@ private:
 	class Thread {
 	public:
 		template<class FUNC>
-		inline Thread(FUNC f, ThreadPool* pPool, size_t i)
-			: _thread(f, pPool, i)
+		inline Thread(FUNC f, ThreadPool* pPool)
+			: _thread(f, pPool, this)
 		{ }
 
 		inline void join() {
@@ -232,7 +232,7 @@ private:
 	void stop();
 
 	bool acquireThreads(size_t numRequested, size_t numSteps, FuncType* f) const;
-	void releaseThread(size_t threadNum) const;
+	void releaseThread(Thread* pThread) const;
 
 	bool atStage(Stage st) const;
 
@@ -240,13 +240,13 @@ private:
 
 	void setStageForAll(Stage st) const;
 
-	void setStage(Stage st, size_t threadNum) const;
+	void setStage(Stage st, Thread* pThread) const;
 
 	void runFunc_private(size_t numThreads, size_t numSteps, FuncType* f) const;
 
-	static void runStat(ThreadPool* pSelf, size_t threadNum);
+	static void runStat(ThreadPool* pSelf, Thread* pThread);
 
-	void run(size_t threadNum);
+	void run(Thread* pThread);
 
 	bool _running = true;
 	const size_t _numThreads, _numAllocatedThreads;
