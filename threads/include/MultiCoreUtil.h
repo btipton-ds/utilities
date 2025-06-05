@@ -187,7 +187,7 @@ private:
 public:
 	using FuncType = _STD function<bool (size_t threadNum, size_t idx)>;
 
-	ThreadPool(size_t numThreads, size_t numAvailable);
+	ThreadPool(size_t numThreads, size_t numSubThreads, size_t numAvailable);
 
 	~ThreadPool();
 
@@ -200,6 +200,11 @@ public:
 	void run(size_t numSteps, const L& f, bool multiCore);
 	template<class L>
 	void run(size_t numSteps, const L& f, bool multiCore) const;
+
+	template<class L>
+	void runSub(size_t numSteps, const L& f, bool multiCore);
+	template<class L>
+	void runSub(size_t numSteps, const L& f, bool multiCore) const;
 
 	template<class L>
 	void run(size_t numThreads, size_t numSteps, const L& f, bool multiCore);
@@ -218,9 +223,10 @@ private:
 		inline void join() {
 			_thread.join();
 		}
-		bool _assigned = false;
+
+		std::thread::id _ownerThreadId;
 		Stage _stage = AT_NOT_CREATED;
-		FuncType* _threadFunc = nullptr;
+		const FuncType* _pThreadFunc = nullptr;
 		mutable size_t _numThreadsForThisFunc = 0;
 		mutable size_t _numSteps = 0;
 		mutable size_t _startIndex = -1;
@@ -231,7 +237,7 @@ private:
 
 	void stop();
 
-	bool acquireThreads(size_t numRequested, size_t numSteps, FuncType* f) const;
+	bool acquireThreads(size_t numRequested, size_t numSteps, const FuncType& func) const;
 	void releaseThread(Thread* pThread) const;
 
 	bool atStage(Stage st) const;
@@ -240,16 +246,16 @@ private:
 
 	void setStageForAll(Stage st) const;
 
-	void setStage(Stage st, Thread* pThread) const;
+	void setStageFromWorkerThread(Stage st, Thread* pThread) const;
 
-	void runFunc_private(size_t numThreads, size_t numSteps, FuncType* f) const;
+	void runFunc_private(size_t numThreads, size_t numSteps, const FuncType& func) const;
 
-	static void runStat(ThreadPool* pSelf, Thread* pThread);
+	static void runSingleThreadStat(ThreadPool* pSelf, Thread* pThread);
 
-	void run(Thread* pThread);
+	void runSingleThread(Thread* pThread);
 
 	bool _running = true;
-	const size_t _numThreads, _numAllocatedThreads;
+	const size_t _numThreads, _numSubThreads, _numAllocatedThreads;
 
 	mutable _STD condition_variable _cv;
 	mutable _STD mutex _stageMutex, _stackMutex;
@@ -274,7 +280,7 @@ inline void ThreadPool::run(size_t numSteps, const L& f, bool multiCore) {
 	if (multiCore) {
 		// In primary thread
 		FuncType wrapper(f);
-		runFunc_private(_numThreads, numSteps, &wrapper);
+		runFunc_private(_numThreads, numSteps, wrapper);
 	} else {
 		for (size_t i = 0; i < numSteps; i++) {
 			if (!f(0, i))
@@ -288,7 +294,35 @@ inline void ThreadPool::run(size_t numSteps, const L& f, bool multiCore) const {
 	if (multiCore) {
 		// In primary thread
 		FuncType wrapper(f);
-		runFunc_private(_numThreads, numSteps, &wrapper);
+		runFunc_private(_numThreads, numSteps, wrapper);
+	} else {
+		for (size_t i = 0; i < numSteps; i++) {
+			if (!f(0, i))
+				break;
+		}
+	}
+}
+
+template<class L>
+inline void ThreadPool::runSub(size_t numSteps, const L& f, bool multiCore) {
+	if (multiCore) {
+		// In primary thread
+		FuncType wrapper(f);
+		runFunc_private(_numSubThreads, numSteps, wrapper);
+	} else {
+		for (size_t i = 0; i < numSteps; i++) {
+			if (!f(0, i))
+				break;
+		}
+	}
+}
+
+template<class L>
+inline void ThreadPool::runSub(size_t numSteps, const L& f, bool multiCore) const {
+	if (multiCore) {
+		// In primary thread
+		FuncType wrapper(f);
+		runFunc_private(_numSubThreads, numSteps, wrapper);
 	} else {
 		for (size_t i = 0; i < numSteps; i++) {
 			if (!f(0, i))
@@ -302,9 +336,8 @@ inline void ThreadPool::run(size_t numThreads, size_t numSteps, const L& f, bool
 	if (multiCore) {
 		// In primary thread
 		FuncType wrapper(f);
-		runFunc_private(numThreads, numSteps, &wrapper);
-	}
-	else {
+		runFunc_private(numThreads, numSteps, wrapper);
+	} else {
 		for (size_t i = 0; i < numSteps; i++) {
 			if (!f(0, i))
 				break;
@@ -317,9 +350,8 @@ inline void ThreadPool::run(size_t numThreads, size_t numSteps, const L& f, bool
 	if (multiCore) {
 		// In primary thread
 		FuncType wrapper(f);
-		runFunc_private(numThreads, numSteps, &wrapper);
-	}
-	else {
+		runFunc_private(numThreads, numSteps, wrapper);
+	} else {
 		for (size_t i = 0; i < numSteps; i++) {
 			if (!f(0, i))
 				break;
