@@ -230,6 +230,11 @@ void ThreadPool::runFunc_private(size_t numThreads, size_t numSteps, const FuncT
 	{
 		_STD unique_lock lk(_stageMutex);
 		_cv.wait(lk, [this]()->bool {
+#ifdef _DEBUG
+			for (const auto pThread : _ourThreads) {
+				assert(pThread->_ownerThreadId != this_thread::get_id());
+			}
+#endif // _DEBUG
 			_ourThreads.clear();
 			return true;
 		});
