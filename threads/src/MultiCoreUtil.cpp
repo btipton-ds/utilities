@@ -60,28 +60,24 @@
 using namespace std;
 using namespace MultiCore;
 
-thread_local _STD vector<ThreadPool::Thread*> ThreadPool::_ourThreads;
-
 ThreadPool::ThreadPool(size_t numThreads, size_t numSubThreads, size_t numAllocatedThreads)
 	: _numThreads(numThreads)
 	, _numSubThreads(numSubThreads)
-	, _numAllocatedThreads(numAllocatedThreads)
 {
 	// In primary thread
-	start();
+	start(numAllocatedThreads);
 }
 
 ThreadPool::~ThreadPool()
 {
 	// In primary thread
-	int dbgBreak = 1;
 	stop();
 }
 
-void ThreadPool::start() {
+void ThreadPool::start(size_t numAllocatedThreads) {
 	// In primary thread
 
-	for (size_t i = 0; i < _numAllocatedThreads; i++) {
+	for (size_t i = 0; i < numAllocatedThreads; i++) {
 		_allocatedThreads.push_back(new Thread(runSingleThreadStat, this));
 		_availThreads.push_back(_allocatedThreads.back());
 	}
@@ -95,7 +91,7 @@ void ThreadPool::stop()
 		_cv.notify_all();
 		_STD unique_lock lk(_stageMutex);
 		_cv.wait(lk, [this]()->bool {
-			return atStage(AT_TERMINATED);
+			return atStage(_allocatedThreads, AT_TERMINATED);
 		});
 	}
 
@@ -107,9 +103,9 @@ void ThreadPool::stop()
 	_availThreads.clear();
 }
 
-bool ThreadPool::atStage(Stage st) const
+bool ThreadPool::atStage(const _STD vector<Thread*>& ourThreads, Stage st) const
 {
-	for (auto pThread : _ourThreads) {
+	for (auto pThread : ourThreads) {
 		if (pThread->_ownerThreadId == this_thread::get_id() && pThread->_stage != st)
 			return false;
 	}
@@ -117,9 +113,9 @@ bool ThreadPool::atStage(Stage st) const
 	return true;
 }
 
-bool ThreadPool::atStage(Stage st0, Stage st1) const
+bool ThreadPool::atStage(const _STD vector<Thread*>& ourThreads, Stage st0, Stage st1) const
 {
-	for (auto pThread : _ourThreads) {
+	for (auto pThread : ourThreads) {
 		if (pThread->_ownerThreadId == this_thread::get_id() && pThread->_stage != st0 && pThread->_stage != st1)
 			return false;
 	}
@@ -127,9 +123,9 @@ bool ThreadPool::atStage(Stage st0, Stage st1) const
 	return true;
 }
 
-void ThreadPool::setStageForAll(Stage st) const
+void ThreadPool::setStageForAll(const _STD vector<Thread*>& ourThreads, Stage st) const
 {
-	for (auto pThread : _ourThreads) {
+	for (auto pThread : ourThreads) {
 		assert(pThread->_ownerThreadId == this_thread::get_id());
 		pThread->_stage = st;
 	}
@@ -148,33 +144,32 @@ size_t ThreadPool::numThreadsAvailable() const
 	return _availThreads.size();
 }
 
-bool ThreadPool::acquireThreads(size_t numRequested, size_t numSteps, const FuncType& func) const
+bool ThreadPool::acquireThreads(size_t numRequested, size_t numSteps, const FuncType& func, _STD vector<Thread*>& ourThreads) const
 {
-	_ourThreads.clear();
+	ourThreads.clear();
 
 	size_t num = 0;
 	{
 		lock_guard lg(_stackMutex);
 		num = std::min(numRequested, _availThreads.size());
-		if (num < 3)
-			num = 0;
-		for (size_t i = 0; i < num; i++) {
+		if (2 * num < _numSubThreads)
+			num = 1;
+		for (size_t i = 0; i < num - 1; i++) {
 			auto pThread = _availThreads.back();
 			pThread->_ownerThreadId = this_thread::get_id();
 			_availThreads.pop_back();
-			_ourThreads.push_back(pThread);
+			ourThreads.push_back(pThread);
 		}
 	}
 
 	if (num > 0) {
-		size_t startIdx = 0;
-		for (size_t i = 0; i < num; i++) {
-			auto pThread = _ourThreads[i];
+		for (size_t i = 0; i < ourThreads.size(); i++) {
+			auto pThread = ourThreads[i];
 
 			pThread->_pThreadFunc = &func;
-			pThread->_numThreadsForThisFunc = _ourThreads.size();
+			pThread->_numThreadsForThisFunc = ourThreads.size() + 1;
 			pThread->_numSteps = numSteps;
-			pThread->_startIndex = startIdx++;
+			pThread->_ourThreadIndex = i;
 		}
 		return true;
 	} else {
@@ -189,7 +184,7 @@ void ThreadPool::releaseThread(Thread* pThread) const
 	pThread->_pThreadFunc = nullptr;
 	pThread->_numThreadsForThisFunc = 0;
 	pThread->_numSteps = 0;
-	pThread->_startIndex = -1;
+	pThread->_ourThreadIndex = -1;
 
 	{
 		lock_guard lg(_stackMutex);
@@ -199,29 +194,36 @@ void ThreadPool::releaseThread(Thread* pThread) const
 	_cv.notify_all();
 }
 
-void ThreadPool::runFunc_private(size_t numThreads, size_t numSteps, const FuncType& func) const
+void ThreadPool::runFunc_private(size_t numThreads, size_t numSteps, const FuncType& func, _STD vector<Thread*>& ourThreads) const
 {
 	// In owner thread
 	{
 		_STD unique_lock lk(_stageMutex);
-		_cv.wait(lk, [this, numSteps, &func, numThreads]()->bool {
-			return acquireThreads(numThreads, numSteps, func);
+		_cv.wait(lk, [this, numSteps, &func, numThreads, &ourThreads]()->bool {
+			return acquireThreads(numThreads, numSteps, func, ourThreads);
 		});
 	}
 
 	{
 		_STD unique_lock lk(_stageMutex);
-		_cv.wait(lk, [this]()->bool {
-			return atStage(AT_STOPPED);
+		_cv.wait(lk, [this, &ourThreads]()->bool {
+			return atStage(ourThreads, AT_STOPPED);
 		});
 
-		setStageForAll(AT_RUNNING);
+		setStageForAll(ourThreads, AT_RUNNING);
+	}
+
+	size_t startIndex = 0;
+	size_t stride = ourThreads.size() + 1;
+	for (size_t i = startIndex; i < numSteps; i += stride) {
+		if (!func(startIndex, i))
+			break;
 	}
 
 	{
 		_STD unique_lock lk(_stageMutex);
-		_cv.wait(lk, [this]()->bool {
-			return atStage(AT_STOPPED);
+		_cv.wait(lk, [this, &ourThreads]()->bool {
+			return atStage(ourThreads, AT_STOPPED);
 		});
 
 		_cv.notify_all();
@@ -230,12 +232,6 @@ void ThreadPool::runFunc_private(size_t numThreads, size_t numSteps, const FuncT
 	{
 		_STD unique_lock lk(_stageMutex);
 		_cv.wait(lk, [this]()->bool {
-#ifdef _DEBUG
-			for (const auto pThread : _ourThreads) {
-				assert(pThread->_ownerThreadId != this_thread::get_id());
-			}
-#endif // _DEBUG
-			_ourThreads.clear();
 			return true;
 		});
 	}
@@ -261,8 +257,11 @@ void ThreadPool::runSingleThread(Thread* pThread) {
 
 		auto pFunc = pThread->_pThreadFunc;
 		if (pFunc) {
-			for (size_t i = pThread->_startIndex; i < pThread->_numSteps; i += pThread->_numThreadsForThisFunc) {
-				if (!(*pFunc)(pThread->_startIndex, i))
+			size_t startIndex = pThread->_ourThreadIndex + 1;
+			size_t numSteps = pThread->_numSteps;
+			size_t stride = pThread->_numThreadsForThisFunc;
+			for (size_t i = startIndex; i < numSteps; i += stride) {
+				if (!(*pFunc)(startIndex, i))
 					break;
 			}
 		}
