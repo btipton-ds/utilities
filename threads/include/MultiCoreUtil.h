@@ -184,7 +184,9 @@ private:
 		AT_RUNNING,
 		AT_TERMINATED,
 	};
+
 public:
+	class Thread;
 	using FuncType = _STD function<bool (size_t threadNum, size_t idx)>;
 
 	ThreadPool(size_t numThreads, size_t numSubThreads, size_t numAvailable);
@@ -193,8 +195,6 @@ public:
 
 	inline size_t getNumAllocatedThreads() const;
 	inline size_t getNumThreads() const;
-
-	size_t numThreadsAvailable() const;
 
 	template<class L>
 	void run(size_t numSteps, const L& f, bool multiCore);
@@ -213,31 +213,11 @@ public:
 	void run(size_t numThreads, size_t numSteps, const L& f, bool multiCore) const;
 
 private:
-	class Thread {
-	public:
-		template<class FUNC>
-		inline Thread(FUNC f, ThreadPool* pPool)
-			: _thread(f, pPool, this)
-		{ }
-
-		inline void join() {
-			_thread.join();
-		}
-
-		std::thread::id _ownerThreadId;
-		Stage _stage = AT_NOT_CREATED;
-		const FuncType* _pThreadFunc = nullptr;
-		mutable size_t _numThreadsForThisFunc = 0;
-		mutable size_t _numSteps = 0;
-		mutable size_t _ourThreadIndex = -1;
-	private:
-		_STD thread _thread;
-	};
 	void start(size_t numAllocatedThreads);
 
 	void stop();
 
-	bool acquireThreads(size_t numRequested, size_t numSteps, const FuncType& func, _STD vector<Thread*>& ourThreads) const;
+	bool acquireThreads(bool isSub, size_t numRequested, size_t numSteps, const FuncType& func, _STD vector<Thread*>& ourThreads) const;
 	void releaseThread(Thread* pThread) const;
 
 	bool atStage(const _STD vector<Thread*>& ourThreads, Stage st) const;
@@ -248,7 +228,7 @@ private:
 
 	void setStageFromWorkerThread(Stage st, Thread* pThread) const;
 
-	void runFunc_private(size_t numThreads, size_t numSteps, const FuncType& func, _STD vector<Thread*>& ourThreads) const;
+	void runFunc_private(bool isSub, size_t numThreads, size_t numSteps, const FuncType& func, _STD vector<Thread*>& ourThreads) const;
 
 	static void runSingleThreadStat(ThreadPool* pSelf, Thread* pThread);
 
@@ -278,9 +258,9 @@ template<class L>
 inline void ThreadPool::run(size_t numSteps, const L& f, bool multiCore) {
 	if (multiCore) {
 		// In primary thread
-		_STD vector<Thread*> ourThreads;
 		FuncType wrapper(f);
-		runFunc_private(_numThreads, numSteps, wrapper, ourThreads);
+		_STD vector<Thread*> ourThreads;
+		runFunc_private(false, _numThreads, numSteps, wrapper, ourThreads);
 	} else {
 		for (size_t i = 0; i < numSteps; i++) {
 			if (!f(0, i))
@@ -293,9 +273,9 @@ template<class L>
 inline void ThreadPool::run(size_t numSteps, const L& f, bool multiCore) const {
 	if (multiCore) {
 		// In primary thread
-		_STD vector<Thread*> ourThreads;
 		FuncType wrapper(f);
-		runFunc_private(_numThreads, numSteps, wrapper, ourThreads);
+		_STD vector<Thread*> ourThreads;
+		runFunc_private(false, _numThreads, numSteps, wrapper, ourThreads);
 	} else {
 		for (size_t i = 0; i < numSteps; i++) {
 			if (!f(0, i))
@@ -308,9 +288,9 @@ template<class L>
 inline void ThreadPool::runSub(size_t numSteps, const L& f, bool multiCore) {
 	if (multiCore && numSteps > 3 * _numSubThreads) {
 		// In primary thread
-		_STD vector<Thread*> ourThreads;
 		FuncType wrapper(f);
-		runFunc_private(_numSubThreads, numSteps, wrapper, ourThreads);
+		_STD vector<Thread*> ourThreads;
+		runFunc_private(true, _numSubThreads, numSteps, wrapper, ourThreads);
 	} else {
 		for (size_t i = 0; i < numSteps; i++) {
 			if (!f(0, i))
@@ -325,7 +305,7 @@ inline void ThreadPool::runSub(size_t numSteps, const L& f, bool multiCore) cons
 		// In primary thread
 		FuncType wrapper(f);
 		_STD vector<Thread*> ourThreads;
-		runFunc_private(_numSubThreads, numSteps, wrapper, ourThreads);
+		runFunc_private(true, _numSubThreads, numSteps, wrapper, ourThreads);
 	} else {
 		for (size_t i = 0; i < numSteps; i++) {
 			if (!f(0, i))
@@ -340,7 +320,7 @@ inline void ThreadPool::run(size_t numThreads, size_t numSteps, const L& f, bool
 		// In primary thread
 		FuncType wrapper(f);
 		_STD vector<Thread*> ourThreads;
-		runFunc_private(numThreads, numSteps, wrapper, ourThreads);
+		runFunc_private(false, numThreads, numSteps, wrapper, ourThreads);
 	} else {
 		for (size_t i = 0; i < numSteps; i++) {
 			if (!f(0, i))
@@ -355,7 +335,7 @@ inline void ThreadPool::run(size_t numThreads, size_t numSteps, const L& f, bool
 		// In primary thread
 		FuncType wrapper(f);
 		_STD vector<Thread*> ourThreads;
-		runFunc_private(numThreads, numSteps, wrapper, ourThreads);
+		runFunc_private(false, numThreads, numSteps, wrapper, ourThreads);
 	} else {
 		for (size_t i = 0; i < numSteps; i++) {
 			if (!f(0, i))

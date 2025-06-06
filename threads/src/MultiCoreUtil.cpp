@@ -60,6 +60,30 @@
 using namespace std;
 using namespace MultiCore;
 
+class ThreadPool::Thread {
+public:
+	template<class FUNC>
+	inline Thread(FUNC f, ThreadPool* pPool)
+		: _thread(f, pPool, this)
+	{
+	}
+
+	inline void join() {
+		_thread.join();
+	}
+
+	std::thread::id _ownerThreadId;
+	Stage _stage = AT_NOT_CREATED;
+	const FuncType* _pThreadFunc = nullptr;
+	mutable size_t _numThreadsForThisFunc = 0;
+	mutable size_t _numSteps = 0;
+	mutable size_t _ourThreadIndex = -1;
+private:
+	_STD thread _thread;
+};
+
+
+
 ThreadPool::ThreadPool(size_t numThreads, size_t numSubThreads, size_t numAllocatedThreads)
 	: _numThreads(numThreads)
 	, _numSubThreads(numSubThreads)
@@ -138,21 +162,22 @@ void ThreadPool::setStageFromWorkerThread(Stage st, Thread* pThread) const
 	_cv.notify_all();
 }
 
-size_t ThreadPool::numThreadsAvailable() const
-{
-	_STD unique_lock lk(_stageMutex);
-	return _availThreads.size();
-}
-
-bool ThreadPool::acquireThreads(size_t numRequested, size_t numSteps, const FuncType& func, _STD vector<Thread*>& ourThreads) const
+bool ThreadPool::acquireThreads(bool isSub, size_t numRequested, size_t numSteps, const FuncType& func, _STD vector<Thread*>& ourThreads) const
 {
 	ourThreads.clear();
 
 	size_t num = 0;
 	{
 		lock_guard lg(_stackMutex);
-		num = std::min(numRequested, _availThreads.size());
-		if (2 * num < _numSubThreads)
+		if (isSub) {
+			const size_t numOpsPerThread = 5;
+			size_t numRecommended = std::max(1ull, numSteps / numOpsPerThread);
+			num = std::min(numRequested, numRecommended);
+			num = std::min(num, _availThreads.size());
+		} else {
+			num = std::min(numRequested, _availThreads.size());
+		}
+		if (num < 1)
 			num = 1;
 		for (size_t i = 0; i < num - 1; i++) {
 			auto pThread = _availThreads.back();
@@ -194,13 +219,13 @@ void ThreadPool::releaseThread(Thread* pThread) const
 	_cv.notify_all();
 }
 
-void ThreadPool::runFunc_private(size_t numThreads, size_t numSteps, const FuncType& func, _STD vector<Thread*>& ourThreads) const
+void ThreadPool::runFunc_private(bool isSub, size_t numThreads, size_t numSteps, const FuncType& func, _STD vector<Thread*>& ourThreads) const
 {
 	// In owner thread
 	{
 		_STD unique_lock lk(_stageMutex);
-		_cv.wait(lk, [this, numSteps, &func, numThreads, &ourThreads]()->bool {
-			return acquireThreads(numThreads, numSteps, func, ourThreads);
+		_cv.wait(lk, [this, isSub, numSteps, &func, numThreads, &ourThreads]()->bool {
+			return acquireThreads(isSub, numThreads, numSteps, func, ourThreads);
 		});
 	}
 
