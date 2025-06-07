@@ -162,16 +162,16 @@ void ThreadPool::setStageFromWorkerThread(Stage st, Thread* pThread) const
 	_cv.notify_all();
 }
 
-bool ThreadPool::acquireThreads(bool isSub, size_t numRequested, size_t numSteps, const FuncType& func, _STD vector<Thread*>& ourThreads) const
+void ThreadPool::acquireThreads(size_t numRequested, size_t numSteps, size_t minStepsToMultiThread, const FuncType& func, _STD vector<Thread*>& ourThreads) const
 {
 	ourThreads.clear();
 
 	size_t num = 0;
 	{
 		lock_guard lg(_stackMutex);
-		if (isSub) {
-			const size_t numOpsPerThread = 5;
-			size_t numRecommended = std::max(1ull, numSteps / numOpsPerThread);
+		if (minStepsToMultiThread != -1) {
+			size_t numStepsPerThread = minStepsToMultiThread / 3;
+			size_t numRecommended = std::max(1ull, numSteps / numStepsPerThread);
 			num = std::min(numRequested, numRecommended);
 			num = std::min(num, _availThreads.size());
 		} else {
@@ -187,18 +187,13 @@ bool ThreadPool::acquireThreads(bool isSub, size_t numRequested, size_t numSteps
 		}
 	}
 
-	if (num > 0) {
-		for (size_t i = 0; i < ourThreads.size(); i++) {
-			auto pThread = ourThreads[i];
+	for (size_t i = 0; i < ourThreads.size(); i++) {
+		auto pThread = ourThreads[i];
 
-			pThread->_pThreadFunc = &func;
-			pThread->_numThreadsForThisFunc = ourThreads.size() + 1;
-			pThread->_numSteps = numSteps;
-			pThread->_ourThreadIndex = i;
-		}
-		return true;
-	} else {
-		return false;
+		pThread->_pThreadFunc = &func;
+		pThread->_numThreadsForThisFunc = ourThreads.size() + 1;
+		pThread->_numSteps = numSteps;
+		pThread->_ourThreadIndex = i;
 	}
 
 }
@@ -219,13 +214,14 @@ void ThreadPool::releaseThread(Thread* pThread) const
 	_cv.notify_all();
 }
 
-void ThreadPool::runFunc_private(bool isSub, size_t numThreads, size_t numSteps, const FuncType& func, _STD vector<Thread*>& ourThreads) const
+void ThreadPool::runFunc_private(size_t numThreads, size_t numSteps, size_t minStepsToMultiThread, const FuncType& func, _STD vector<Thread*>& ourThreads) const
 {
 	// In owner thread
 	{
 		_STD unique_lock lk(_stageMutex);
-		_cv.wait(lk, [this, isSub, numSteps, &func, numThreads, &ourThreads]()->bool {
-			return acquireThreads(isSub, numThreads, numSteps, func, ourThreads);
+		_cv.wait(lk, [this, numThreads, numSteps, minStepsToMultiThread, &func, &ourThreads]()->bool {
+			acquireThreads(numThreads, numSteps, minStepsToMultiThread, func, ourThreads);
+			return true;
 		});
 	}
 
