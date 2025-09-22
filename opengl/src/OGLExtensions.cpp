@@ -2,9 +2,6 @@
 #include <iostream>
 #include <assert.h>
 
-#ifdef WIN32
-#include <tchar.h>
-
 using namespace std;
 using namespace OGL;
 
@@ -14,6 +11,9 @@ using namespace OGL;
 #define GET_EXT_POINTER_MESSAGE_RETURN_FALSE(name, type) { static bool ok=true; static bool first=true; if(first){ first=false; name = (type)wglGetProcAddress(#name); if(!name){ ok=false; return false; }} if(!ok) return false;}
 
 #define	RETURN_IF_NOT_FIRST_TIME(a) static bool first=true; if(!first) return a; first = false;
+
+#ifdef WIN32
+#include <tchar.h>
 
 PFNGLACTIVESHADERPROGRAMPROC    Extensions::glActiveShaderProgram = 0;
 PFNGLACTIVETEXTUREPROC    Extensions::glActiveTexture = 0;
@@ -761,7 +761,7 @@ PFNGLWINDOWPOS3SVPROC    Extensions::glWindowPos3sv = 0;
 #else
 #endif // WIN32
 
-void Extensions::dumpGlErrors(const char* filename, int lineNumber)
+void OGL::Extensions::dumpGlErrors(const char* filename, int lineNumber)
 {
     GLenum err;
     while ((err = glGetError()) && err != GL_NO_ERROR) {
@@ -793,19 +793,18 @@ void Extensions::dumpGlErrors(const char* filename, int lineNumber)
     }
 }
 
-Extensions::Extensions()
+OGL::Extensions::Extensions()
 {
     hasVBOSupport();
 }
 
-bool Extensions::hasVBOSupport()
+bool OGL::Extensions::hasVBOSupport()
 {
+#ifdef WIN32
     if (!wglGetCurrentContext())
         return false;
     static bool support = false;
     RETURN_IF_NOT_FIRST_TIME(support);
-
-#ifdef WIN32
     assert(wglGetCurrentContext());
 
     GET_EXT_POINTER_MESSAGE_RETURN_FALSE(glActiveShaderProgram, PFNGLACTIVESHADERPROGRAMPROC);
@@ -1555,9 +1554,9 @@ bool Extensions::hasVBOSupport()
     support = glBindBuffer && glGenBuffers && glBufferData && glBufferSubData &&
         glIsBuffer && glDeleteBuffers && glDrawRangeElements && glGetBufferParameteriv &&
         glGetBufferSubData;
-#else
-    support = true;
-#endif // WIN32
 
     return support;
+#else
+    return true;
+#endif // WIN32
 }

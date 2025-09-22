@@ -768,12 +768,12 @@ PFNGLWINDOWPOS3SVPROC    COglExtensions::glWindowPos3sv = 0;
 #endif // WIN32
 
 
-COglExtensions::COglExtensions()
+OGL::Extensions::Extensions()
 {
     hasVBOSupport();
 }
 
-bool COglExtensions::hasVBOSupport()
+bool OGL::Extensions::hasVBOSupport()
 {
 #ifdef WIN32
     if (!wglGetCurrentContext())

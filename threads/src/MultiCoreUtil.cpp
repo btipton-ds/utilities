@@ -171,7 +171,7 @@ void ThreadPool::acquireThreads(size_t numRequested, size_t numSteps, size_t min
 		lock_guard lg(_stackMutex);
 		if (minStepsToMultiThread != -1) {
 			size_t numStepsPerThread = minStepsToMultiThread / 3;
-			size_t numRecommended = std::max(1ull, numSteps / numStepsPerThread);
+			size_t numRecommended = std::max((size_t)1, numSteps / numStepsPerThread);
 			num = std::min(numRequested, numRecommended);
 			num = std::min(num, _availThreads.size());
 		} else {
