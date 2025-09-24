@@ -7,6 +7,7 @@
 #include <GL/glext.h>
 #include <GL/wglext.h>
 #else
+#include <GL/glew.h>
 #endif
 
 #define HAS_SHADER_SUBROUTINES 1

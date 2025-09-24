@@ -14,8 +14,7 @@
 #define UINT unsigned int
 #define LPVOID void*
 #define CHECK_GLSL_STATE
-#include "/usr/include/GL/gl.h"
-#include "/usr/include/GL/glext.h"
+#include <GL/glew.h>
 #endif
 
 #include <OGLExtensions.h>
