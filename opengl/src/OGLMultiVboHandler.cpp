@@ -112,12 +112,14 @@ void MultiVboHandler::moveKeyToLayer(int key, int layer)
     int curLayer = m_keysLayer[key];
     m_keysLayer[key] = layer;
 
-    auto& layersKeys = m_layersKeys[curLayer];
-    auto iterBegin = layersKeys.begin();
-    auto iterEnd = layersKeys.end();
-    auto iter = std::find(iterBegin, iterEnd, key);
-    if (iter != iterEnd)
-        layersKeys.erase(iter);
+    auto iter = m_layersKeys[curLayer].begin();
+    for (; iter != m_layersKeys[curLayer].end(); iter++)
+    {
+        if (*iter == key)
+            break;
+    }
+    if (iter != m_layersKeys[curLayer].end())
+        m_layersKeys[curLayer].erase(iter);
 
     if (layer >= m_layersKeys.size())
         m_layersKeys.resize(layer + 1);
