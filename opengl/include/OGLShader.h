@@ -6,11 +6,7 @@
 
 #ifdef WIN32
 #include <Windows.h>
-#include <GL/gl.h>
-#include <GL/glext.h>
-#include <GL/wglext.h>
 
-#include <OGLExtensions.h>
 #define CHECK_GLSL_STATE   assert( wglGetCurrentContext() ); GL_ASSERT; if( !isEnabled() || m_error )  return 0
 #else
 
@@ -21,6 +17,8 @@
 #include "/usr/include/GL/gl.h"
 #include "/usr/include/GL/glext.h"
 #endif
+
+#include <OGLExtensions.h>
 
 #include <OGLCol4f.h>
 

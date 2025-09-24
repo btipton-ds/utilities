@@ -4,10 +4,7 @@
 #include <set>
 #include <memory>
 
-#ifdef WIN32
 #include <OGLExtensions.h>
-#endif
-
 #include <OGLMultiVbo.h>
 
 // Open this file for documentation. It's stored in the include directory with this header file.

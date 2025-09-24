@@ -7,9 +7,6 @@
 #include <Windows.h>
 #include <gl/GL.h>
 #else
-#define GL_GLEXT_PROTOTYPES
-#include </usr/include/GL/gl.h>
-#include </usr/include/GL/glext.h>
 #endif
 
 //#include <Kernel/OpenGLib/glu.h> // LIMBO not picking up from the precompiled header in 64 bit
