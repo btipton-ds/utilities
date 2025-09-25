@@ -574,7 +574,7 @@ void MultiVboHandler::releaseTessellations(size_t entityId)
     const auto& iter1 = iter->second.begin();
     const auto& pGlIndices = iter1->second;
 
-    if ((pGlIndices->m_numVertsInBatch == 0) || (pGlIndices->m_vertBaseIndex == _SIZE_T_ERROR) || (pGlIndices->m_batchIndex >= m_batches.size()))
+    if ((pGlIndices->m_numVertsInBatch == 0) || (pGlIndices->m_vertBaseIndex == _UINT_ERROR) || (pGlIndices->m_batchIndex >= m_batches.size()))
         return;
 
     auto batchPtr = m_batches[pGlIndices->m_batchIndex];

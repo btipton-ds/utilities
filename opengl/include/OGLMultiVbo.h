@@ -7,6 +7,7 @@
 
 #include <OGLExtensions.h>
 #define _SIZE_T_ERROR SIZE_MAX
+#define _UINT_ERROR ((unsigned int) -1)
 
 // Open this file for documentation. It's stored in the include directory with this header file.
 // 
