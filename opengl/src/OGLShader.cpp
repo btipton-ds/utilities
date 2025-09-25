@@ -767,7 +767,7 @@ void ShaderBase::loadDefaultVariables()
 						stiArg++;
 				}
 
-                if (tname = strstr( source, "float" ))
+                if ((tname = strstr( source, "float" )))
                 {
                     vname = getVariableName( tname + 5 );
                     if (stiDefaultVariable)
@@ -775,7 +775,7 @@ void ShaderBase::loadDefaultVariables()
                     else
                         setVariable(vname, 0);
                 }
-                else if (tname = strstr( source, "vec2" ))
+                else if ((tname = strstr( source, "vec2" )))
                 {
                     vname = getVariableName( tname + 4 );
                     p2f val;
@@ -786,7 +786,7 @@ void ShaderBase::loadDefaultVariables()
                     }
                     setVariable(vname, val);
                 }
-                else if (tname = strstr( source, "vec3" ))
+                else if ((tname = strstr( source, "vec3" )))
                 {
                     vname = getVariableName( tname + 4 );
                     p3f val;
@@ -796,7 +796,7 @@ void ShaderBase::loadDefaultVariables()
                     }
                     setVariable( vname, val);
                 }
-                else if (tname = strstr( source, "vec4" ))
+                else if ((tname = strstr( source, "vec4" )))
                 {
                     vname = getVariableName( tname + 4 );
                     col4f col;
@@ -806,7 +806,7 @@ void ShaderBase::loadDefaultVariables()
                     }
                     setVariable( vname, col);
                 }
-                else if( tname = strstr( source, "sampler2DRect" ) )
+                else if ((tname = strstr(source, "sampler2DRect")))
                 {
                     vname = getVariableName( tname + 14 );
 					if( !stiArg )
@@ -847,7 +847,7 @@ void ShaderBase::loadDefaultVariables()
 							setTexture( string(vname), 0 ); // need to make sure the texture is present and gets a slot for ATI
                     }
                 }
-                else if (tname = strstr(source, "sampler2DArray"))
+                else if ((tname = strstr(source, "sampler2DArray")))
                 {
                     // we may be using pow2 image buffers in the future
                     // also we should verify the po2ness of the file and trigger a resize if needed
@@ -867,7 +867,7 @@ void ShaderBase::loadDefaultVariables()
                             setTexture(string(vname), 0); // need to make sure the texture is present and gets a slot for ATI
                     }
                 }
-                else if (tname = strstr(source, "sampler2D"))
+                else if ((tname = strstr(source, "sampler2D")))
                 {
                     // we may be using pow2 image buffers in the future
                     // also we should verify the po2ness of the file and trigger a resize if needed
@@ -887,7 +887,7 @@ void ShaderBase::loadDefaultVariables()
                             setTexture(string(vname), 0); // need to make sure the texture is present and gets a slot for ATI
                     }
                 }
-                else if( tname = strstr( source, "samplerCube" ) )
+                else if((tname = strstr( source, "samplerCube" )))
                 {
                     vname = getVariableName( tname + 11 );
 
@@ -921,7 +921,7 @@ void ShaderBase::loadDefaultVariables()
                     continue;
                 } 
             }
-        } while( source = getNextLine(source, endChar) );
+        } while ((source = getNextLine(source, endChar)));
 
         delete [] sourceCpy;
     }
