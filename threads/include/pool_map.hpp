@@ -33,6 +33,7 @@ This file is part of the DistFieldHexMesh application/library.
 #define ITER_TEMPL_DECL template <int IterType>
 #define MAP_DECL MultiCore::map<KEY, T>
 #define ITER_DECL MultiCore::map<KEY, T>::_iterator<IterType>
+#define ITER_DECL_RET MultiCore::map<KEY, T>::template _iterator<IterType>
 
 TEMPL_DECL
 std::pair<typename MAP_DECL::iterator, bool> MAP_DECL::insert(const DataPair& pair)
@@ -267,7 +268,7 @@ inline bool ITER_DECL::operator > (const _iterator& rhs) const
 
 TEMPL_DECL
 ITER_TEMPL_DECL
-inline typename ITER_DECL::_iterator& ITER_DECL::operator ++ ()
+inline typename ITER_DECL_RET& ITER_DECL::operator ++ ()
 {
 	_keyIter.operator++();
 	return *this;
@@ -275,7 +276,7 @@ inline typename ITER_DECL::_iterator& ITER_DECL::operator ++ ()
 
 TEMPL_DECL
 ITER_TEMPL_DECL
-inline typename ITER_DECL::_iterator& ITER_DECL::operator --()
+inline typename ITER_DECL_RET& ITER_DECL::operator --()
 {
 	_keyIter.operator--();
 	return *this;
@@ -283,7 +284,7 @@ inline typename ITER_DECL::_iterator& ITER_DECL::operator --()
 
 TEMPL_DECL
 ITER_TEMPL_DECL
-inline typename ITER_DECL::_iterator ITER_DECL::operator ++ (int)
+inline typename ITER_DECL_RET ITER_DECL::operator ++ (int)
 {
 	_iterator tmp(*this);
 	++*this;
@@ -292,7 +293,7 @@ inline typename ITER_DECL::_iterator ITER_DECL::operator ++ (int)
 
 TEMPL_DECL
 ITER_TEMPL_DECL
-inline typename ITER_DECL::_iterator ITER_DECL::operator --(int)
+inline typename ITER_DECL_RET ITER_DECL::operator --(int)
 {
 	_iterator tmp(*this);
 	--*this;
@@ -301,7 +302,7 @@ inline typename ITER_DECL::_iterator ITER_DECL::operator --(int)
 
 TEMPL_DECL
 ITER_TEMPL_DECL
-inline typename ITER_DECL::_iterator ITER_DECL::operator + (size_t val) const
+inline typename ITER_DECL_RET ITER_DECL::operator + (size_t val) const
 {
 	_iterator result(_pSource, _keyIter.operator+(val));
 	return result;
@@ -309,7 +310,7 @@ inline typename ITER_DECL::_iterator ITER_DECL::operator + (size_t val) const
 
 TEMPL_DECL
 ITER_TEMPL_DECL
-inline typename ITER_DECL::_iterator ITER_DECL::operator - (size_t val) const
+inline typename ITER_DECL_RET ITER_DECL::operator - (size_t val) const
 {
 	_iterator result(_pSource, _keyIter.operator-(val));
 	return result;

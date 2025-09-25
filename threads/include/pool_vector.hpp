@@ -33,6 +33,7 @@ This file is part of the DistFieldHexMesh application/library.
 #define ITER_TEMPL_DECL template <int IterType>
 #define VECTOR_DECL vector<T> 
 #define ITER_DECL vector<T>::_iterator<IterType>
+#define ITER_DECL_2 vector<T>::template _iterator<IterType>
 
 namespace MultiCore {
 
@@ -538,21 +539,21 @@ size_t ITER_DECL::operator - (const _iterator& rhs) const
 
 TEMPL_DECL
 ITER_TEMPL_DECL
-inline typename ITER_DECL::reference ITER_DECL::operator *() const
+inline typename ITER_DECL_2::reference ITER_DECL::operator *() const
 {
 	return *get();
 }
 
 TEMPL_DECL
 ITER_TEMPL_DECL
-inline typename ITER_DECL::pointer ITER_DECL::operator->() const
+inline typename ITER_DECL_2::pointer ITER_DECL::operator->() const
 {
 	return get();
 }
 
 TEMPL_DECL
 ITER_TEMPL_DECL
-inline typename ITER_DECL::pointer ITER_DECL::get() const
+inline typename ITER_DECL_2::pointer ITER_DECL::get() const
 {
 	if (_pEntry)
 		return _pEntry;

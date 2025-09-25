@@ -119,7 +119,7 @@ void SET_DECL::insert(const std::initializer_list<T>& vals)
 	_set.insert(vals.begin(), vals.end());
 #endif
 
-	for (auto iter = begin; iter != end; iter++) {
+	for (auto iter = begin(); iter != end(); iter++) {
 		insert(*iter);
 	}
 }

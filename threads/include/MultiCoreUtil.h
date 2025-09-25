@@ -133,7 +133,7 @@ namespace MultiCore {
 					}
 				};
 
-				threads.push_back(move(_STD thread(outerLambda)));
+				threads.push_back(std::move(_STD thread(outerLambda)));
 			}
 
 			for (size_t i = 0; i < threads.size(); i++) {
@@ -163,7 +163,7 @@ namespace MultiCore {
 					}
 				};
 
-				threads.push_back(move(_STD thread(outerLambda)));
+				threads.push_back(std::move(_STD thread(outerLambda)));
 			}
 
 			for (size_t i = 0; i < threads.size(); i++) {
