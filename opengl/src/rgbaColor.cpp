@@ -49,7 +49,7 @@ float HueToRGB(float v1, float v2, float vH) {
 
 rgbaColor HSVToRGB(float h, float s, float v) {
     float C = s * v;
-    float X = (float) (C * (1 - abs(fmod(h / 60.0f, 2) - 1)));
+    float X = (float) (C * (1 - fabs(fmod(h / 60.0f, 2) - 1)));
     float m = v - C;
     float r, g, b;
     if (h >= 0 && h < 60) {
