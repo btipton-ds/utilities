@@ -209,7 +209,7 @@ void MultiVboHandler::setFaceTessellationInner(size_t batchIndex, size_t vertChu
     auto& batchPtr = m_batches[batchIndex];
     batchPtr->m_needsUpdate = true;
 
-    size_t sizeRequred2 = 2 * (vertBaseIndex + numVerts);
+    size_t sizeRequred2 = parameters.empty() ? 0 : 2 * (vertBaseIndex + numVerts);
     size_t sizeRequred3 = 3 * (vertBaseIndex + numVerts);
 
     // In the primary code path these arrays are always sized correctly, but during undo/redo there can be a mismatch. Resize everything if they're too small.
@@ -234,10 +234,12 @@ void MultiVboHandler::setFaceTessellationInner(size_t batchIndex, size_t vertChu
                 batchPtr->m_colors[dstIdx] = colors[srcIdx];
         }
 
-        for (int j = 0; j < 2; j++) {
-            size_t dstIdx = 2 * (vertBaseIndex + vertIdx) + j;
-            size_t srcIdx = 2 * vertIdx + j;
-            batchPtr->m_parameters[dstIdx] = parameters[srcIdx];
+        if (!parameters.empty()) {
+            for (int j = 0; j < 2; j++) {
+                size_t dstIdx = 2 * (vertBaseIndex + vertIdx) + j;
+                size_t srcIdx = 2 * vertIdx + j;
+                batchPtr->m_parameters[dstIdx] = parameters[srcIdx];
+            }
         }
     }
 
