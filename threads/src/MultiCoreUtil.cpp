@@ -85,11 +85,11 @@ private:
 
 
 ThreadPool::ThreadPool(size_t numThreads, size_t numSubThreads, size_t numAllocatedThreads)
-	: _numThreads(numThreads)
-	, _numSubThreads(numSubThreads)
+	: _numThreads(numThreads < 64 ? numThreads : 1)
+	, _numSubThreads(numSubThreads < 64 ? numSubThreads : 1)
 {
 	// In primary thread
-	start(numAllocatedThreads);
+	start(numAllocatedThreads < 64 ? numAllocatedThreads : 1);
 }
 
 ThreadPool::~ThreadPool()
