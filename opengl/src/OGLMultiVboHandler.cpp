@@ -543,18 +543,18 @@ void MultiVboHandler::getStorageFor(size_t numVertsNeeded, bool needColorStorage
 
         vertChunkIndex = calcVertChunkIndex(vertBaseIndex);
 
-        size_t sizeNeeded3 = 3 * (vertBaseIndex + blockSizeInChunks * vertChunkSize());
-        size_t sizeNeeded2 = 2 * (vertBaseIndex + blockSizeInChunks * vertChunkSize());
+        size_t sizeRequired3 = 3 * (vertBaseIndex + blockSizeInChunks * vertChunkSize());
+        size_t sizeRequired2 = 2 * (vertBaseIndex + blockSizeInChunks * vertChunkSize());
 
-        if (sizeNeeded3 >= batchPtr->m_points.size())
-            batchPtr->m_points.resize(sizeNeeded3);
+        if (sizeRequired3 >= batchPtr->m_points.size())
+            batchPtr->m_points.resize(sizeRequired3);
 
         if (allocateSpaceForTriangles) {
-            batchPtr->m_normals.resize(sizeNeeded3);
-            batchPtr->m_parameters.resize(sizeNeeded2);
+            batchPtr->m_normals.resize(sizeRequired3);
+            batchPtr->m_parameters.resize(sizeRequired2);
             if (needColorStorage) {
-                batchPtr->m_colors.resize(sizeNeeded3);
-                batchPtr->m_backColors.resize(sizeNeeded3);
+                batchPtr->m_colors.resize(sizeRequired3);
+                batchPtr->m_backColors.resize(sizeRequired3);
             }
         }
 
@@ -654,8 +654,9 @@ const IndicesPtr MultiVboHandler::setEdgeSegTessellation(size_t entityId, size_t
     assert(m_insideBeginEdgeTessellation);
     size_t numVerts = points.size() / 3;
 
+    bool needsColorStorage = !colors.empty();
     size_t batchIndex, vertChunkIndex, blockSizeInChunks;
-    getStorageFor(numVerts, false, batchIndex, vertChunkIndex, blockSizeInChunks);
+    getStorageFor(numVerts, needsColorStorage, batchIndex, vertChunkIndex, blockSizeInChunks);
     shared_ptr<Indices> pOglIndices = make_shared<Indices>();
     setEdgeSegTessellationInner(batchIndex, vertChunkIndex, points, colors, indices, *pOglIndices);
     pOglIndices->m_chunkIdx = vertChunkIndex;
@@ -707,10 +708,11 @@ void MultiVboHandler::setEdgeSegTessellationInner(size_t batchIndex, size_t vert
     glIndicesOut.m_elementIndices.clear();
     auto batchPtr = m_batches[batchIndex];
 
+    size_t blockSizeInChunks = calcNumVertChunks(numVerts);
     // In the primary code path this array is always sized correctly, but during undo/redo there can be a mismatch. Resize it if it's too small.
-    size_t spaceRequired = 3 * (vertBaseIndex + numVerts);
-    if (batchPtr->m_points.size() < spaceRequired)
-        batchPtr->m_points.resize(spaceRequired);
+    size_t sizeRequired = 3 * (vertBaseIndex + blockSizeInChunks * vertChunkSize());
+    if (batchPtr->m_points.size() < sizeRequired)
+        batchPtr->m_points.resize(sizeRequired);
 
     for (size_t vertIdx = 0; vertIdx < numVerts; vertIdx++) {
         for (int j = 0; j < 3; j++) {
@@ -721,8 +723,8 @@ void MultiVboHandler::setEdgeSegTessellationInner(size_t batchIndex, size_t vert
     bool hasColors = !batchPtr->m_colors.empty();
     bool needsColors = !colors.empty();
     if (needsColors || hasColors) {
-        if (batchPtr->m_colors.size() < spaceRequired)
-            batchPtr->m_colors.resize(spaceRequired);
+        if (batchPtr->m_colors.size() < sizeRequired)
+            batchPtr->m_colors.resize(sizeRequired);
 
         if (!colors.empty()) {
             for (size_t vertIdx = 0; vertIdx < numVerts; vertIdx++) {
