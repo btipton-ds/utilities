@@ -229,7 +229,10 @@ void MultiVboHandler::setFaceTessellationInner(size_t batchIndex, size_t vertChu
             size_t dstIdx = 3 * (vertBaseIndex + vertIdx) + j;
             size_t srcIdx = 3 * vertIdx + j;
             batchPtr->m_points[dstIdx] = points[srcIdx];
-            batchPtr->m_normals[dstIdx] = normals[srcIdx];
+
+            if (!normals.empty())
+                batchPtr->m_normals[dstIdx] = normals[srcIdx];
+
             if (!colors.empty())
                 batchPtr->m_colors[dstIdx] = colors[srcIdx];
         }
@@ -242,8 +245,9 @@ void MultiVboHandler::setFaceTessellationInner(size_t batchIndex, size_t vertChu
             }
         }
     }
-
-    for (size_t i = 0; i < triIndices.size(); i++) {
+    size_t numIndices = triIndices.size();
+    glIndicesOut.m_elementIndices.reserve(glIndicesOut.m_elementIndices.size() + numIndices);
+    for (size_t i = 0; i < numIndices; i++) {
         unsigned int vertIndex = vertBaseIndex + triIndices[i];
         glIndicesOut.m_elementIndices.push_back(vertIndex);
     }

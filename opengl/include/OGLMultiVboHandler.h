@@ -75,15 +75,16 @@ public:
 
     void beginFaceTesselation();
     // vertiIndices is index pairs into points, normals and parameters to form triangles. It's the standard OGL element index structure
-    const IndicesPtr setFaceTessellation(size_t entityId, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
-        const std::vector<unsigned int>& vertiIndices);
-    const IndicesPtr setFaceTessellation(size_t entityId, size_t subPartId, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
-        const std::vector<unsigned int>& vertiIndices);
+    const IndicesPtr setFaceTessellation(size_t entityId, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& normals, 
+        const std::vector<float>& parameters, const std::vector<unsigned int>& vertiIndices);
+    const IndicesPtr setFaceTessellation(size_t entityId, size_t subPartId, size_t changeNumber, const std::vector<float>& points, 
+        const std::vector<float>& normals, const std::vector<float>& parameters, const std::vector<unsigned int>& vertiIndices);
 
-    const IndicesPtr setFaceTessellation(size_t entityId, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
-        const std::vector<float>& colors, const std::vector<unsigned int>& vertiIndices);
-    const IndicesPtr setFaceTessellation(size_t entityId, size_t subPartId, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& normals, const std::vector<float>& parameters,
-        const std::vector<float>& colors, const std::vector<unsigned int>& vertiIndices);
+    const IndicesPtr setFaceTessellation(size_t entityId, size_t changeNumber, const std::vector<float>& points, const std::vector<float>& normals, 
+        const std::vector<float>& parameters, const std::vector<float>& colors, const std::vector<unsigned int>& vertiIndices);
+    const IndicesPtr setFaceTessellation(size_t entityId, size_t subPartId, size_t changeNumber, const std::vector<float>& points, 
+        const std::vector<float>& normals, const std::vector<float>& parameters, const std::vector<float>& colors, 
+        const std::vector<unsigned int>& vertiIndices);
 
     const IndicesPtr setFaceTessellation(size_t entityId, const IndicesPtr& pSrc, const std::vector<unsigned int>& elementIndices);
 
