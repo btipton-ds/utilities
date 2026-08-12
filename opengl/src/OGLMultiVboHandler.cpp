@@ -175,7 +175,7 @@ const IndicesPtr MultiVboHandler::setFaceTessellation(size_t entityId, size_t su
 {
     assert(m_insideBeginFaceTessellation);
     assert(!points.empty());
-    assert(points.size() == normals.size());
+    assert(normals.empty() || (points.size() == normals.size()));
 
     size_t numVerts = points.size() / 3;
     size_t batchIndex, vertChunkIndex, blockSizeInChunks;
