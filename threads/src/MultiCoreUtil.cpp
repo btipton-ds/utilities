@@ -82,14 +82,18 @@ private:
 	_STD thread _thread;
 };
 
+ThreadPool::ThreadPool(size_t numThreads)
+	: ThreadPool(numThreads, 0, numThreads)
+{
+}
 
-
+// Sub threads are no longer used, but the code still exists
 ThreadPool::ThreadPool(size_t numThreads, size_t numSubThreads, size_t numAllocatedThreads)
-	: _numThreads(numThreads < 64 ? numThreads : 1)
-	, _numSubThreads(numSubThreads < 64 ? numSubThreads : 1)
+	: _numThreads(numThreads)
+	, _numSubThreads(numSubThreads)
 {
 	// In primary thread
-	start(numAllocatedThreads < 64 ? numAllocatedThreads : 1);
+	start(numAllocatedThreads);
 }
 
 ThreadPool::~ThreadPool()
@@ -234,6 +238,8 @@ void ThreadPool::runFunc_private(size_t numThreads, size_t numSteps, size_t minS
 		setStageForAll(ourThreads, AT_RUNNING);
 	}
 
+	// This uses the current thread as a working thread: index == 0
+	// The individual threads have 1 added to the index
 	size_t startIndex = 0;
 	size_t stride = ourThreads.size() + 1;
 	for (size_t i = startIndex; i < numSteps; i += stride) {

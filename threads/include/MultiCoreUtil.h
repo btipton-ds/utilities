@@ -189,6 +189,7 @@ public:
 	class Thread;
 	using FuncType = _STD function<bool (size_t threadNum, size_t idx)>;
 
+	ThreadPool(size_t numThreads);
 	ThreadPool(size_t numThreads, size_t numSubThreads, size_t numAvailable);
 
 	~ThreadPool();
