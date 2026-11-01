@@ -174,7 +174,8 @@ const IndicesPtr MultiVboHandler::setFaceTessellation(size_t entityId, size_t su
     const vector<float>& parameters, const std::vector<float>& colors, const vector<unsigned int>& vertIndices)
 {
     assert(m_insideBeginFaceTessellation);
-    assert(!points.empty());
+    if (points.empty())
+        return IndicesPtr();
     assert(normals.empty() || (points.size() == normals.size()));
 
     size_t numVerts = points.size() / 3;
